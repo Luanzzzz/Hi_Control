@@ -66,8 +66,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
                 if (window.innerWidth < 1024) toggleSidebar();
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${currentView === item.id
-                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                 }`}
             >
               <item.icon size={18} />
@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
         <div className="p-4 border-t border-gray-200 dark:border-slate-700">
           <a
-            href="https://hicontrol.com.br"
+            href={import.meta.env.VITE_SITE_URL || 'https://hicontrol.com.br'}
             className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-colors"
           >
             <LogOut size={18} />
