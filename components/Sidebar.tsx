@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
         <div className="p-4 border-t border-gray-200 dark:border-slate-700">
           <a
-            href={import.meta.env.VITE_SITE_URL || 'https://hicontrol.com.br'}
+            href="https://site-hi-control.vercel.app"
             className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-colors"
           >
             <LogOut size={18} />
