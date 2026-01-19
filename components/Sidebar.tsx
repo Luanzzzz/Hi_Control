@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  CheckSquare, 
-  MessageCircle, 
-  Users, 
-  Package, 
-  CreditCard, 
-  Wrench, 
-  Calendar, 
+import {
+  LayoutDashboard,
+  FileText,
+  CheckSquare,
+  MessageCircle,
+  Users,
+  Package,
+  CreditCard,
+  Wrench,
+  Calendar,
   PieChart,
   LogOut
 } from 'lucide-react';
@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     { id: ViewState.INVOICES, label: 'Notas Fiscais', icon: FileText, priority: 1 },
     { id: ViewState.TASKS, label: 'Tarefas', icon: CheckSquare, priority: 1 },
     { id: ViewState.WHATSAPP, label: 'WhatsApp', icon: MessageCircle, priority: 1 },
-    { id: ViewState.USERS, label: 'Usuários', icon: Users, priority: 1 },
+    { id: ViewState.USERS, label: 'Clientes', icon: Users, priority: 1 },
     // Priority 2 items point to COMING_SOON for this demo
     { id: ViewState.COMING_SOON, label: 'Estoque', icon: Package, priority: 2 },
     { id: ViewState.COMING_SOON, label: 'Faturamento', icon: CreditCard, priority: 2 },
@@ -39,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   return (
     <>
       {/* Mobile Overlay */}
-      <div 
+      <div
         className={`fixed inset-0 bg-black/50 z-20 lg:hidden ${isOpen ? 'block' : 'hidden'}`}
         onClick={toggleSidebar}
       />
@@ -65,11 +65,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
                 setView(item.id);
                 if (window.innerWidth < 1024) toggleSidebar();
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                currentView === item.id 
-                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' 
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${currentView === item.id
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-              }`}
+                }`}
             >
               <item.icon size={18} />
               {item.label}
@@ -95,10 +94,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         </nav>
 
         <div className="p-4 border-t border-gray-200 dark:border-slate-700">
-          <button className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-colors">
+          <a
+            href="https://hicontrol.com.br"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-colors"
+          >
             <LogOut size={18} />
             Sair do Sistema
-          </button>
+          </a>
         </div>
       </aside>
     </>

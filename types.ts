@@ -7,37 +7,48 @@ export enum ViewState {
   COMING_SOON = 'COMING_SOON'
 }
 
-export interface Invoice {
-  id: string;
-  number: string;
-  client: string;
-  amount: number;
-  status: 'Pendente' | 'Emitida' | 'Cancelada';
-  type: 'NF-e' | 'NFS-e' | 'NFC-e' | 'CT-e';
-  date: string;
-  state: string;
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  assignee: string;
-  priority: 'Alta' | 'Média' | 'Baixa';
-  status: 'A Fazer' | 'Em Progresso' | 'Concluída';
-  dueDate: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  sender: 'user' | 'contact' | 'system';
-  text: string;
-  timestamp: string;
-}
-
 export interface Contact {
   id: string;
   name: string;
   lastMessage: string;
   avatar: string;
   unread: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'contact';
+  text: string;
+  timestamp: string;
+}
+
+// Authentication Types
+export enum UserPlan {
+  BASICO = 'basico',
+  PREMIUM = 'premium'
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  plano: UserPlan;
+  created_at: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export type ModulePriority = 1 | 2;
+
+export interface ModuleAccess {
+  [ViewState.DASHBOARD]: ModulePriority;
+  [ViewState.INVOICES]: ModulePriority;
+  [ViewState.TASKS]: ModulePriority;
+  [ViewState.WHATSAPP]: ModulePriority;
+  [ViewState.USERS]: ModulePriority;
+  [ViewState.COMING_SOON]: ModulePriority;
 }
