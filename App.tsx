@@ -5,6 +5,8 @@ import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { Dashboard } from './components/Dashboard';
 import { Invoices } from './components/Invoices';
+import { InvoiceSearch } from './components/InvoiceSearch';
+import { InvoiceEmitter } from './components/InvoiceEmitter';
 import { Tasks } from './components/Tasks';
 import { WhatsAppModule } from './components/WhatsAppModule';
 import { ViewState, UserPlan, ModuleAccess } from './types';
@@ -15,6 +17,8 @@ import { Construction, Lock } from 'lucide-react';
 const moduleAccess: ModuleAccess = {
   [ViewState.DASHBOARD]: 1,
   [ViewState.INVOICES]: 1,
+  [ViewState.INVOICE_EMITTER]: 1,
+  [ViewState.INVOICE_SEARCH]: 1,
   [ViewState.TASKS]: 1,
   [ViewState.WHATSAPP]: 1,
   [ViewState.USERS]: 2, // Priority 2 - Restricted for basic plan
@@ -80,12 +84,22 @@ const AppContent: React.FC = () => {
     switch (currentView) {
       case ViewState.DASHBOARD:
         return <Dashboard />;
+
       case ViewState.INVOICES:
         return <Invoices />;
+
+      case ViewState.INVOICE_SEARCH:
+        return <InvoiceSearch />;
+
+      case ViewState.INVOICE_EMITTER:
+        return <InvoiceEmitter />;
+
       case ViewState.TASKS:
         return <Tasks />;
+
       case ViewState.WHATSAPP:
         return <WhatsAppModule />;
+
       case ViewState.COMING_SOON:
       case ViewState.USERS:
       default:

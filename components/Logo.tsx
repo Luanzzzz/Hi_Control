@@ -17,13 +17,13 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', showIcon = true }) => {
 
     return (
         <div className="flex items-center gap-3">
-            {showIcon && (
-                <div className="bg-primary-600 p-2 rounded-lg">
-                    <Sparkles size={currentSize.icon} className="text-white" />
-                </div>
-            )}
+            <img
+                src="/logo_png.png"
+                alt="Logo"
+                className={`${size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-12 h-12' : 'w-10 h-10'} object-cover rounded-lg`}
+            />
             <div className={`font-bold ${currentSize.text} text-primary-600`}>
-                Hi <span className="text-slate-700 dark:text-white">Control</span>
+                <span className="text-slate-700 dark:text-white">Control</span>
             </div>
         </div>
     );

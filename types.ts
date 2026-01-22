@@ -1,6 +1,9 @@
+// View States - Navegação principal e submódulos
 export enum ViewState {
   DASHBOARD = 'DASHBOARD',
   INVOICES = 'INVOICES',
+  INVOICE_EMITTER = 'INVOICE_EMITTER',
+  INVOICE_SEARCH = 'INVOICE_SEARCH',
   TASKS = 'TASKS',
   WHATSAPP = 'WHATSAPP',
   USERS = 'USERS',
@@ -34,6 +37,7 @@ export interface User {
   name?: string;
   plano: UserPlan;
   created_at: string;
+  availableModules?: string[]; // Módulos disponíveis para o plano do usuário
 }
 
 export interface AuthState {
@@ -44,9 +48,29 @@ export interface AuthState {
 
 export type ModulePriority = 1 | 2;
 
+// Estrutura de Submódulo
+export interface SubModule {
+  id: ViewState;
+  label: string;
+  priority: ModulePriority;
+  isPriority?: boolean; // Destaque visual para módulos prioritários
+}
+
+// Estrutura de Módulo Principal
+export interface MenuItem {
+  id: ViewState;
+  label: string;
+  icon: any; // LucideIcon type
+  priority: ModulePriority;
+  subModules?: SubModule[];
+}
+
+// Configuração de acesso aos módulos
 export interface ModuleAccess {
   [ViewState.DASHBOARD]: ModulePriority;
   [ViewState.INVOICES]: ModulePriority;
+  [ViewState.INVOICE_EMITTER]: ModulePriority;
+  [ViewState.INVOICE_SEARCH]: ModulePriority;
   [ViewState.TASKS]: ModulePriority;
   [ViewState.WHATSAPP]: ModulePriority;
   [ViewState.USERS]: ModulePriority;

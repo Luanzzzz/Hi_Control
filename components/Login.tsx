@@ -26,12 +26,12 @@ export const Login: React.FC = () => {
                     <div className="text-center">
                         <div className="flex items-center justify-center gap-3 mb-2">
                             <img
-                                src="/logo-h-white.jpg"
+                                src="/logo_png.png"
                                 alt="Hi Control Logo"
-                                className="w-16 h-16 object-contain rounded-lg"
+                                className="w-16 h-16 object-cover rounded-lg"
                             />
-                            <h1 className="text-4xl font-bold text-white">
-                                Hi <span className="text-primary-500">Control</span>
+                            <h1 className="text-4xl font-bold text-primary-500">
+                                Control
                             </h1>
                         </div>
                         <p className="text-slate-400 text-sm">Sistema de Gestão Contábil</p>
