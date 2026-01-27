@@ -39,7 +39,9 @@ import {
   baixarXmlNota,
   downloadBlob,
   formatarMoeda,
-  formatarData
+  formatarData,
+  iniciarBuscaNFe,
+  verificarStatusBusca
 } from '../services/notaFiscalService';
 
 export const BuscadorNotas: React.FC = () => {
@@ -49,6 +51,59 @@ export const BuscadorNotas: React.FC = () => {
   const [erro, setErro] = useState<string | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
   const [notaSelecionada, setNotaSelecionada] = useState<NotaFiscal | null>(null);
+
+  // Estados de Polling
+  const [pollingId, setPollingId] = useState<string | null>(null);
+  const [statusBusca, setStatusBusca] = useState<string>("");
+  const [filtrosAtuais, setFiltrosAtuais] = useState<any>(null);
+
+  // Efeito para polling de status
+  React.useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (pollingId && loading) {
+      intervalId = setInterval(async () => {
+        try {
+          const job = await verificarStatusBusca(pollingId);
+
+          if (job.status === 'completed') {
+            setStatusBusca("Busca concluída! Atualizando resultados...");
+            setPollingId(null);
+
+            // Buscar resultados locais usando os filtros (agora que o sync terminou)
+            if (filtrosAtuais) {
+              const filtros = {
+                tipo_nf: filtrosAtuais.tipoNf as TipoNotaFiscal | "TODAS",
+                cnpj_emitente: filtrosAtuais.cnpjEmitente || undefined,
+                data_inicio: filtrosAtuais.dataInicio.toISOString().split('T')[0],
+                data_fim: filtrosAtuais.dataFim.toISOString().split('T')[0],
+                numero_nf: filtrosAtuais.numeroNf || undefined,
+                serie: filtrosAtuais.serie || undefined,
+                situacao: filtrosAtuais.situacao as SituacaoNota | "todas"
+              };
+              const resultados = await buscarNotasAvancado(filtros);
+              setNotas(resultados);
+              if (resultados.length === 0) {
+                setErro("Nenhuma nota encontrada após sincronização.");
+              }
+            }
+            setLoading(false);
+          } else if (job.status === 'failed') {
+            setErro(`Falha na busca SEFAZ: ${job.error || 'Erro desconhecido'}`);
+            setPollingId(null);
+            setLoading(false);
+          } else {
+            setStatusBusca(job.status === 'processing' ? 'Processando junto à SEFAZ...' : 'Aguardando início...');
+          }
+        } catch (error) {
+          console.error("Erro no polling:", error);
+          // Opcional: contar falhas e abortar? Por enquanto continua tentando.
+        }
+      }, 3000); // Poll a cada 3s
+    }
+
+    return () => clearInterval(intervalId);
+  }, [pollingId, loading, filtrosAtuais]);
 
   // React Hook Form
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<FormularioFiltros>({
@@ -98,27 +153,51 @@ export const BuscadorNotas: React.FC = () => {
     // Limpar erro anterior
     setErro(null);
     setLoading(true);
+    setPollingId(null); // Reset
+    setStatusBusca("Iniciando...");
 
     try {
-      const filtros = {
-        tipo_nf: data.tipoNf as TipoNotaFiscal | "TODAS",
-        cnpj_emitente: data.cnpjEmitente || undefined,
-        data_inicio: data.dataInicio.toISOString().split('T')[0],
-        data_fim: data.dataFim.toISOString().split('T')[0],
-        numero_nf: data.numeroNf || undefined,
-        serie: data.serie || undefined,
-        situacao: data.situacao as SituacaoNota | "todas"
-      };
+      // 1. Tentar Iniciar Busca na SEFAZ (Async)
+      // Nota: Precisa de CNPJ. Se não informado no filtro, usamos o filtro?
+      // O endpoint /iniciar requer CNPJ.
+      // Se user não preencheu CNPJ Emitente, não podemos buscar na distribuicao (que é pra UM cnpj)
+      // A MENOS que backend pegue do usuário. Mas front deve mandar.
+      // Vamos tentar mandar o que tiver.
 
-      const resultados = await buscarNotasAvancado(filtros);
-      setNotas(resultados);
+      const cnpjParaBusca = data.cnpjEmitente;
 
-      if (resultados.length === 0) {
-        setErro("Nenhuma nota fiscal encontrada com os filtros selecionados");
+      if (cnpjParaBusca) {
+        setStatusBusca("Solicitando busca à SEFAZ...");
+        const job = await iniciarBuscaNFe(cnpjParaBusca);
+
+        // Sucesso no start -> Iniciar Polling
+        setPollingId(job.job_id);
+        setFiltrosAtuais(data);
+        // O useEffect cuidará do resto
+      } else {
+        // Sem CNPJ específico, faz apenas busca local
+        setStatusBusca("Buscando localmente...");
+        const filtros = {
+          tipo_nf: data.tipoNf as TipoNotaFiscal | "TODAS",
+          cnpj_emitente: undefined,
+          data_inicio: data.dataInicio.toISOString().split('T')[0],
+          data_fim: data.dataFim.toISOString().split('T')[0],
+          numero_nf: data.numeroNf || undefined,
+          serie: data.serie || undefined,
+          situacao: data.situacao as SituacaoNota | "todas"
+        };
+
+        const resultados = await buscarNotasAvancado(filtros);
+        setNotas(resultados);
+
+        if (resultados.length === 0) {
+          setErro("Nenhuma nota encontrada (Busca Local - CNPJ não informado para busca SEFAZ)");
+        }
+        setLoading(false);
       }
+
     } catch (error) {
-      setErro(error instanceof Error ? error.message : "Erro ao buscar notas fiscais");
-    } finally {
+      setErro(error instanceof Error ? error.message : "Erro ao iniciar busca");
       setLoading(false);
     }
   };
@@ -316,7 +395,7 @@ export const BuscadorNotas: React.FC = () => {
               {loading ? (
                 <>
                   <RefreshCw size={18} className="animate-spin" />
-                  Buscando...
+                  {statusBusca || "Buscando..."}
                 </>
               ) : (
                 <>

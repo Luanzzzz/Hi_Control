@@ -11,6 +11,8 @@ import { Tasks } from './components/Tasks';
 import { WhatsAppModule } from './components/WhatsAppModule';
 import { ViewState, UserPlan, ModuleAccess } from './types';
 import { Construction, Lock } from 'lucide-react';
+import { Clients } from './components/Clients';
+import { Configuracoes } from './components/Configuracoes';
 
 
 // Define module access levels
@@ -22,6 +24,7 @@ const moduleAccess: ModuleAccess = {
   [ViewState.TASKS]: 1,
   [ViewState.WHATSAPP]: 1,
   [ViewState.USERS]: 2, // Priority 2 - Restricted for basic plan
+  [ViewState.SETTINGS]: 1,
   [ViewState.COMING_SOON]: 2, // Priority 2
 };
 
@@ -100,8 +103,13 @@ const AppContent: React.FC = () => {
       case ViewState.WHATSAPP:
         return <WhatsAppModule />;
 
-      case ViewState.COMING_SOON:
       case ViewState.USERS:
+        return <Clients />;
+
+      case ViewState.SETTINGS:
+        return <Configuracoes />;
+
+      case ViewState.COMING_SOON:
       default:
         return (
           <div className="h-full flex flex-col items-center justify-center p-8 text-center">

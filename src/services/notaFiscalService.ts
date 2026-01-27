@@ -9,7 +9,9 @@ import type {
   NotaFiscalDetalhada,
   FiltrosBusca,
   FiltrosBuscaGeral,
-  EstatisticasNotas
+  EstatisticasNotas,
+  JobBusca,
+  PropsInicioBusca
 } from '../types/notaFiscal';
 
 /**
@@ -167,4 +169,42 @@ export const formatarData = (dataISO: string): string => {
  */
 export const formatarDataHora = (dataISO: string): string => {
   return new Date(dataISO).toLocaleString('pt-BR');
+};
+
+/**
+ * Inicia a busca de notas em background
+ */
+export const iniciarBuscaNFe = async (
+  cnpj: string,
+  nsuInicial?: number
+): Promise<PropsInicioBusca> => {
+  try {
+    const response = await api.post<PropsInicioBusca>(
+      '/api/v1/nfe/buscar/iniciar',
+      { cnpj, nsu_inicial: nsuInicial }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao iniciar busca';
+      throw new Error(message);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Verifica status do Job de busca
+ */
+export const verificarStatusBusca = async (jobId: string): Promise<JobBusca> => {
+  try {
+    const response = await api.get<JobBusca>(`/api/v1/nfe/buscar/status/${jobId}`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao verificar status';
+      throw new Error(message);
+    }
+    throw error;
+  }
 };

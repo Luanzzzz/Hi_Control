@@ -384,3 +384,26 @@ export const CORES_SITUACAO: Record<SituacaoNota, string> = {
   denegada: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   processando: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
 };
+
+export interface JobBusca {
+  id: string;
+  user_id: string;
+  type: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  result?: {
+    total_notas: number;
+    max_nsu: number;
+    success: boolean;
+    mensagem: string;
+    notas_resumo: Array<{ chave: string, valor: number }>;
+  };
+  error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PropsInicioBusca {
+  job_id: string;
+  status: string;
+  message: string;
+}

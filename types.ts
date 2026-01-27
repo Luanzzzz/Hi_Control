@@ -7,6 +7,7 @@ export enum ViewState {
   TASKS = 'TASKS',
   WHATSAPP = 'WHATSAPP',
   USERS = 'USERS',
+  SETTINGS = 'SETTINGS',
   COMING_SOON = 'COMING_SOON'
 }
 
@@ -74,5 +75,6 @@ export interface ModuleAccess {
   [ViewState.TASKS]: ModulePriority;
   [ViewState.WHATSAPP]: ModulePriority;
   [ViewState.USERS]: ModulePriority;
+  [ViewState.SETTINGS]: ModulePriority;
   [ViewState.COMING_SOON]: ModulePriority;
 }

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Menu, Moon, Sun, Bell, Search, Sparkles, User, LogOut, Crown } from 'lucide-react';
+import { Menu, Moon, Sun, Bell, Search, Sparkles, User, LogOut, Crown, Settings } from 'lucide-react';
 import { generateAIResponse } from '../services/geminiService';
 import { useAuth } from '../contexts/AuthContext';
 import { UserPlan } from '../types';
+import { PerfilContadorModal } from './PerfilContadorModal';
 
 interface TopBarProps {
   toggleSidebar: () => void;
@@ -16,6 +17,7 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
   const [aiResponse, setAiResponse] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   const { user, signOut } = useAuth();
 
@@ -144,7 +146,17 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
                 </div>
               </div>
 
-              <div className="p-2">
+              <div className="p-2 space-y-1">
+                <button
+                  onClick={() => {
+                    setIsConfigModalOpen(true);
+                    setIsProfileOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <Settings size={18} />
+                  <span className="text-sm font-medium">Configurações da Contabilidade</span>
+                </button>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
@@ -157,6 +169,12 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
           )}
         </div>
       </div>
+
+      {/* Perfil Contador Modal */}
+      <PerfilContadorModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+      />
     </header>
   );
 };

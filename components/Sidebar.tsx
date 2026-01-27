@@ -16,7 +16,8 @@ import {
   Lock,
   Search,
   FileEdit,
-  Star
+  Star,
+  Settings
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -75,6 +76,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       id: ViewState.USERS,
       label: 'Clientes',
       icon: Users,
+      priority: 1
+    },
+    {
+      id: ViewState.SETTINGS,
+      label: 'Configurações',
+      icon: Settings,
       priority: 1
     }
   ];
@@ -150,10 +157,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           onClick={handleClick}
           disabled={!hasAccess}
           className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
-              ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-              : hasAccess
-                ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-                : 'text-gray-400 dark:text-gray-600 opacity-60 cursor-not-allowed'
+            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+            : hasAccess
+              ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+              : 'text-gray-400 dark:text-gray-600 opacity-60 cursor-not-allowed'
             }`}
         >
           <div className="flex items-center gap-3">
@@ -197,10 +204,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         onClick={handleClick}
         disabled={!hasAccess}
         className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${isActive
-            ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-            : hasAccess
-              ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
-              : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
+          ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+          : hasAccess
+            ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
+            : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
           }`}
       >
         <div className="flex items-center gap-2">
@@ -236,8 +243,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         onClick={handleClick}
         disabled={!hasAccess}
         className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${hasAccess
-            ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-            : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
+          ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+          : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
           }`}
       >
         <div className="flex items-center gap-3">
@@ -274,8 +281,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           <div className="px-6 py-3 bg-primary-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
             <p className="text-xs text-gray-500 dark:text-gray-400">Plano Atual</p>
             <p className={`text-sm font-bold ${user.plano === UserPlan.PREMIUM
-                ? 'text-primary-700 dark:text-primary-400'
-                : 'text-gray-700 dark:text-gray-300'
+              ? 'text-primary-700 dark:text-primary-400'
+              : 'text-gray-700 dark:text-gray-300'
               }`}>
               {user.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico'}
             </p>
