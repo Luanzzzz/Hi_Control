@@ -9,137 +9,93 @@ import {
   RefreshCw,
   Star,
   Building2,
-  Hash
+  Hash,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { buscarNotasGeral, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
+import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
+import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 
-// Tipo de Nota Fiscal
-enum InvoiceType {
-  NFE = 'NFE',
-  NFCE = 'NFCE',
-  NFSE = 'NFSE',
-  CTE = 'CTE'
-}
-
-// Status da Nota Fiscal
-enum InvoiceStatus {
-  AUTORIZADA = 'Autorizada',
-  CANCELADA = 'Cancelada',
-  DENEGADA = 'Denegada',
-  PENDENTE = 'Pendente'
-}
-
-// Interface de Nota Fiscal
-interface Invoice {
-  id: string;
-  numero: string;
-  serie: string;
-  chaveAcesso: string;
-  tipo: InvoiceType;
-  dataEmissao: string;
-  cnpjEmissor: string;
-  nomeEmissor: string;
-  valor: number;
-  status: InvoiceStatus;
-}
 
 export const InvoiceSearch: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<InvoiceType | 'TODAS'>('TODAS');
-  const [selectedStatus, setSelectedStatus] = useState<InvoiceStatus | 'TODOS'>('TODOS');
+  const [selectedType, setSelectedType] = useState<TipoNotaFiscal | 'TODAS'>('TODAS');
+  const [selectedStatus, setSelectedStatus] = useState<SituacaoNota | 'todas'>('todas');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Dados mockados para demonstração
-  const mockInvoices: Invoice[] = [
-    {
-      id: '1',
-      numero: '000123',
-      serie: '1',
-      chaveAcesso: '35240112345678000199550010001234561234567890',
-      tipo: InvoiceType.NFE,
-      dataEmissao: '2024-01-20',
-      cnpjEmissor: '12.345.678/0001-99',
-      nomeEmissor: 'Empresa Tech Solutions Ltda',
-      valor: 5400.00,
-      status: InvoiceStatus.AUTORIZADA
-    },
-    {
-      id: '2',
-      numero: '000124',
-      serie: '1',
-      chaveAcesso: '35240112345678000199550010001234671234567891',
-      tipo: InvoiceType.NFCE,
-      dataEmissao: '2024-01-21',
-      cnpjEmissor: '98.765.432/0001-11',
-      nomeEmissor: 'Mercado Silva & Cia',
-      valor: 2150.00,
-      status: InvoiceStatus.AUTORIZADA
-    },
-    {
-      id: '3',
-      numero: '000125',
-      serie: '2',
-      chaveAcesso: '35240112345678000199550020001234781234567892',
-      tipo: InvoiceType.NFE,
-      dataEmissao: '2024-01-22',
-      cnpjEmissor: '11.222.333/0001-44',
-      nomeEmissor: 'Consultório Médico Dra. Ana',
-      valor: 8900.00,
-      status: InvoiceStatus.CANCELADA
+  // Estados da API
+  const [invoices, setInvoices] = useState<NotaFiscal[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
+
+  // Validar período de busca (máximo 90 dias)
+  const validarPeriodo = (): string | null => {
+    if (dateFrom && dateTo) {
+      const inicio = new Date(dateFrom);
+      const fim = new Date(dateTo);
+      const diffTime = Math.abs(fim.getTime() - inicio.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays > 90) {
+        return `O período de busca não pode exceder 90 dias. Período atual: ${diffDays} dias.`;
+      }
     }
-  ];
+    return null;
+  };
 
-  const [invoices] = useState<Invoice[]>(mockInvoices);
+  // Buscar notas fiscais
+  const handleSearch = async () => {
+    setIsLoading(true);
+    setError(null);
 
-  // Filtrar notas
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch =
-      invoice.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.chaveAcesso.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.nomeEmissor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.cnpjEmissor.includes(searchTerm);
+    try {
+      // Validar período se ambas as datas estiverem preenchidas
+      const erroValidacao = validarPeriodo();
+      if (erroValidacao) {
+        setError(erroValidacao);
+        setIsLoading(false);
+        return;
+      }
 
-    const matchesType = selectedType === 'TODAS' || invoice.tipo === selectedType;
-    const matchesStatus = selectedStatus === 'TODOS' || invoice.status === selectedStatus;
+      const resultado = await buscarNotasGeral({
+        search_term: searchTerm || undefined,
+        tipo_nf: selectedType === 'TODAS' ? undefined : selectedType,
+        situacao: selectedStatus === 'todas' ? undefined : selectedStatus,
+        data_inicio: dateFrom || undefined,
+        data_fim: dateTo || undefined,
+        limit: 100,
+      });
 
-    const matchesDate = (!dateFrom || invoice.dataEmissao >= dateFrom) &&
-                        (!dateTo || invoice.dataEmissao <= dateTo);
-
-    return matchesSearch && matchesType && matchesStatus && matchesDate;
-  });
-
-  // Obter cor do status
-  const getStatusColor = (status: InvoiceStatus): string => {
-    switch (status) {
-      case InvoiceStatus.AUTORIZADA:
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case InvoiceStatus.CANCELADA:
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      case InvoiceStatus.DENEGADA:
-        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
-      case InvoiceStatus.PENDENTE:
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-      default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
+      setInvoices(resultado);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao buscar notas fiscais. Tente novamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Obter cor do tipo
-  const getTypeColor = (type: InvoiceType): string => {
-    switch (type) {
-      case InvoiceType.NFE:
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case InvoiceType.NFCE:
-        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
-      case InvoiceType.NFSE:
-        return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400';
-      case InvoiceType.CTE:
-        return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400';
-      default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
+  // Download de XML
+  const handleDownloadXml = async (chaveAcesso: string) => {
+    if (!chaveAcesso) {
+      setError('Chave de acesso não disponível para esta nota.');
+      return;
+    }
+
+    setDownloadingXml(chaveAcesso);
+    try {
+      const blob = await baixarXmlNota(chaveAcesso);
+      downloadBlob(blob, `NFe${chaveAcesso}.xml`);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao baixar XML. Tente novamente.');
+    } finally {
+      setDownloadingXml(null);
     }
   };
+
 
   // Formatar valor
   const formatCurrency = (value: number): string => {
@@ -158,9 +114,10 @@ export const InvoiceSearch: React.FC = () => {
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedType('TODAS');
-    setSelectedStatus('TODOS');
+    setSelectedStatus('todas');
     setDateFrom('');
     setDateTo('');
+    setError(null);
   };
 
   return (
@@ -174,16 +131,23 @@ export const InvoiceSearch: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               Buscador de Notas Fiscais
-              <Star size={20} className="text-yellow-500 fill-yellow-500" />
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Consulte e gerencie suas notas fiscais eletrônicas
             </p>
           </div>
         </div>
-        <button className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
-          <RefreshCw size={16} />
-          Sincronizar
+        <button
+          onClick={handleSearch}
+          disabled={isLoading}
+          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          {isLoading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <RefreshCw size={16} />
+          )}
+          {isLoading ? 'Buscando...' : 'Buscar'}
         </button>
       </div>
 
@@ -203,11 +167,10 @@ export const InvoiceSearch: React.FC = () => {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              showFilters
+            className={`px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 ${showFilters
                 ? 'bg-primary-600 text-white'
                 : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-            }`}
+              }`}
           >
             <Filter size={18} />
             Filtros
@@ -223,14 +186,14 @@ export const InvoiceSearch: React.FC = () => {
               </label>
               <select
                 value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value as InvoiceType | 'TODAS')}
+                onChange={(e) => setSelectedType(e.target.value as TipoNotaFiscal | 'TODAS')}
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
               >
                 <option value="TODAS">Todas</option>
-                <option value={InvoiceType.NFE}>NF-e</option>
-                <option value={InvoiceType.NFCE}>NFC-e</option>
-                <option value={InvoiceType.NFSE}>NFS-e</option>
-                <option value={InvoiceType.CTE}>CT-e</option>
+                <option value="NFe">NF-e</option>
+                <option value="NFCe">NFC-e</option>
+                <option value="NFSe">NFS-e</option>
+                <option value="CTe">CT-e</option>
               </select>
             </div>
 
@@ -240,14 +203,14 @@ export const InvoiceSearch: React.FC = () => {
               </label>
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as InvoiceStatus | 'TODOS')}
+                onChange={(e) => setSelectedStatus(e.target.value as SituacaoNota | 'todas')}
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
               >
-                <option value="TODOS">Todos</option>
-                <option value={InvoiceStatus.AUTORIZADA}>Autorizada</option>
-                <option value={InvoiceStatus.CANCELADA}>Cancelada</option>
-                <option value={InvoiceStatus.DENEGADA}>Denegada</option>
-                <option value={InvoiceStatus.PENDENTE}>Pendente</option>
+                <option value="todas">Todas</option>
+                <option value="autorizada">Autorizada</option>
+                <option value="cancelada">Cancelada</option>
+                <option value="denegada">Denegada</option>
+                <option value="processando">Processando</option>
               </select>
             </div>
 
@@ -293,15 +256,27 @@ export const InvoiceSearch: React.FC = () => {
         )}
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">Erro</p>
+            <p className="text-sm text-red-700 dark:text-red-400 mt-1">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Results */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 dark:text-white">
-            Resultados ({filteredInvoices.length})
+            Resultados ({invoices.length})
           </h2>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-500 dark:text-gray-400">
               <tr>
@@ -315,7 +290,16 @@ export const InvoiceSearch: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-              {filteredInvoices.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <Loader2 size={48} className="mx-auto text-primary-500 mb-3 animate-spin" />
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Buscando notas fiscais...
+                    </p>
+                  </td>
+                </tr>
+              ) : invoices.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <FileText size={48} className="mx-auto text-gray-400 mb-3" />
@@ -325,39 +309,39 @@ export const InvoiceSearch: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((invoice) => (
+                invoices.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getTypeColor(invoice.tipo)}`}>
-                        {invoice.tipo}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[invoice.tipo_nf]}`}>
+                        {invoice.tipo_nf}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
                       <div className="flex items-center gap-2">
                         <Hash size={14} className="text-gray-400" />
-                        {invoice.numero}/{invoice.serie}
+                        {invoice.numero_nf}/{invoice.serie}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>
                         <p className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
                           <Building2 size={14} className="text-gray-400" />
-                          {invoice.nomeEmissor}
+                          {invoice.nome_emitente || 'N/A'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          CNPJ: {invoice.cnpjEmissor}
+                          CNPJ: {invoice.cnpj_emitente}
                         </p>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
-                      {formatCurrency(invoice.valor)}
+                      {formatCurrency(invoice.valor_total)}
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
-                      {formatDate(invoice.dataEmissao)}
+                      {formatDate(invoice.data_emissao)}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                        {invoice.status}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[invoice.situacao]}`}>
+                        {invoice.situacao.charAt(0).toUpperCase() + invoice.situacao.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -365,14 +349,21 @@ export const InvoiceSearch: React.FC = () => {
                         <button
                           className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors"
                           title="Visualizar"
+                          onClick={() => {/* TODO: Abrir modal de detalhes */ }}
                         >
                           <Eye size={18} className="text-gray-600 dark:text-gray-400" />
                         </button>
                         <button
-                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors"
+                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Download XML"
+                          onClick={() => invoice.chave_acesso && handleDownloadXml(invoice.chave_acesso)}
+                          disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
                         >
-                          <Download size={18} className="text-gray-600 dark:text-gray-400" />
+                          {downloadingXml === invoice.chave_acesso ? (
+                            <Loader2 size={18} className="text-gray-600 dark:text-gray-400 animate-spin" />
+                          ) : (
+                            <Download size={18} className="text-gray-600 dark:text-gray-400" />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -381,6 +372,105 @@ export const InvoiceSearch: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="block md:hidden">
+          {isLoading ? (
+            <div className="p-12 text-center">
+              <Loader2 size={48} className="mx-auto text-primary-500 mb-3 animate-spin" />
+              <p className="text-gray-500 dark:text-gray-400">
+                Buscando notas fiscais...
+              </p>
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="p-12 text-center">
+              <FileText size={48} className="mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">
+                Nenhuma nota fiscal encontrada
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200 dark:divide-slate-700">
+              {invoices.map((invoice) => (
+                <div key={invoice.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                  {/* Header: Número e Tipo */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Hash size={16} className="text-gray-400" />
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {invoice.numero_nf}/{invoice.serie}
+                      </span>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[invoice.tipo_nf]}`}>
+                      {invoice.tipo_nf}
+                    </span>
+                  </div>
+
+                  {/* Emissor */}
+                  <div className="mb-3">
+                    <div className="flex items-start gap-2">
+                      <Building2 size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {invoice.nome_emitente || 'N/A'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          CNPJ: {invoice.cnpj_emitente}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Valor e Data */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Valor</p>
+                      <p className="text-lg font-bold text-primary-600 dark:text-primary-400">
+                        {formatCurrency(invoice.valor_total)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Emissão</p>
+                      <p className="text-sm text-gray-900 dark:text-white">
+                        {formatDate(invoice.data_emissao)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="mb-3">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[invoice.situacao]}`}>
+                      {invoice.situacao.charAt(0).toUpperCase() + invoice.situacao.slice(1)}
+                    </span>
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-slate-700">
+                    <button
+                      className="flex-1 py-2 px-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      onClick={() => {/* TODO: Abrir modal de detalhes */ }}
+                    >
+                      <Eye size={16} />
+                      Visualizar
+                    </button>
+                    <button
+                      className="flex-1 py-2 px-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-white"
+                      onClick={() => invoice.chave_acesso && handleDownloadXml(invoice.chave_acesso)}
+                      disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
+                    >
+                      {downloadingXml === invoice.chave_acesso ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Download size={16} />
+                      )}
+                      {downloadingXml === invoice.chave_acesso ? 'Baixando...' : 'Download XML'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -49,7 +49,9 @@ export const Login: React.FC = () => {
                     {error && (
                         <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
                             <AlertCircle className="text-red-500 shrink-0" size={20} />
-                            <p className="text-red-400 text-sm">{error}</p>
+                            <p className="text-red-400 text-sm">
+                                {String(error || 'Ocorreu um erro inesperado.')}
+                            </p>
                         </div>
                     )}
 
@@ -114,16 +116,6 @@ export const Login: React.FC = () => {
                             )}
                         </button>
                     </form>
-
-                    {/* Contas Demo */}
-                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-                        <p className="text-slate-400 text-xs mb-2 font-medium">Contas para teste:</p>
-                        <div className="space-y-1 text-xs text-slate-500">
-                            <p><span className="text-primary-400">Admin:</span> admin@hicontrol.com / admin123</p>
-                            <p><span className="text-primary-400">Premium:</span> premium@hicontrol.com / premium123</p>
-                            <p><span className="text-primary-400">Básico:</span> basico@hicontrol.com / basico123</p>
-                        </div>
-                    </div>
 
                     {/* Rodapé */}
                     <div className="text-center">

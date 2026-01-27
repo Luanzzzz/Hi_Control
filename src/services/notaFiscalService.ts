@@ -1,7 +1,9 @@
 /**
  * Serviço de API para Notas Fiscais
+ * Usa a instância centralizada de API com interceptores JWT
  */
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
+import api from './api';
 import type {
   NotaFiscal,
   NotaFiscalDetalhada,
@@ -9,42 +11,6 @@ import type {
   FiltrosBuscaGeral,
   EstatisticasNotas
 } from '../types/notaFiscal';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-// Cliente axios configurado
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
-
-// Interceptor para adicionar token JWT
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Interceptor para tratar erros de autenticação
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expirado ou inválido - redirecionar para login
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
 
 /**
  * Busca avançada de notas fiscais
@@ -202,5 +168,3 @@ export const formatarData = (dataISO: string): string => {
 export const formatarDataHora = (dataISO: string): string => {
   return new Date(dataISO).toLocaleString('pt-BR');
 };
-
-export default api;

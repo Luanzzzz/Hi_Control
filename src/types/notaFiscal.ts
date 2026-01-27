@@ -41,6 +41,274 @@ export interface NotaFiscalDetalhada extends NotaFiscal {
   tags?: string[];
 }
 
+// ============================================
+// TIPOS COMPLETOS PARA EMISSÃO DE NF-E
+// ============================================
+
+export type TipoAmbiente = "1" | "2"; // 1=Produção, 2=Homologação
+export type ModeloNFe = "55" | "65"; // 55=NF-e, 65=NFC-e
+export type ModalidadeFrete = 0 | 1 | 2 | 9; // 0=CIF, 1=FOB, 2=Terceiros, 9=Sem frete
+
+/**
+ * Impostos do item (ICMS)
+ */
+export interface ICMSItem {
+  cst: string;
+  origem: string;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+  base_calculo_st?: number;
+  aliquota_st?: number;
+  valor_st?: number;
+}
+
+/**
+ * Impostos do item (IPI)
+ */
+export interface IPIItem {
+  cst: string;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+}
+
+/**
+ * Impostos do item (PIS)
+ */
+export interface PISItem {
+  cst: string;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+}
+
+/**
+ * Impostos do item (COFINS)
+ */
+export interface COFINSItem {
+  cst: string;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+}
+
+/**
+ * Conjunto de impostos do item
+ */
+export interface ImpostosItem {
+  icms: ICMSItem;
+  ipi?: IPIItem;
+  pis: PISItem;
+  cofins: COFINSItem;
+}
+
+/**
+ * Item de NF-e (produto ou serviço)
+ */
+export interface ItemNFe {
+  numero_item: number;
+  codigo_produto: string;
+  ean?: string;
+  descricao: string;
+  ncm: string; // 8 dígitos
+  cest?: string;
+  cfop: string; // 4 dígitos
+  unidade_comercial: string;
+  quantidade_comercial: number;
+  valor_unitario_comercial: number;
+  valor_total_bruto: number;
+  valor_desconto?: number;
+  ean_tributavel?: string;
+  unidade_tributavel?: string;
+  quantidade_tributavel?: number;
+  valor_unitario_tributavel?: number;
+  valor_frete?: number;
+  valor_seguro?: number;
+  valor_outras_despesas?: number;
+  impostos: ImpostosItem;
+}
+
+/**
+ * Transportadora
+ */
+export interface TransportadoraNFe {
+  cnpj_cpf?: string;
+  razao_social?: string;
+  inscricao_estadual?: string;
+  endereco?: string;
+  municipio?: string;
+  uf?: string;
+}
+
+/**
+ * Veículo de transporte
+ */
+export interface VeiculoTransporte {
+  placa?: string;
+  uf?: string;
+  rntc?: string; // Registro Nacional de Transportador de Carga
+}
+
+/**
+ * Volumes transportados
+ */
+export interface VolumesTransporte {
+  quantidade?: number;
+  especie?: string;
+  marca?: string;
+  numeracao?: string;
+  peso_bruto?: number;
+  peso_liquido?: number;
+}
+
+/**
+ * Informações de transporte
+ */
+export interface TransporteNFe {
+  modalidade_frete: ModalidadeFrete;
+  transportadora?: TransportadoraNFe;
+  veiculo?: VeiculoTransporte;
+  volumes?: VolumesTransporte;
+}
+
+/**
+ * Duplicata (parcela de pagamento)
+ */
+export interface DuplicataNFe {
+  numero_duplicata: string;
+  data_vencimento: string; // ISO date
+  valor: number;
+}
+
+/**
+ * Cobrança
+ */
+export interface CobrancaNFe {
+  duplicatas?: DuplicataNFe[];
+}
+
+/**
+ * Destinatário da NF-e
+ */
+export interface DestinatarioNFe {
+  cnpj?: string;
+  cpf?: string;
+  razao_social: string;
+  inscricao_estadual?: string;
+  indicador_inscricao_estadual: "1" | "2" | "9"; // 1=Contribuinte, 2=Isento, 9=Não contribuinte
+  endereco_logradouro: string;
+  endereco_numero: string;
+  endereco_complemento?: string;
+  endereco_bairro: string;
+  codigo_municipio: string; // Código IBGE
+  municipio: string;
+  uf: string;
+  cep: string;
+  codigo_pais?: string;
+  pais?: string;
+  telefone?: string;
+  email?: string;
+}
+
+/**
+ * Rejeição da SEFAZ
+ */
+export interface SefazRejeicao {
+  codigo: string;
+  motivo: string;
+  correcao?: string;
+  campo?: string;
+}
+
+/**
+ * Resposta da SEFAZ
+ */
+export interface SefazResponse {
+  status_codigo: string;
+  status_descricao: string;
+  protocolo?: string;
+  chave_acesso?: string;
+  autorizado: boolean;
+  rejeitado: boolean;
+  rejeicoes: SefazRejeicao[];
+}
+
+/**
+ * Dados completos para criação de NF-e
+ */
+export interface NotaFiscalCompletaCreate {
+  empresa_id: string;
+  numero_nf: string;
+  serie: string;
+  modelo: ModeloNFe;
+  ambiente: TipoAmbiente;
+  destinatario: DestinatarioNFe;
+  itens: ItemNFe[];
+  transporte?: TransporteNFe;
+  cobranca?: CobrancaNFe;
+  informacoes_complementares?: string;
+  informacoes_fisco?: string;
+}
+
+/**
+ * Resposta completa da autorização de NF-e
+ */
+export interface NotaFiscalCompletaResponse {
+  id: string;
+  chave_acesso: string;
+  numero_nf: string;
+  serie: string;
+  modelo: ModeloNFe;
+  situacao: SituacaoNota;
+  protocolo?: string;
+  data_autorizacao: string;
+  valor_total: number;
+  itens: ItemNFe[];
+  transporte?: TransporteNFe;
+  cobranca?: CobrancaNFe;
+  destinatario: DestinatarioNFe;
+  sefaz_response: SefazResponse;
+}
+
+/**
+ * Request para upload de certificado digital
+ */
+export interface CertificadoUploadRequest {
+  certificado_base64: string;
+  senha: string;
+}
+
+/**
+ * Response do upload de certificado
+ */
+export interface CertificadoUploadResponse {
+  mensagem: string;
+  validade: string; // ISO date
+  dias_restantes: number;
+  titular: string;
+  emissor: string;
+  requer_atencao: boolean;
+}
+
+/**
+ * Status do certificado digital
+ */
+export type StatusCertificado = "valido" | "expirando_em_breve" | "expirado" | "ausente";
+
+/**
+ * Response do status do certificado
+ */
+export interface CertificadoStatusResponse {
+  validade: string | null;
+  dias_restantes: number | null;
+  status: StatusCertificado;
+  requer_atencao: boolean;
+  alerta: string;
+  titular?: string | null;
+  emissor?: string | null;
+}
+
 export interface FiltrosBusca {
   tipo_nf?: TipoNotaFiscal | "TODAS";
   cnpj_emitente?: string;

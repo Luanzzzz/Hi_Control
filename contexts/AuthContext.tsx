@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState, UserPlan } from '../types';
+import api, { saveTokens, clearTokens } from '../src/services/api';
 
 interface AuthContextType extends AuthState {
     signIn: (email: string, password: string) => Promise<void>;
@@ -31,77 +32,119 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check for existing session on mount
     useEffect(() => {
         const storedUser = localStorage.getItem('hi_control_user');
-        if (storedUser) {
+        const accessToken = localStorage.getItem('access_token');
+
+        // Validar AMBOS juntos - token e usuário devem existir
+        if (storedUser && accessToken) {
             try {
                 const user = JSON.parse(storedUser);
                 setAuthState({ user, loading: false, error: null });
             } catch (error) {
-                localStorage.removeItem('hi_control_user');
+                // Erro ao parsear usuário - limpar tudo
+                clearTokens();
                 setAuthState({ user: null, loading: false, error: null });
             }
         } else {
+            // Token ou usuário ausente - limpar tudo e pedir login
+            clearTokens();
             setAuthState({ user: null, loading: false, error: null });
         }
+
+        // Listener para evento de sessão expirada (disparado pelo interceptor)
+        const handleSessionExpired = () => {
+            clearTokens();
+            setAuthState({
+                user: null,
+                loading: false,
+                error: 'Sessão expirada. Faça login novamente.'
+            });
+        };
+
+        window.addEventListener('auth:session-expired', handleSessionExpired);
+
+        // Cleanup do listener ao desmontar
+        return () => {
+            window.removeEventListener('auth:session-expired', handleSessionExpired);
+        };
     }, []);
 
     const signIn = async (email: string, password: string): Promise<void> => {
         setAuthState(prev => ({ ...prev, loading: true, error: null }));
 
-        // Mock authentication - simulate API call
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                // Mock users for demonstration
-                const mockUsers: { [key: string]: { password: string; user: User } } = {
-                    'admin@hicontrol.com': {
-                        password: 'admin123',
-                        user: {
-                            id: '1',
-                            email: 'admin@hicontrol.com',
-                            name: 'Administrador',
-                            plano: UserPlan.PREMIUM,
-                            created_at: new Date().toISOString(),
-                        },
-                    },
-                    'premium@hicontrol.com': {
-                        password: 'premium123',
-                        user: {
-                            id: '2',
-                            email: 'premium@hicontrol.com',
-                            name: 'Usuário Premium',
-                            plano: UserPlan.PREMIUM,
-                            created_at: new Date().toISOString(),
-                        },
-                    },
-                    'basico@hicontrol.com': {
-                        password: 'basico123',
-                        user: {
-                            id: '3',
-                            email: 'basico@hicontrol.com',
-                            name: 'Usuário Básico',
-                            plano: UserPlan.BASICO,
-                            created_at: new Date().toISOString(),
-                        },
-                    },
-                };
+        try {
+            // 1. Fazer login no backend - POST /api/v1/auth/login
+            const params = new URLSearchParams();
+            params.append('username', email);
+            params.append('password', password);
 
-                const userRecord = mockUsers[email];
+            const loginResponse = await api.post('/api/v1/auth/login', params, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
 
-                if (userRecord && userRecord.password === password) {
-                    const user = userRecord.user;
-                    localStorage.setItem('hi_control_user', JSON.stringify(user));
-                    setAuthState({ user, loading: false, error: null });
-                    resolve();
-                } else {
-                    const error = 'Email ou senha inválidos';
-                    setAuthState({ user: null, loading: false, error });
-                    reject(new Error(error));
+            const { access_token, refresh_token } = loginResponse.data;
+
+            // 2. Salvar tokens no localStorage
+            saveTokens(access_token, refresh_token);
+
+            // 3. Buscar dados do usuário - GET /api/v1/auth/me
+            const userResponse = await api.get('/api/v1/auth/me');
+            const userData = userResponse.data;
+
+            // 4. Mapear plano do backend para frontend
+            // Backend: "basico", "profissional", "enterprise"
+            // Frontend: UserPlan.BASICO ou UserPlan.PREMIUM
+            let userPlan: UserPlan = UserPlan.BASICO;
+            if (userData.plano_nome) {
+                const planoNormalizado = userData.plano_nome.toLowerCase();
+                if (planoNormalizado.includes('profissional') ||
+                    planoNormalizado.includes('premium') ||
+                    planoNormalizado.includes('enterprise')) {
+                    userPlan = UserPlan.PREMIUM;
                 }
-            }, 1000); // Simulate network delay
-        });
+            }
+
+            // 5. Criar objeto User compatível com o frontend
+            const user: User = {
+                id: userData.id,
+                email: userData.email,
+                name: userData.nome_completo || userData.email,
+                plano: userPlan,
+                created_at: userData.created_at || new Date().toISOString(),
+                availableModules: userData.modulos_disponiveis || [],
+            };
+
+            // 6. Salvar usuário no localStorage e state
+            localStorage.setItem('hi_control_user', JSON.stringify(user));
+            setAuthState({ user, loading: false, error: null });
+
+        } catch (error: any) {
+            // BLINDAGEM DE ERRO - Garantir que errorMessage seja SEMPRE string
+            const detail = error.response?.data?.detail;
+            let errorMessage = 'Erro ao fazer login.';
+
+            if (typeof detail === 'string') {
+                errorMessage = detail;
+            } else if (Array.isArray(detail)) {
+                // Erro 422 do FastAPI vem como array: [{msg: '...', ...}]
+                errorMessage = detail[0]?.msg || 'Dados de login inválidos.';
+            } else if (detail && typeof detail === 'object') {
+                errorMessage = (detail as any).msg || 'Erro na estrutura dos dados.';
+            } else if (error.response?.status === 401) {
+                errorMessage = 'Email ou senha incorretos.';
+            } else if (error.response?.status === 403) {
+                errorMessage = 'Usuário inativo. Contate o suporte.';
+            }
+
+            // Limpar tokens em caso de erro
+            clearTokens();
+            setAuthState({ user: null, loading: false, error: errorMessage });
+            throw new Error(errorMessage);
+        }
     };
 
     const signOut = () => {
-        localStorage.removeItem('hi_control_user');
+        // Limpar todos os tokens e dados do usuário
+        clearTokens();
         setAuthState({ user: null, loading: false, error: null });
     };
 

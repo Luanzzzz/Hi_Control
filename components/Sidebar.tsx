@@ -131,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     const hasSubModules = item.subModules && item.subModules.length > 0;
 
     const isActive = currentView === item.id ||
-                     (item.subModules?.some(sub => sub.id === currentView));
+      (item.subModules?.some(sub => sub.id === currentView));
 
     const handleClick = () => {
       if (!hasAccess) return;
@@ -149,13 +149,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         <button
           onClick={handleClick}
           disabled={!hasAccess}
-          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            isActive
+          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
               ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
               : hasAccess
-              ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-              : 'text-gray-400 dark:text-gray-600 opacity-60 cursor-not-allowed'
-          }`}
+                ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                : 'text-gray-400 dark:text-gray-600 opacity-60 cursor-not-allowed'
+            }`}
         >
           <div className="flex items-center gap-3">
             <item.icon size={18} />
@@ -197,13 +196,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         key={subModule.id}
         onClick={handleClick}
         disabled={!hasAccess}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-          isActive
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${isActive
             ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
             : hasAccess
-            ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
-            : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
-        }`}
+              ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
+              : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
+          }`}
       >
         <div className="flex items-center gap-2">
           <SubModuleIcon size={14} />
@@ -212,7 +210,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
         <div className="flex items-center gap-1">
           {subModule.isPriority && hasAccess && (
-            <Star size={12} className="text-yellow-500 fill-yellow-500" />
+            // Star removida conforme solicitado
+            null
           )}
           {!hasAccess && <Lock size={12} />}
         </div>
@@ -236,11 +235,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         key={`${item.label}-${item.id}`}
         onClick={handleClick}
         disabled={!hasAccess}
-        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-          hasAccess
+        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${hasAccess
             ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700/50'
             : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
-        }`}
+          }`}
       >
         <div className="flex items-center gap-3">
           <item.icon size={18} />
@@ -259,9 +257,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         onClick={toggleSidebar}
       />
 
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${
-        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      } flex flex-col h-full`}>
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } flex flex-col h-full`}>
         {/* Logo */}
         <div className="p-6 flex items-center justify-center border-b border-gray-100 dark:border-slate-700">
           <div className="flex items-center gap-2">
@@ -276,11 +273,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         {user && (
           <div className="px-6 py-3 bg-primary-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
             <p className="text-xs text-gray-500 dark:text-gray-400">Plano Atual</p>
-            <p className={`text-sm font-bold ${
-              user.plano === UserPlan.PREMIUM
+            <p className={`text-sm font-bold ${user.plano === UserPlan.PREMIUM
                 ? 'text-primary-700 dark:text-primary-400'
                 : 'text-gray-700 dark:text-gray-300'
-            }`}>
+              }`}>
               {user.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico'}
             </p>
           </div>
