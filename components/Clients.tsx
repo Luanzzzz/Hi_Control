@@ -138,9 +138,10 @@ export const Clients = () => {
 
             handleCloseModal();
             loadClients();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Erro ao salvar cliente", error);
-            alert("Erro ao salvar cliente.");
+            const errorMessage = error.response?.data?.detail || error.message || "Erro ao salvar cliente.";
+            alert(`Erro: ${errorMessage}`);
         }
     };
 
