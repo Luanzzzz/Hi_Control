@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-// Ensure API URL is configured correctly
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import api from '../src/services/api';
 
 export interface Empresa {
     id: string;
@@ -65,40 +62,32 @@ export interface EmpresaCreate {
 }
 
 class EmpresaService {
-    async listar(token: string): Promise<Empresa[]> {
-        const response = await axios.get(`${API_URL}/empresas`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+    async listar(): Promise<Empresa[]> {
+        const response = await api.get('/empresas');
         return response.data;
     }
 
-    async criar(empresa: EmpresaCreate, token: string): Promise<Empresa> {
-        const response = await axios.post(`${API_URL}/empresas`, {
+    async criar(empresa: EmpresaCreate): Promise<Empresa> {
+        const response = await api.post('/empresas', {
             ...empresa,
             // Remove mask characters from CNPJ/CEP if needed, but backend handles validation
             cnpj: empresa.cnpj.replace(/\D/g, ''),
             cep: empresa.cep?.replace(/\D/g, '')
-        }, {
-            headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
     }
 
-    async atualizar(id: string, empresa: EmpresaCreate, token: string): Promise<Empresa> {
-        const response = await axios.put(`${API_URL}/empresas/${id}`, {
+    async atualizar(id: string, empresa: EmpresaCreate): Promise<Empresa> {
+        const response = await api.put(`/empresas/${id}`, {
             ...empresa,
             cnpj: empresa.cnpj.replace(/\D/g, ''),
             cep: empresa.cep?.replace(/\D/g, '')
-        }, {
-            headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
     }
 
-    async deletar(id: string, token: string): Promise<void> {
-        await axios.delete(`${API_URL}/empresas/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+    async deletar(id: string): Promise<void> {
+        await api.delete(`/empresas/${id}`);
     }
 
     /**
@@ -106,23 +95,18 @@ class EmpresaService {
      * @param empresaId - ID da empresa
      * @param certBase64 - Certificado em base64 (sem prefixo)
      * @param senha - Senha do certificado
-     * @param token - Token de autenticação
      */
     async uploadCertificado(
         empresaId: string,
         certBase64: string,
-        senha: string,
-        token: string
+        senha: string
     ): Promise<CertificateUploadResponse> {
         try {
-            const response = await axios.post<CertificateUploadResponse>(
-                `${API_URL}/certificados/empresas/${empresaId}/certificado`,
+            const response = await api.post<CertificateUploadResponse>(
+                `/certificados/empresas/${empresaId}/certificado`,
                 {
                     certificado_base64: certBase64,
                     senha,
-                },
-                {
-                    headers: { Authorization: `Bearer ${token}` }
                 }
             );
             return response.data;
@@ -138,18 +122,13 @@ class EmpresaService {
     /**
      * Verificar status do certificado de uma empresa
      * @param empresaId - ID da empresa
-     * @param token - Token de autenticação
      */
     async verificarStatusCertificado(
-        empresaId: string,
-        token: string
+        empresaId: string
     ): Promise<CertificateStatus> {
         try {
-            const response = await axios.get<CertificateStatus>(
-                `${API_URL}/certificados/empresas/${empresaId}/certificado/status`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+            const response = await api.get<CertificateStatus>(
+                `/certificados/empresas/${empresaId}/certificado/status`
             );
             return response.data;
         } catch (error: any) {

@@ -19,7 +19,7 @@ export const Clients = () => {
     const [uploadingCert, setUploadingCert] = useState(false);
     const [certMessage, setCertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    const token = localStorage.getItem('token') || '';
+
 
     const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<EmpresaCreate>();
 
@@ -30,7 +30,7 @@ export const Clients = () => {
     const loadClients = async () => {
         setLoading(true);
         try {
-            const data = await empresaService.listar(token);
+            const data = await empresaService.listar();
             setClients(data);
         } catch (error) {
             console.error("Erro ao listar clientes", error);
@@ -102,7 +102,7 @@ export const Clients = () => {
         setUploadingCert(true);
         try {
             const certBase64 = await fileToBase64(certFile);
-            await empresaService.uploadCertificado(empresaId, certBase64, certPassword, token);
+            await empresaService.uploadCertificado(empresaId, certBase64, certPassword);
             setCertMessage({ type: 'success', text: 'Certificado enviado com sucesso!' });
         } catch (error: any) {
             setCertMessage({ type: 'error', text: error.message });
@@ -118,10 +118,10 @@ export const Clients = () => {
 
             // 1. Save/update client first
             if (editingClient) {
-                await empresaService.atualizar(editingClient.id, data, token);
+                await empresaService.atualizar(editingClient.id, data);
                 empresaId = editingClient.id;
             } else {
-                const newClient = await empresaService.criar(data, token);
+                const newClient = await empresaService.criar(data);
                 empresaId = newClient.id;
             }
 
@@ -148,7 +148,7 @@ export const Clients = () => {
     const handleDelete = async (id: string) => {
         if (confirm("Tem certeza que deseja excluir este cliente?")) {
             try {
-                await empresaService.deletar(id, token);
+                await empresaService.deletar(id);
                 loadClients();
             } catch (error) {
                 console.error("Erro ao deletar", error);
