@@ -31,7 +31,7 @@ export const buscarNotasAvancado = async (
       situacao: filtros.situacao === "todas" ? undefined : filtros.situacao
     };
 
-    const response = await api.get<NotaFiscal[]>('/api/v1/notas/buscar', { params });
+    const response = await api.get<NotaFiscal[]>('/notas/buscar', { params });
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -60,7 +60,7 @@ export const buscarNotasGeral = async (
       limit: filtros.limit || 100
     };
 
-    const response = await api.get<NotaFiscal[]>('/api/v1/notas', { params });
+    const response = await api.get<NotaFiscal[]>('/notas', { params });
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -79,7 +79,7 @@ export const obterDetalhesNota = async (
 ): Promise<NotaFiscalDetalhada> => {
   try {
     const response = await api.get<NotaFiscalDetalhada>(
-      `/api/v1/notas/${chaveAcesso}`
+      `/notas/${chaveAcesso}`
     );
     return response.data;
   } catch (error) {
@@ -96,7 +96,7 @@ export const obterDetalhesNota = async (
  */
 export const baixarXmlNota = async (chaveAcesso: string): Promise<Blob> => {
   try {
-    const response = await api.get(`/api/v1/notas/${chaveAcesso}/xml`, {
+    const response = await api.get(`/notas/${chaveAcesso}/xml`, {
       responseType: 'blob'
     });
     return response.data;
@@ -118,7 +118,7 @@ export const obterEstatisticasNotas = async (
 ): Promise<EstatisticasNotas> => {
   try {
     const response = await api.get<EstatisticasNotas>(
-      '/api/v1/notas/estatisticas/resumo',
+      '/notas/estatisticas/resumo',
       {
         params: { data_inicio: dataInicio, data_fim: dataFim }
       }
@@ -180,7 +180,7 @@ export const iniciarBuscaNFe = async (
 ): Promise<PropsInicioBusca> => {
   try {
     const response = await api.post<PropsInicioBusca>(
-      '/api/v1/nfe/buscar/iniciar',
+      '/nfe/buscar/iniciar',
       { cnpj, nsu_inicial: nsuInicial }
     );
     return response.data;
@@ -198,7 +198,7 @@ export const iniciarBuscaNFe = async (
  */
 export const verificarStatusBusca = async (jobId: string): Promise<JobBusca> => {
   try {
-    const response = await api.get<JobBusca>(`/api/v1/nfe/buscar/status/${jobId}`);
+    const response = await api.get<JobBusca>(`/nfe/buscar/status/${jobId}`);
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {

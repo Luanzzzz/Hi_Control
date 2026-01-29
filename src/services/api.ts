@@ -10,7 +10,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosE
  */
 
 // Configuração da URL base da API
-const API_BASE_URL = ((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/api/v1').replace(/\/$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '') + '/api/v1';
 
 // Criar instância do Axios
 const api: AxiosInstance = axios.create({

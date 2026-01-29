@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import InputMask from 'react-input-mask';
-import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Phone, Mail, Shield, Upload, FileCheck, AlertCircle } from 'lucide-react';
-import { empresaService, Empresa, EmpresaCreate } from '../services/empresaService';
+import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle } from 'lucide-react';
+import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
 import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
 import { formatDate } from '../utils/dateUtils';
 
@@ -12,6 +12,11 @@ export const Clients = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Empresa | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // CNPJ check state
+    const [cnpjCheck, setCnpjCheck] = useState<CnpjCheckResponse | null>(null);
+    const [checkingCnpj, setCheckingCnpj] = useState(false);
+    const [formMessage, setFormMessage] = useState<{ type: 'success' | 'info' | 'error' | 'warning'; text: string } | null>(null);
 
     // Certificate state
     const [certFile, setCertFile] = useState<File | null>(null);
@@ -68,10 +73,45 @@ export const Clients = () => {
         setIsModalOpen(false);
         setEditingClient(null);
         reset();
-        // Clear certificate fields
+        // Clear all state
+        setCnpjCheck(null);
+        setCheckingCnpj(false);
+        setFormMessage(null);
         setCertFile(null);
         setCertPassword('');
         setCertMessage(null);
+    };
+
+    const handleCnpjBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+        const cnpj = e.target.value;
+        const cnpjDigits = cnpj.replace(/\D/g, '');
+
+        // Só verificar se o CNPJ tem 14 dígitos e não estamos editando
+        if (cnpjDigits.length !== 14 || editingClient) {
+            setCnpjCheck(null);
+            setFormMessage(null);
+            return;
+        }
+
+        setCheckingCnpj(true);
+        try {
+            const result = await empresaService.verificarCnpj(cnpjDigits);
+            setCnpjCheck(result);
+
+            if (result.exists && result.empresa) {
+                setFormMessage({
+                    type: 'warning',
+                    text: `Cliente "${result.empresa.razao_social}" já cadastrado com este CNPJ. Ao salvar, os dados serão atualizados.`
+                });
+            } else {
+                setFormMessage(null);
+            }
+        } catch {
+            // Silently fail - não bloquear o formulário por erro na verificação
+            setCnpjCheck(null);
+        } finally {
+            setCheckingCnpj(false);
+        }
     };
 
     const handleCertificateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,35 +153,94 @@ export const Clients = () => {
     };
 
     const onSubmit = async (data: EmpresaCreate) => {
+        setFormMessage(null);
         try {
             let empresaId: string;
 
-            // 1. Save/update client first
             if (editingClient) {
                 await empresaService.atualizar(editingClient.id, data);
                 empresaId = editingClient.id;
+                setFormMessage({ type: 'success', text: 'Dados do cliente atualizados com sucesso!' });
             } else {
-                const newClient = await empresaService.criar(data);
-                empresaId = newClient.id;
+                const result = await empresaService.criar(data);
+                empresaId = result.id;
+
+                if (result._action === 'updated') {
+                    setFormMessage({ type: 'info', text: result._message || 'Dados do cliente atualizados com sucesso!' });
+                } else {
+                    setFormMessage({ type: 'success', text: result._message || 'Cliente cadastrado com sucesso!' });
+                }
             }
 
-            // 2. Upload certificate if provided
+            // Upload certificate if provided
             if (certFile && certPassword) {
                 try {
                     await handleCertificateUpload(empresaId);
                 } catch (certError) {
                     console.error("Erro ao fazer upload do certificado:", certError);
-                    // Don't block client save if certificate upload fails
-                    alert("Cliente salvo, mas houve erro ao enviar o certificado. Tente novamente.");
+                    setFormMessage({
+                        type: 'warning',
+                        text: 'Cliente salvo, mas houve erro ao enviar o certificado. Tente novamente pela edição.'
+                    });
+                    // Ainda recarrega a lista, mas mantém a mensagem visível por um momento
+                    loadClients();
+                    return;
                 }
             }
 
             handleCloseModal();
             loadClients();
         } catch (error: any) {
-            console.error("Erro ao salvar cliente", error);
-            const errorMessage = error.response?.data?.detail || error.message || "Erro ao salvar cliente.";
-            alert(`Erro: ${errorMessage}`);
+            console.error("Erro ao salvar cliente:", error);
+
+            if (error.response) {
+                const { status, data: responseData } = error.response;
+                const detail = responseData?.detail;
+
+                switch (status) {
+                    case 409: {
+                        // CNPJ duplicado ou inativo
+                        const message = typeof detail === 'object'
+                            ? detail.message
+                            : detail || 'CNPJ já cadastrado no sistema.';
+                        const suggestion = typeof detail === 'object' ? detail.suggestion : null;
+                        setFormMessage({
+                            type: 'error',
+                            text: `${message}${suggestion ? ` ${suggestion}` : ''}`
+                        });
+                        break;
+                    }
+                    case 422: {
+                        // Validação (CNPJ inválido, campos obrigatórios, etc.)
+                        let message = 'Dados inválidos.';
+                        if (typeof detail === 'string') {
+                            message = detail;
+                        } else if (Array.isArray(detail)) {
+                            message = detail.map((e: any) => e.msg || e.message).join('; ');
+                        } else if (typeof detail === 'object' && detail.message) {
+                            message = detail.message;
+                        }
+                        setFormMessage({ type: 'error', text: message });
+                        break;
+                    }
+                    case 400:
+                        setFormMessage({
+                            type: 'error',
+                            text: typeof detail === 'object' ? detail.message : (detail || 'Dados inválidos.')
+                        });
+                        break;
+                    default:
+                        setFormMessage({
+                            type: 'error',
+                            text: 'Erro ao salvar cliente. Tente novamente.'
+                        });
+                }
+            } else {
+                setFormMessage({
+                    type: 'error',
+                    text: 'Erro de conexão com o servidor. Verifique sua internet e tente novamente.'
+                });
+            }
         }
     };
 
@@ -241,10 +340,31 @@ export const Clients = () => {
                         </div>
 
                         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+                            {/* Form-level message (success/error/warning) */}
+                            {formMessage && (
+                                <div className={`p-4 rounded-lg text-sm flex items-start gap-3 ${
+                                    formMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' :
+                                    formMessage.type === 'info' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800' :
+                                    formMessage.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800' :
+                                    'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
+                                }`}>
+                                    <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+                                    <span>{formMessage.text}</span>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="col-span-2 md:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ *</label>
-                                    <InputMask mask="99.999.999/9999-99" {...register('cnpj', { required: true })} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2" />
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        CNPJ *
+                                        {checkingCnpj && <span className="ml-2 text-xs text-gray-400">Verificando...</span>}
+                                    </label>
+                                    <InputMask
+                                        mask="99.999.999/9999-99"
+                                        {...register('cnpj', { required: true })}
+                                        onBlur={handleCnpjBlur}
+                                        className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                    />
                                 </div>
                                 <div className="col-span-2 md:col-span-1">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social *</label>

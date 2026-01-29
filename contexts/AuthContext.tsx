@@ -72,12 +72,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setAuthState(prev => ({ ...prev, loading: true, error: null }));
 
         try {
-            // 1. Fazer login no backend - POST /api/v1/auth/login
+            // 1. Fazer login no backend - POST /auth/login
             const params = new URLSearchParams();
             params.append('username', email);
             params.append('password', password);
 
-            const loginResponse = await api.post('/api/v1/auth/login', params, {
+            const loginResponse = await api.post('/auth/login', params, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
 
@@ -86,8 +86,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // 2. Salvar tokens no localStorage
             saveTokens(access_token, refresh_token);
 
-            // 3. Buscar dados do usuário - GET /api/v1/auth/me
-            const userResponse = await api.get('/api/v1/auth/me');
+            // 3. Buscar dados do usuário - GET /auth/me
+            const userResponse = await api.get('/auth/me');
             const userData = userResponse.data;
 
             // 4. Mapear plano do backend para frontend

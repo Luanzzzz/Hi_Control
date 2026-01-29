@@ -61,16 +61,36 @@ export interface EmpresaCreate {
     regime_tributario?: 'simples_nacional' | 'lucro_presumido' | 'lucro_real';
 }
 
+export interface CnpjCheckResponse {
+    exists: boolean;
+    ativa?: boolean;
+    empresa?: {
+        id: string;
+        razao_social: string;
+        nome_fantasia?: string;
+    };
+}
+
+export interface EmpresaCreateResponse extends Empresa {
+    _action: 'created' | 'updated';
+    _message: string;
+}
+
 class EmpresaService {
     async listar(): Promise<Empresa[]> {
         const response = await api.get('/empresas');
         return response.data;
     }
 
-    async criar(empresa: EmpresaCreate): Promise<Empresa> {
-        const response = await api.post('/empresas', {
+    async verificarCnpj(cnpj: string): Promise<CnpjCheckResponse> {
+        const cnpjDigits = cnpj.replace(/\D/g, '');
+        const response = await api.get<CnpjCheckResponse>(`/empresas/check-cnpj/${cnpjDigits}`);
+        return response.data;
+    }
+
+    async criar(empresa: EmpresaCreate): Promise<EmpresaCreateResponse> {
+        const response = await api.post<EmpresaCreateResponse>('/empresas', {
             ...empresa,
-            // Remove mask characters from CNPJ/CEP if needed, but backend handles validation
             cnpj: empresa.cnpj.replace(/\D/g, ''),
             cep: empresa.cep?.replace(/\D/g, '')
         });

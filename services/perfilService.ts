@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import api from '../src/services/api';
 
 export interface Perfil {
     id?: string;
@@ -16,26 +14,24 @@ export interface PerfilUpdate {
 }
 
 class PerfilService {
-    async obter(token: string): Promise<Perfil> {
+    async obter(_token?: string): Promise<Perfil> {
         try {
-            const response = await axios.get(`${API_URL}/perfil`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Token is automatically added by api interceptor
+            const response = await api.get('/perfil');
             return response.data;
-        } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status === 404) {
+        } catch (error: any) {
+            if (error.response?.status === 404) {
                 return {}; // Return empty if not found
             }
             throw error;
         }
     }
 
-    async atualizar(perfil: PerfilUpdate, token: string): Promise<Perfil> {
-        const response = await axios.put(`${API_URL}/perfil`, {
+    async atualizar(perfil: PerfilUpdate, _token?: string): Promise<Perfil> {
+        // Token is automatically added by api interceptor
+        const response = await api.put('/perfil', {
             ...perfil,
             cnpj: perfil.cnpj.replace(/\D/g, '')
-        }, {
-            headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
     }
