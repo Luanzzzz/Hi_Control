@@ -111,6 +111,19 @@ class EmpresaService {
     }
 
     /**
+     * ADMIN: Remove TODAS as empresas do usuário (inclusive inativas)
+     * ⚠️ Operação IRREVERSÍVEL - use apenas para testes
+     */
+    async limparTodasEmpresas(): Promise<{
+        message: string;
+        deleted_count: number;
+        empresas_deletadas: string[];
+    }> {
+        const response = await api.delete('/empresas/admin/cleanup-all');
+        return response.data;
+    }
+
+    /**
      * Upload de certificado digital A1 para uma empresa
      * @param empresaId - ID da empresa
      * @param certBase64 - Certificado em base64 (sem prefixo)
