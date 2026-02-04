@@ -1,8 +1,13 @@
 /**
  * Componente de Busca de Notas Fiscais
  * Integrado com API backend FastAPI
+ * 
+ * ATUALIZADO: Sprint NFe Integration
+ * - Seleção de empresa (cliente)
+ * - Status de certificado
+ * - Cache e fonte de dados
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import InputMask from 'react-input-mask';
 import {
@@ -17,7 +22,8 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  History
 } from 'lucide-react';
 
 import type {
@@ -44,13 +50,38 @@ import {
   verificarStatusBusca
 } from '../services/notaFiscalService';
 
+// Novos componentes do Sprint NFe Integration
+import {
+  ClienteSelector,
+  CertificadoBadge,
+  AlertaCertificado,
+  FonteDadosIndicador
+} from './BuscadorNotas/index';
+
+// Hook customizado para busca por empresa
+import { useBuscadorNotas } from '../hooks/useBuscadorNotas';
+
 export const BuscadorNotas: React.FC = () => {
-  // Estados
+  // ===== Hook de Busca por Empresa (Sprint NFe Integration) =====
+  const {
+    empresaId,
+    empresaNome,
+    statusCertificado,
+    certificadoLoading,
+    fonte,
+    alertaCertificado,
+    podeBuscar,
+    selecionarEmpresa,
+    limparErro: limparErroEmpresa,
+  } = useBuscadorNotas();
+
+  // Estados locais
   const [notas, setNotas] = useState<NotaFiscal[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
   const [notaSelecionada, setNotaSelecionada] = useState<NotaFiscal | null>(null);
+  const [mostrarHistorico, setMostrarHistorico] = useState(false);
 
   // Estados de Polling
   const [pollingId, setPollingId] = useState<string | null>(null);
@@ -248,17 +279,75 @@ export const BuscadorNotas: React.FC = () => {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setMostrarFiltros(!mostrarFiltros)}
-          className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors hover:bg-gray-200 dark:hover:bg-slate-600 flex items-center gap-2"
-        >
-          <Filter size={18} />
-          {mostrarFiltros ? "Ocultar Filtros" : "Mostrar Filtros"}
-          {mostrarFiltros ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Indicador de fonte de dados */}
+          {fonte && <FonteDadosIndicador fonte={fonte} />}
+
+          <button
+            onClick={() => setMostrarFiltros(!mostrarFiltros)}
+            className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors hover:bg-gray-200 dark:hover:bg-slate-600 flex items-center gap-2"
+          >
+            <Filter size={18} />
+            {mostrarFiltros ? "Ocultar Filtros" : "Mostrar Filtros"}
+            {mostrarFiltros ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
       </div>
 
-      {/* Formulário de Filtros */}
+      {/* ===== SELETOR DE EMPRESA (Sprint NFe Integration) ===== */}
+      <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Building2 size={20} className="text-purple-400" />
+            Cliente para Busca
+          </h2>
+
+          {/* Badge de status do certificado */}
+          {statusCertificado && !certificadoLoading && (
+            <CertificadoBadge
+              status={statusCertificado.status as any}
+              diasRestantes={statusCertificado.dias_para_vencer}
+              usandoFallback={statusCertificado.usando_fallback}
+            />
+          )}
+
+          {certificadoLoading && (
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <RefreshCw size={14} className="animate-spin" />
+              Verificando certificado...
+            </div>
+          )}
+        </div>
+
+        {/* Seletor de empresa */}
+        <ClienteSelector
+          empresaId={empresaId}
+          onSelect={(empresa) => selecionarEmpresa(empresa.id, empresa.razao_social)}
+          statusCertificado={statusCertificado ? {
+            status: statusCertificado.status as any,
+            dias_para_vencer: statusCertificado.dias_para_vencer ?? undefined
+          } : null}
+        />
+
+        {/* Empresa selecionada */}
+        {empresaId && empresaNome && (
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <span>Buscando notas de:</span>
+            <span className="font-medium text-white">{empresaNome}</span>
+          </div>
+        )}
+
+        {/* Alerta de certificado (se houver problema) */}
+        {alertaCertificado && (
+          <AlertaCertificado
+            tipo={alertaCertificado.tipo}
+            titulo={alertaCertificado.titulo}
+            mensagem={alertaCertificado.mensagem}
+            bloqueante={alertaCertificado.bloqueante}
+            onClose={() => limparErroEmpresa()}
+          />
+        )}
+      </div>
       {mostrarFiltros && (
         <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
