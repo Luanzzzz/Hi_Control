@@ -4,7 +4,7 @@
  * Exports all components for empresa-based NFe search.
  */
 
-export { CertificadoBadge } from './CertificadoBadge';
+export { CertificadoBadge, CertificadoBadgeAsync } from './CertificadoBadge';
 export type { CertificadoStatus } from './CertificadoBadge';
 
 export { AlertaCertificado } from './AlertaCertificado';

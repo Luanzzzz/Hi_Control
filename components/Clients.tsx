@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import InputMask from 'react-input-mask';
-import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch } from 'lucide-react';
 import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
 import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
 import { formatDate } from '../utils/dateUtils';
+import { CertificadoBadgeAsync } from '../src/components/BuscadorNotas';
 
 export const Clients = () => {
+    const navigate = useNavigate();
+
     const [clients, setClients] = useState<Empresa[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,7 +28,12 @@ export const Clients = () => {
     const [uploadingCert, setUploadingCert] = useState(false);
     const [certMessage, setCertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-
+    /**
+     * Navega para o Buscador de Notas com a empresa pré-selecionada
+     */
+    const irParaBuscadorNotas = (empresaId: string) => {
+        navigate(`/notas-fiscais/buscador?empresaId=${empresaId}`);
+    };
 
     const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<EmpresaCreate>();
 
@@ -292,21 +301,51 @@ export const Clients = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredClients.map(client => (
-                            <div key={client.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 flex flex-col hover:shadow-md transition-shadow">
+                            <div
+                                key={client.id}
+                                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 flex flex-col hover:shadow-lg hover:border-primary-500/50 transition-all cursor-pointer group"
+                                onClick={() => irParaBuscadorNotas(client.id)}
+                            >
+                                {/* Header do Card */}
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="p-2 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-lg">
-                                        <Building size={24} />
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-lg group-hover:bg-primary-200 dark:group-hover:bg-primary-800/40 transition-colors">
+                                            <Building size={24} />
+                                        </div>
+                                        {/* Badge de Status do Certificado */}
+                                        <CertificadoBadgeAsync
+                                            empresaId={client.id}
+                                            size="sm"
+                                            showLabel={true}
+                                        />
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => handleOpenModal(client)} className="text-gray-400 hover:text-blue-500 transition-colors">
+
+                                    {/* Ações - com stopPropagation */}
+                                    <div
+                                        className="flex gap-2"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <button
+                                            onClick={() => handleOpenModal(client)}
+                                            className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                            title="Editar cliente"
+                                        >
                                             <Edit2 size={18} />
                                         </button>
-                                        <button onClick={() => handleDelete(client.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                        <button
+                                            onClick={() => handleDelete(client.id)}
+                                            className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                            title="Excluir cliente"
+                                        >
                                             <Trash2 size={18} />
                                         </button>
                                     </div>
                                 </div>
-                                <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-1 truncate" title={client.razao_social}>{client.razao_social}</h3>
+
+                                {/* Informações da Empresa */}
+                                <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-1 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={client.razao_social}>
+                                    {client.razao_social}
+                                </h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{client.nome_fantasia || '-'}</p>
 
                                 <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mt-auto">
@@ -319,6 +358,20 @@ export const Clients = () => {
                                             {client.cidade}/{client.estado}
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Botão de Buscar Notas */}
+                                <div
+                                    className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <button
+                                        onClick={() => irParaBuscadorNotas(client.id)}
+                                        className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-medium"
+                                    >
+                                        <FileSearch size={16} />
+                                        Buscar Notas Fiscais
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -342,12 +395,11 @@ export const Clients = () => {
                         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
                             {/* Form-level message (success/error/warning) */}
                             {formMessage && (
-                                <div className={`p-4 rounded-lg text-sm flex items-start gap-3 ${
-                                    formMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' :
+                                <div className={`p-4 rounded-lg text-sm flex items-start gap-3 ${formMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' :
                                     formMessage.type === 'info' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800' :
-                                    formMessage.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800' :
-                                    'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
-                                }`}>
+                                        formMessage.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800' :
+                                            'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
+                                    }`}>
                                     <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
                                     <span>{formMessage.text}</span>
                                 </div>

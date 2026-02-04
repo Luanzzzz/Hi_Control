@@ -3,8 +3,9 @@
  * 
  * Badge visual que mostra o status do certificado digital.
  */
-import React from 'react';
-import { Shield, ShieldAlert, ShieldOff, ShieldCheck, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, ShieldAlert, ShieldOff, ShieldCheck, AlertTriangle, Loader2 } from 'lucide-react';
+import { obterStatusCertificadoEmpresa, StatusCertificado } from '../../services/notaFiscalService';
 
 export type CertificadoStatus = 'ativo' | 'expirando' | 'vencido' | 'ausente' | 'erro';
 
@@ -117,6 +118,108 @@ export function CertificadoBadge({
                 </span>
             )}
         </div>
+    );
+}
+
+// ============================================
+// ===== VERSÃO ASSÍNCRONA (Para uso em Clients.tsx) =====
+// ============================================
+
+interface CertificadoBadgeAsyncProps {
+    empresaId: string;
+    size?: 'sm' | 'md' | 'lg';
+    showLabel?: boolean;
+    inline?: boolean;
+}
+
+/**
+ * Versão assíncrona do CertificadoBadge que busca o status automaticamente
+ * Ideal para uso em listas de empresas (Clients.tsx)
+ */
+export function CertificadoBadgeAsync({
+    empresaId,
+    size = 'sm',
+    showLabel = true,
+    inline = false,
+}: CertificadoBadgeAsyncProps) {
+    const [status, setStatus] = useState<StatusCertificado | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchStatus = async () => {
+            setLoading(true);
+            setError(false);
+
+            try {
+                const result = await obterStatusCertificadoEmpresa(empresaId);
+                if (isMounted) {
+                    setStatus(result);
+                }
+            } catch (err) {
+                console.error('Erro ao buscar status certificado:', err);
+                if (isMounted) {
+                    setError(true);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchStatus();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [empresaId]);
+
+    const sizeConfig = SIZE_CONFIG[size];
+
+    // Loading state
+    if (loading) {
+        return (
+            <span
+                className={`
+                    inline-flex items-center ${sizeConfig.gap} ${sizeConfig.padding}
+                    bg-gray-500/20 text-gray-400 border border-gray-500/30
+                    rounded-full font-medium ${sizeConfig.fontSize}
+                `}
+            >
+                <Loader2 size={sizeConfig.iconSize} className="animate-spin" />
+                {showLabel && !inline && <span>Verificando...</span>}
+            </span>
+        );
+    }
+
+    // Error state
+    if (error || !status) {
+        return (
+            <span
+                className={`
+                    inline-flex items-center ${sizeConfig.gap} ${sizeConfig.padding}
+                    bg-gray-500/20 text-gray-500 border border-gray-500/30
+                    rounded-full font-medium ${sizeConfig.fontSize}
+                `}
+            >
+                <Shield size={sizeConfig.iconSize} />
+                {showLabel && <span>Desconhecido</span>}
+            </span>
+        );
+    }
+
+    // Render the sync badge with fetched data
+    return (
+        <CertificadoBadge
+            status={status.status}
+            diasRestantes={status.dias_para_vencer}
+            usandoFallback={status.usando_fallback}
+            size={size}
+            showLabel={showLabel}
+        />
     );
 }
 

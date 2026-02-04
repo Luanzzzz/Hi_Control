@@ -125,8 +125,19 @@ export function useBuscadorNotas(options: UseBuscadorNotasOptions = {}) {
         temMaisNotas: false,
     });
 
-    // Carregar empresa do localStorage ao montar
+    // Carregar empresa do localStorage ou URL ao montar
     useEffect(() => {
+        // 1. Verificar se há empresaId na URL (prioridade)
+        const urlParams = new URLSearchParams(window.location.search);
+        const empresaIdFromUrl = urlParams.get('empresaId');
+
+        if (empresaIdFromUrl) {
+            // Carregar empresa da URL (navegação de Clients.tsx)
+            selecionarEmpresa(empresaIdFromUrl);
+            return;
+        }
+
+        // 2. Se não há na URL, tentar carregar do localStorage
         if (persistirEmpresa) {
             const salvo = localStorage.getItem(STORAGE_KEY);
             if (salvo) {
@@ -141,6 +152,7 @@ export function useBuscadorNotas(options: UseBuscadorNotasOptions = {}) {
             }
         }
     }, []);
+
 
     /**
      * Seleciona uma empresa e valida seu certificado.

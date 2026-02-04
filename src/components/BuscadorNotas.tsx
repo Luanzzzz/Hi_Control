@@ -82,6 +82,7 @@ export const BuscadorNotas: React.FC = () => {
   const [mostrarFiltros, setMostrarFiltros] = useState(true);
   const [notaSelecionada, setNotaSelecionada] = useState<NotaFiscal | null>(null);
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
+  const [usarCertificadoContador, setUsarCertificadoContador] = useState(false);
 
   // Estados de Polling
   const [pollingId, setPollingId] = useState<string | null>(null);
@@ -343,9 +344,32 @@ export const BuscadorNotas: React.FC = () => {
             tipo={alertaCertificado.tipo}
             titulo={alertaCertificado.titulo}
             mensagem={alertaCertificado.mensagem}
-            bloqueante={alertaCertificado.bloqueante}
+            bloqueante={alertaCertificado.bloqueante && !usarCertificadoContador}
             onClose={() => limparErroEmpresa()}
           />
+        )}
+
+        {/* Opção de usar certificado do contador */}
+        {empresaId && statusCertificado && statusCertificado.status !== 'ativo' && (
+          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={usarCertificadoContador}
+                onChange={(e) => setUsarCertificadoContador(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <div className="flex-1">
+                <span className="text-white font-medium flex items-center gap-2">
+                  🔐 Usar meu certificado (contador) para consultar notas desta empresa
+                </span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Marque esta opção se você possui certificado válido e quer consultar
+                  notas de empresas que ainda não cadastraram o certificado próprio
+                </p>
+              </div>
+            </label>
+          </div>
         )}
       </div>
       {mostrarFiltros && (

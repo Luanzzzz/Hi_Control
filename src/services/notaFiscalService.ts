@@ -208,3 +208,110 @@ export const verificarStatusBusca = async (jobId: string): Promise<JobBusca> => 
     throw error;
   }
 };
+
+// ============================================
+// ===== NOVOS ENDPOINTS DE EMPRESA (Sprint NFe Integration) =====
+// ============================================
+
+export interface StatusCertificado {
+  status: 'ativo' | 'expirando' | 'vencido' | 'ausente';
+  mensagem: string;
+  dias_para_vencer: number | null;
+  data_validade: string | null;
+  titular: string | null;
+  pode_consultar: boolean;
+  usando_fallback: boolean;
+  fallback_disponivel: boolean;
+}
+
+export interface BuscarNotasEmpresaRequest {
+  data_inicio: string;
+  data_fim: string;
+  tipo_nota?: string;
+  usar_cache?: boolean;
+}
+
+export interface BuscarNotasEmpresaResponse {
+  notas: NotaFiscal[];
+  fonte: 'cache' | 'sefaz';
+  cache_expira_em?: string;
+  total: number;
+  empresa_id: string;
+  empresa_nome: string;
+}
+
+export interface HistoricoConsulta {
+  id: string;
+  empresa_id: string;
+  filtros: Record<string, any>;
+  quantidade_notas: number;
+  fonte: 'cache' | 'sefaz';
+  created_at: string;
+  sucesso: boolean;
+  erro?: string;
+}
+
+/**
+ * Obtém status do certificado de uma empresa
+ */
+export const obterStatusCertificadoEmpresa = async (
+  empresaId: string
+): Promise<StatusCertificado> => {
+  try {
+    const response = await api.get<StatusCertificado>(
+      `/nfe/empresas/${empresaId}/certificado/status`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao verificar certificado';
+      throw new Error(message);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Busca notas fiscais de uma empresa específica
+ * Usa cache quando disponível e certificado da empresa ou fallback do contador
+ */
+export const buscarNotasEmpresa = async (
+  empresaId: string,
+  filtros: BuscarNotasEmpresaRequest
+): Promise<BuscarNotasEmpresaResponse> => {
+  try {
+    const response = await api.post<BuscarNotasEmpresaResponse>(
+      `/nfe/empresas/${empresaId}/notas/buscar`,
+      filtros
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao buscar notas da empresa';
+      throw new Error(message);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Obtém histórico de consultas de uma empresa
+ */
+export const obterHistoricoConsultas = async (
+  empresaId: string,
+  limit: number = 10
+): Promise<HistoricoConsulta[]> => {
+  try {
+    const response = await api.get<HistoricoConsulta[]>(
+      `/nfe/empresas/${empresaId}/notas/historico`,
+      { params: { limit } }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao obter histórico';
+      throw new Error(message);
+    }
+    throw error;
+  }
+};
