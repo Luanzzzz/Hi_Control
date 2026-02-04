@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
 import InputMask from 'react-input-mask';
 import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
@@ -52,9 +51,12 @@ const SimpleCertBadge: React.FC<SimpleCertBadgeProps> = ({ certificadoValidade }
     );
 };
 
-export const Clients = () => {
-    const navigate = useNavigate();
+// Props interface para receber função de navegação do App.tsx
+interface ClientsProps {
+    onNavigateToBuscador?: (empresaId: string) => void;
+}
 
+export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
     const [clients, setClients] = useState<Empresa[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,10 +75,25 @@ export const Clients = () => {
     const [certMessage, setCertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     /**
-     * Navega para o Buscador de Notas com a empresa pré-selecionada
+     * Salva o empresaId no localStorage e dispara evento para navegação
+     * Compatível com arquitetura ViewState do App.tsx
      */
-    const irParaBuscadorNotas = (empresaId: string) => {
-        navigate(`/notas-fiscais/buscador?empresaId=${empresaId}`);
+    const irParaBuscadorNotas = (empresaId: string, empresaNome?: string) => {
+        // Salvar no localStorage para o BuscadorNotas/InvoiceSearch ler
+        localStorage.setItem('buscador_notas_empresa_selecionada', JSON.stringify({
+            id: empresaId,
+            nome: empresaNome || ''
+        }));
+
+        // Se callback foi passado pelo App.tsx, usar para navegar
+        if (onNavigateToBuscador) {
+            onNavigateToBuscador(empresaId);
+        } else {
+            // Fallback: disparar evento customizado que App.tsx pode escutar
+            window.dispatchEvent(new CustomEvent('navigate:buscador-notas', {
+                detail: { empresaId }
+            }));
+        }
     };
 
     const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<EmpresaCreate>();

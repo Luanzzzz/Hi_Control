@@ -82,6 +82,16 @@ class EmpresaService {
         return response.data;
     }
 
+    async obterPorId(id: string): Promise<Empresa | null> {
+        try {
+            const response = await api.get<Empresa>(`/empresas/${id}`);
+            return response.data;
+        } catch (error: any) {
+            console.error('[EmpresaService] Erro ao obter empresa:', error);
+            return null;
+        }
+    }
+
     async verificarCnpj(cnpj: string): Promise<CnpjCheckResponse> {
         const cnpjDigits = cnpj.replace(/\D/g, '');
         const response = await api.get<CnpjCheckResponse>(`/empresas/check-cnpj/${cnpjDigits}`);

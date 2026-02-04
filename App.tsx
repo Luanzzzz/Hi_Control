@@ -104,7 +104,14 @@ const AppContent: React.FC = () => {
         return <WhatsAppModule />;
 
       case ViewState.USERS:
-        return <Clients />;
+        return (
+          <Clients
+            onNavigateToBuscador={(empresaId) => {
+              // Navegar para tela de busca de notas
+              setCurrentView(ViewState.INVOICE_SEARCH);
+            }}
+          />
+        );
 
       case ViewState.SETTINGS:
         return <Configuracoes />;
