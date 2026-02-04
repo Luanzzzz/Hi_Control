@@ -2,11 +2,55 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import InputMask from 'react-input-mask';
-import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
 import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
 import { formatDate } from '../utils/dateUtils';
-import { CertificadoBadgeAsync } from '../src/components/BuscadorNotas';
+
+// ===== Badge de Certificado Simples (inline) =====
+interface SimpleCertBadgeProps {
+    certificadoValidade?: string | null;
+}
+
+const SimpleCertBadge: React.FC<SimpleCertBadgeProps> = ({ certificadoValidade }) => {
+    if (!certificadoValidade) {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400 border border-gray-500/30 rounded-full text-xs font-medium">
+                <ShieldAlert size={14} />
+                <span>Sem Cert.</span>
+            </span>
+        );
+    }
+
+    const dataValidade = new Date(certificadoValidade);
+    const hoje = new Date();
+    const diasRestantes = Math.ceil((dataValidade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diasRestantes <= 0) {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full text-xs font-medium">
+                <ShieldOff size={14} />
+                <span>Vencido</span>
+            </span>
+        );
+    }
+
+    if (diasRestantes <= 30) {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full text-xs font-medium">
+                <AlertTriangle size={14} />
+                <span>{diasRestantes}d</span>
+            </span>
+        );
+    }
+
+    return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-xs font-medium">
+            <ShieldCheck size={14} />
+            <span>Ativo</span>
+        </span>
+    );
+};
 
 export const Clients = () => {
     const navigate = useNavigate();
@@ -313,10 +357,8 @@ export const Clients = () => {
                                             <Building size={24} />
                                         </div>
                                         {/* Badge de Status do Certificado */}
-                                        <CertificadoBadgeAsync
-                                            empresaId={client.id}
-                                            size="sm"
-                                            showLabel={true}
+                                        <SimpleCertBadge
+                                            certificadoValidade={client.certificado_validade}
                                         />
                                     </div>
 
