@@ -18,7 +18,7 @@ import {
   ShieldAlert,
   AlertTriangle
 } from 'lucide-react';
-import { buscarNotasGeral, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
+import { buscarNotasEmpresa, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
 import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
 import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 import { empresaService, Empresa } from '../services/empresaService';
@@ -266,6 +266,18 @@ export const InvoiceSearch: React.FC = () => {
 
   // Buscar notas fiscais
   const handleSearch = async () => {
+    // Validar empresa selecionada
+    if (!empresaSelecionada) {
+      setError('⚠️ Selecione uma empresa primeiro');
+      return;
+    }
+
+    // Validar datas obrigatórias
+    if (!dateFrom || !dateTo) {
+      setError('⚠️ Preencha as datas de início e fim');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -278,18 +290,28 @@ export const InvoiceSearch: React.FC = () => {
         return;
       }
 
-      const resultado = await buscarNotasGeral({
-        search_term: searchTerm || undefined,
-        tipo_nf: selectedType === 'TODAS' ? undefined : selectedType,
-        situacao: selectedStatus === 'todas' ? undefined : selectedStatus,
-        data_inicio: dateFrom || undefined,
-        data_fim: dateTo || undefined,
-        limit: 100,
+      // Chamar novo endpoint com empresa_id
+      const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
+        data_inicio: dateFrom,
+        data_fim: dateTo,
+        tipo_nota: selectedType === 'TODAS' ? undefined : selectedType,
+        usar_cache: true
       });
 
-      setInvoices(resultado);
+      setInvoices(resultado.notas || []);
+
+      // Feedback de sucesso ao usuário
+      const icone = resultado.fonte === 'cache' ? '💾' : '🌐';
+      const origem = resultado.fonte === 'cache' ? 'cache local' : 'SEFAZ';
+      console.log(`${icone} ${resultado.total} notas encontradas (${origem})`);
     } catch (err: any) {
-      setError(err.message || 'Erro ao buscar notas fiscais. Tente novamente.');
+      const mensagemErro = err.message || 'Erro ao buscar notas fiscais. Tente novamente.';
+      setError(mensagemErro);
+
+      // Se erro de certificado, mostrar alerta específico
+      if (mensagemErro.toLowerCase().includes('certificado')) {
+        setError(mensagemErro + '\n💡 Verifique se o certificado da empresa está válido');
+      }
     } finally {
       setIsLoading(false);
     }
