@@ -225,19 +225,22 @@ export interface StatusCertificado {
 }
 
 export interface BuscarNotasEmpresaRequest {
-  data_inicio: string;
-  data_fim: string;
-  tipo_nota?: string;
-  usar_cache?: boolean;
+  cnpj: string;
+  nsu_inicial?: number;
+  max_notas?: number;
 }
 
 export interface BuscarNotasEmpresaResponse {
-  notas: NotaFiscal[];
+  success: boolean;
   fonte: 'cache' | 'sefaz';
-  cache_expira_em?: string;
-  total: number;
   empresa_id: string;
-  empresa_nome: string;
+  certificado_status: string;
+  certificado_usado: string;
+  notas: NotaFiscal[];
+  ultimo_nsu: number;
+  max_nsu: number;
+  total_notas: number;
+  tem_mais_notas: boolean;
 }
 
 export interface HistoricoConsulta {

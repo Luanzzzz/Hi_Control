@@ -290,12 +290,27 @@ export const InvoiceSearch: React.FC = () => {
         return;
       }
 
-      // Chamar novo endpoint com empresa_id
+      // Validar se empresa tem CNPJ
+      if (!empresaSelecionada.cnpj) {
+        setError('⚠️ Empresa sem CNPJ cadastrado');
+        setIsLoading(false);
+        return;
+      }
+
+      // Remover formatação do CNPJ (deve ter 14 dígitos)
+      const cnpjLimpo = empresaSelecionada.cnpj.replace(/\D/g, '');
+
+      if (cnpjLimpo.length !== 14) {
+        setError('⚠️ CNPJ inválido (deve ter 14 dígitos)');
+        setIsLoading(false);
+        return;
+      }
+
+      // Chamar endpoint com payload correto
       const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
-        data_inicio: dateFrom,
-        data_fim: dateTo,
-        tipo_nota: selectedType === 'TODAS' ? undefined : selectedType,
-        usar_cache: true
+        cnpj: cnpjLimpo,
+        nsu_inicial: 0,
+        max_notas: 100
       });
 
       setInvoices(resultado.notas || []);
@@ -303,7 +318,9 @@ export const InvoiceSearch: React.FC = () => {
       // Feedback de sucesso ao usuário
       const icone = resultado.fonte === 'cache' ? '💾' : '🌐';
       const origem = resultado.fonte === 'cache' ? 'cache local' : 'SEFAZ';
-      console.log(`${icone} ${resultado.total} notas encontradas (${origem})`);
+      const certUsado = resultado.certificado_usado === 'empresa' ? '🏢 Certificado da Empresa' : '👤 Certificado do Contador';
+      console.log(`${icone} ${resultado.total_notas} notas encontradas (${origem})`);
+      console.log(`${certUsado}`);
     } catch (err: any) {
       const mensagemErro = err.message || 'Erro ao buscar notas fiscais. Tente novamente.';
       setError(mensagemErro);
