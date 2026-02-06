@@ -23,6 +23,34 @@ import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/nota
 import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 import { empresaService, Empresa } from '../services/empresaService';
 
+// ===== Funções Auxiliares =====
+
+/**
+ * Extrai o tipo base de nota de strings formatadas
+ * Ex: "NFe Entrada" → "NFe", "NFCe Saída" → "NFCe"
+ */
+const getTipoBase = (tipoFormatado: string): TipoNotaFiscal => {
+  const match = tipoFormatado.match(/^(NFe|NFCe|NFSe|CTe)/i);
+  if (match) {
+    return match[1] as TipoNotaFiscal;
+  }
+  return 'NFe' as TipoNotaFiscal; // Fallback
+};
+
+/**
+ * Helper para normalizar situação (backend retorna uppercase, CORES_SITUACAO espera lowercase)
+ * Ex: "AUTORIZADA" → "autorizada"
+ */
+const getSituacaoNormalizada = (situacao: string): SituacaoNota => {
+  const situacaoLower = situacao.toLowerCase() as SituacaoNota;
+  // Validar que é uma situação válida
+  const situacoesValidas: SituacaoNota[] = ['autorizada', 'cancelada', 'denegada', 'processando'];
+  if (situacoesValidas.includes(situacaoLower)) {
+    return situacaoLower;
+  }
+  return 'autorizada' as SituacaoNota; // Fallback seguro
+};
+
 // ===== Componente ClienteSelector Inline =====
 interface ClienteSelectorProps {
   empresaSelecionada: Empresa | null;
@@ -218,6 +246,16 @@ export const InvoiceSearch: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
 
+  // Estados de paginação NSU
+  const [ultimoNSU, setUltimoNSU] = useState<number>(0);
+  const [maxNSU, setMaxNSU] = useState<number>(0);
+  const [temMaisNotas, setTemMaisNotas] = useState<boolean>(false);
+  const [carregandoMais, setCarregandoMais] = useState<boolean>(false);
+
+  // Estado do modal de visualização
+  const [notaSelecionada, setNotaSelecionada] = useState<NotaFiscal | null>(null);
+  const [mostrarModal, setMostrarModal] = useState<boolean>(false);
+
   // Carregar empresa pré-selecionada do localStorage (vindo de Clients.tsx)
   useEffect(() => {
     const salvo = localStorage.getItem('buscador_notas_empresa_selecionada');
@@ -272,24 +310,14 @@ export const InvoiceSearch: React.FC = () => {
       return;
     }
 
-    // Validar datas obrigatórias
-    if (!dateFrom || !dateTo) {
-      setError('⚠️ Preencha as datas de início e fim');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
+    setInvoices([]);  // Limpar resultados anteriores
+    setUltimoNSU(0);  // Resetar paginação
+    setMaxNSU(0);
+    setTemMaisNotas(false);
 
     try {
-      // Validar período se ambas as datas estiverem preenchidas
-      const erroValidacao = validarPeriodo();
-      if (erroValidacao) {
-        setError(erroValidacao);
-        setIsLoading(false);
-        return;
-      }
-
       // Validar se empresa tem CNPJ
       if (!empresaSelecionada.cnpj) {
         setError('⚠️ Empresa sem CNPJ cadastrado');
@@ -306,21 +334,41 @@ export const InvoiceSearch: React.FC = () => {
         return;
       }
 
-      // Chamar endpoint com payload correto
+      // Buscar notas (primeira página)
       const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
         cnpj: cnpjLimpo,
-        nsu_inicial: 0,
-        max_notas: 100
+        nsu_inicial: 0,        // Começar do NSU 0
+        max_notas: 50          // 50 notas por vez
       });
 
+      console.log('✅ Busca concluída:', {
+        total: resultado.total_notas,
+        fonte: resultado.fonte,
+        tem_mais: resultado.tem_mais_notas,
+        ultimo_nsu: resultado.ultimo_nsu,
+        max_nsu: resultado.max_nsu
+      });
+
+      // Validar estrutura dos dados
+      if (resultado.notas?.length > 0) {
+        const primeiraNota = resultado.notas[0];
+        console.log('📋 Estrutura da primeira nota:', Object.keys(primeiraNota));
+        console.log('📋 Dados da primeira nota:', primeiraNota);
+      }
+
       setInvoices(resultado.notas || []);
+      setUltimoNSU(resultado.ultimo_nsu);
+      setMaxNSU(resultado.max_nsu);
+      setTemMaisNotas(resultado.tem_mais_notas);
+
+      if (resultado.total_notas === 0) {
+        setError('ℹ️ Nenhuma nota fiscal encontrada para esta empresa');
+      }
 
       // Feedback de sucesso ao usuário
       const icone = resultado.fonte === 'cache' ? '💾' : '🌐';
       const origem = resultado.fonte === 'cache' ? 'cache local' : 'SEFAZ';
-      const certUsado = resultado.certificado_usado === 'empresa' ? '🏢 Certificado da Empresa' : '👤 Certificado do Contador';
       console.log(`${icone} ${resultado.total_notas} notas encontradas (${origem})`);
-      console.log(`${certUsado}`);
     } catch (err: any) {
       const mensagemErro = err.message || 'Erro ao buscar notas fiscais. Tente novamente.';
       setError(mensagemErro);
@@ -332,6 +380,53 @@ export const InvoiceSearch: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Carregar mais notas (paginação)
+  const handleCarregarMais = async () => {
+    if (!empresaSelecionada || carregandoMais || !temMaisNotas) {
+      return;
+    }
+
+    setCarregandoMais(true);
+    setError(null);
+
+    try {
+      const cnpjLimpo = empresaSelecionada.cnpj.replace(/\D/g, '');
+
+      // Buscar próxima página a partir do último NSU
+      const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
+        cnpj: cnpjLimpo,
+        nsu_inicial: ultimoNSU + 1,  // Próximo NSU
+        max_notas: 50
+      });
+
+      console.log(`✅ Página adicional carregada: +${resultado.notas.length} notas`);
+
+      // ACUMULAR resultados (não substituir)
+      setInvoices(prev => [...prev, ...(resultado.notas || [])]);
+      setUltimoNSU(resultado.ultimo_nsu);
+      setMaxNSU(resultado.max_nsu);
+      setTemMaisNotas(resultado.tem_mais_notas);
+
+    } catch (err: any) {
+      console.error('❌ Erro ao carregar mais notas:', err);
+      setError(`Erro ao carregar mais notas: ${err.message}`);
+    } finally {
+      setCarregandoMais(false);
+    }
+  };
+
+  // Handlers do modal
+  const handleVisualizarNota = (nota: NotaFiscal) => {
+    console.log('👁️ Visualizando nota:', nota);
+    setNotaSelecionada(nota);
+    setMostrarModal(true);
+  };
+
+  const handleFecharModal = () => {
+    setMostrarModal(false);
+    setNotaSelecionada(null);
   };
 
   // Download de XML
@@ -580,7 +675,7 @@ export const InvoiceSearch: React.FC = () => {
                 invoices.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[invoice.tipo_nf]}`}>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[getTipoBase(invoice.tipo_nf)]}`}>
                         {invoice.tipo_nf}
                       </span>
                     </td>
@@ -608,7 +703,7 @@ export const InvoiceSearch: React.FC = () => {
                       {formatDate(invoice.data_emissao)}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[invoice.situacao]}`}>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[getSituacaoNormalizada(invoice.situacao)]}`}>
                         {invoice.situacao.charAt(0).toUpperCase() + invoice.situacao.slice(1)}
                       </span>
                     </td>
@@ -617,7 +712,7 @@ export const InvoiceSearch: React.FC = () => {
                         <button
                           className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors"
                           title="Visualizar"
-                          onClick={() => {/* TODO: Abrir modal de detalhes */ }}
+                          onClick={() => handleVisualizarNota(invoice)}
                         >
                           <Eye size={18} className="text-gray-600 dark:text-gray-400" />
                         </button>
@@ -670,7 +765,7 @@ export const InvoiceSearch: React.FC = () => {
                         {invoice.numero_nf}/{invoice.serie}
                       </span>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[invoice.tipo_nf]}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[getTipoBase(invoice.tipo_nf)]}`}>
                       {invoice.tipo_nf}
                     </span>
                   </div>
@@ -708,7 +803,7 @@ export const InvoiceSearch: React.FC = () => {
 
                   {/* Status */}
                   <div className="mb-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[invoice.situacao]}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[getSituacaoNormalizada(invoice.situacao)]}`}>
                       {invoice.situacao.charAt(0).toUpperCase() + invoice.situacao.slice(1)}
                     </span>
                   </div>
@@ -717,7 +812,7 @@ export const InvoiceSearch: React.FC = () => {
                   <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-slate-700">
                     <button
                       className="flex-1 py-2 px-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-                      onClick={() => {/* TODO: Abrir modal de detalhes */ }}
+                      onClick={() => handleVisualizarNota(invoice)}
                     >
                       <Eye size={16} />
                       Visualizar
@@ -740,7 +835,141 @@ export const InvoiceSearch: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Botão Carregar Mais */}
+        {invoices.length > 0 && temMaisNotas && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={handleCarregarMais}
+              disabled={carregandoMais}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {carregandoMais ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Carregando...</span>
+                </>
+              ) : (
+                <>
+                  <Download size={20} />
+                  <span>Carregar Mais Notas</span>
+                  {maxNSU > 0 && (
+                    <span className="text-sm opacity-75">
+                      ({invoices.length} de ~{maxNSU})
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Info de fim da lista */}
+        {invoices.length > 0 && !temMaisNotas && (
+          <div className="mt-6 text-center text-gray-500 dark:text-gray-400 text-sm">
+            ✅ Todas as {invoices.length} notas foram carregadas
+          </div>
+        )}
       </div>
+
+      {/* Modal de Visualização */}
+      {mostrarModal && notaSelecionada && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleFecharModal}>
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center rounded-t-lg">
+              <div>
+                <h3 className="text-xl font-bold">Detalhes da Nota Fiscal</h3>
+                <p className="text-sm opacity-90">NFe Nº {notaSelecionada.numero_nf} - Série {notaSelecionada.serie}</p>
+              </div>
+              <button
+                onClick={handleFecharModal}
+                className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Conteúdo */}
+            <div className="p-6 space-y-6">
+              {/* Informações Básicas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border-l-4 border-blue-500 pl-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Tipo</p>
+                  <p className="font-semibold text-gray-800 dark:text-white">{notaSelecionada.tipo_nf}</p>
+                </div>
+                <div className="border-l-4 border-green-500 pl-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Data de Emissão</p>
+                  <p className="font-semibold text-gray-800 dark:text-white">
+                    {formatDate(notaSelecionada.data_emissao)}
+                  </p>
+                </div>
+                <div className="border-l-4 border-purple-500 pl-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Valor Total</p>
+                  <p className="font-semibold text-gray-800 dark:text-white text-lg">
+                    {formatCurrency(notaSelecionada.valor_total)}
+                  </p>
+                </div>
+                <div className="border-l-4 border-yellow-500 pl-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Situação</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${CORES_SITUACAO[getSituacaoNormalizada(notaSelecionada.situacao)]}`}>
+                    {notaSelecionada.situacao.charAt(0).toUpperCase() + notaSelecionada.situacao.slice(1)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Emitente */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
+                  <Building2 size={20} className="text-blue-600" />
+                  Emitente
+                </h4>
+                <p className="font-medium text-gray-800 dark:text-white">{notaSelecionada.nome_emitente}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">CNPJ: {notaSelecionada.cnpj_emitente}</p>
+              </div>
+
+              {/* Chave de Acesso */}
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
+                  <FileText size={20} className="text-blue-600" />
+                  Chave de Acesso
+                </h4>
+                <p className="font-mono text-sm text-gray-700 dark:text-gray-300 break-all bg-white dark:bg-slate-800 p-2 rounded border border-gray-200 dark:border-slate-600">
+                  {notaSelecionada.chave_acesso}
+                </p>
+              </div>
+
+              {/* NSU (se disponível) */}
+              {notaSelecionada.nsu && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Hash size={16} />
+                  NSU: {notaSelecionada.nsu}
+                </div>
+              )}
+            </div>
+
+            {/* Footer com ações */}
+            <div className="bg-gray-50 dark:bg-slate-700/50 px-6 py-4 flex justify-end gap-3 rounded-b-lg border-t border-gray-200 dark:border-slate-600">
+              <button
+                onClick={handleFecharModal}
+                className="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => notaSelecionada.chave_acesso && handleDownloadXml(notaSelecionada.chave_acesso)}
+                disabled={!notaSelecionada.chave_acesso}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <Download size={20} />
+                Baixar XML
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

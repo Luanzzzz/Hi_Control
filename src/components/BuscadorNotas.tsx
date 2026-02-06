@@ -61,6 +61,29 @@ import {
 // Hook customizado para busca por empresa
 import { useBuscadorNotas } from '../hooks/useBuscadorNotas';
 
+/**
+ * Helper para extrair tipo base de strings formatadas (ex: "NFe Entrada" → "NFe")
+ */
+const getTipoBase = (tipoFormatado: string): TipoNotaFiscal => {
+  const match = tipoFormatado.match(/^(NFe|NFCe|NFSe|CTe)/i);
+  if (match) {
+    return match[1] as TipoNotaFiscal;
+  }
+  return 'NFe' as TipoNotaFiscal;
+};
+
+/**
+ * Helper para normalizar situação (backend retorna uppercase, CORES_SITUACAO espera lowercase)
+ */
+const getSituacaoNormalizada = (situacao: string): SituacaoNota => {
+  const situacaoLower = situacao.toLowerCase() as SituacaoNota;
+  const situacoesValidas: SituacaoNota[] = ['autorizada', 'cancelada', 'denegada', 'processando'];
+  if (situacoesValidas.includes(situacaoLower)) {
+    return situacaoLower;
+  }
+  return 'autorizada' as SituacaoNota;
+};
+
 export const BuscadorNotas: React.FC = () => {
   // ===== Hook de Busca por Empresa (Sprint NFe Integration) =====
   const {
@@ -576,7 +599,7 @@ export const BuscadorNotas: React.FC = () => {
                     {/* Tipo */}
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${CORES_TIPO_NF[nota.tipo_nf]}`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${CORES_TIPO_NF[getTipoBase(nota.tipo_nf)]}`}
                       >
                         {nota.tipo_nf}
                       </span>
@@ -621,7 +644,7 @@ export const BuscadorNotas: React.FC = () => {
                     {/* Situação */}
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${CORES_SITUACAO[nota.situacao]}`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${CORES_SITUACAO[getSituacaoNormalizada(nota.situacao)]}`}
                       >
                         {nota.situacao.charAt(0).toUpperCase() + nota.situacao.slice(1)}
                       </span>
@@ -665,12 +688,12 @@ export const BuscadorNotas: React.FC = () => {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex flex-col gap-2">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${CORES_TIPO_NF[nota.tipo_nf]}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${CORES_TIPO_NF[getTipoBase(nota.tipo_nf)]}`}
                     >
                       {nota.tipo_nf}
                     </span>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${CORES_SITUACAO[nota.situacao]}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${CORES_SITUACAO[getSituacaoNormalizada(nota.situacao)]}`}
                     >
                       {nota.situacao.charAt(0).toUpperCase() + nota.situacao.slice(1)}
                     </span>
@@ -794,7 +817,7 @@ export const BuscadorNotas: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Situação</p>
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${CORES_SITUACAO[notaSelecionada.situacao]}`}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${CORES_SITUACAO[getSituacaoNormalizada(notaSelecionada.situacao)]}`}
                   >
                     {notaSelecionada.situacao.charAt(0).toUpperCase() + notaSelecionada.situacao.slice(1)}
                   </span>

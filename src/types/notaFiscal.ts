@@ -10,9 +10,10 @@ export interface NotaFiscal {
   empresa_id: string;
   numero_nf: string;
   serie: string;
-  tipo_nf: TipoNotaFiscal;
+  tipo_nf: TipoNotaFiscal | string; // Pode ser formatado ("NFe Entrada") quando vindo da API
   modelo?: string;
   chave_acesso?: string;
+  nsu?: number; // NSU da DistribuicaoDFe (quando buscado via SEFAZ)
   data_emissao: string;
   data_autorizacao?: string;
   valor_total: number;
