@@ -251,6 +251,7 @@ export const InvoiceSearch: React.FC = () => {
   const [maxNSU, setMaxNSU] = useState<number>(0);
   const [temMaisNotas, setTemMaisNotas] = useState<boolean>(false);
   const [carregandoMais, setCarregandoMais] = useState<boolean>(false);
+  const [limitePorPagina, setLimitePorPagina] = useState<number>(50); // Quantidade de notas por página
 
   // Estado do modal de visualização
   const [notaSelecionada, setNotaSelecionada] = useState<NotaFiscal | null>(null);
@@ -338,7 +339,7 @@ export const InvoiceSearch: React.FC = () => {
       const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
         cnpj: cnpjLimpo,
         nsu_inicial: 0,        // Começar do NSU 0
-        max_notas: 50          // 50 notas por vez
+        max_notas: limitePorPagina  // Usar limite configurado
       });
 
       console.log('✅ Busca concluída:', {
@@ -398,7 +399,7 @@ export const InvoiceSearch: React.FC = () => {
       const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
         cnpj: cnpjLimpo,
         nsu_inicial: ultimoNSU + 1,  // Próximo NSU
-        max_notas: 50
+        max_notas: limitePorPagina  // Usar limite configurado
       });
 
       console.log(`✅ Página adicional carregada: +${resultado.notas.length} notas`);
@@ -542,7 +543,7 @@ export const InvoiceSearch: React.FC = () => {
 
         {/* Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t border-gray-200 dark:border-slate-700">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Tipo de Nota
@@ -607,7 +608,24 @@ export const InvoiceSearch: React.FC = () => {
               </div>
             </div>
 
-            <div className="md:col-span-4 flex justify-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Notas por Página
+              </label>
+              <select
+                value={limitePorPagina}
+                onChange={(e) => setLimitePorPagina(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+              >
+                <option value={10}>10 notas</option>
+                <option value={25}>25 notas</option>
+                <option value={50}>50 notas</option>
+                <option value={100}>100 notas</option>
+                <option value={200}>200 notas</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-5 flex justify-end">
               <button
                 onClick={clearFilters}
                 className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
