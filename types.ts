@@ -4,6 +4,9 @@ export enum ViewState {
   INVOICES = 'INVOICES',
   INVOICE_EMITTER = 'INVOICE_EMITTER',
   INVOICE_SEARCH = 'INVOICE_SEARCH',
+  PDV = 'PDV', // NFC-e - Cupom Fiscal Eletrônico
+  CTE = 'CTE', // CT-e - Conhecimento de Transporte
+  NFSE = 'NFSE', // NFS-e - Nota Fiscal de Serviço
   TASKS = 'TASKS',
   WHATSAPP = 'WHATSAPP',
   USERS = 'USERS',
@@ -72,6 +75,9 @@ export interface ModuleAccess {
   [ViewState.INVOICES]: ModulePriority;
   [ViewState.INVOICE_EMITTER]: ModulePriority;
   [ViewState.INVOICE_SEARCH]: ModulePriority;
+  [ViewState.PDV]: ModulePriority;
+  [ViewState.CTE]: ModulePriority;
+  [ViewState.NFSE]: ModulePriority;
   [ViewState.TASKS]: ModulePriority;
   [ViewState.WHATSAPP]: ModulePriority;
   [ViewState.USERS]: ModulePriority;

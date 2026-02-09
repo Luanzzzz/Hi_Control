@@ -7,6 +7,9 @@ import { Dashboard } from './components/Dashboard';
 import { Invoices } from './components/Invoices';
 import { InvoiceSearch } from './components/InvoiceSearch';
 import { InvoiceEmitter } from './components/InvoiceEmitter';
+import { PDV } from './components/PDV';
+import { CTe } from './components/CTe';
+import { NFSe } from './components/NFSe';
 import { Tasks } from './components/Tasks';
 import { WhatsAppModule } from './components/WhatsAppModule';
 import { ViewState, UserPlan, ModuleAccess } from './types';
@@ -21,6 +24,9 @@ const moduleAccess: ModuleAccess = {
   [ViewState.INVOICES]: 1,
   [ViewState.INVOICE_EMITTER]: 1,
   [ViewState.INVOICE_SEARCH]: 1,
+  [ViewState.PDV]: 1, // NFC-e disponível para todos
+  [ViewState.CTE]: 1, // CT-e disponível para todos
+  [ViewState.NFSE]: 1, // NFS-e disponível para todos
   [ViewState.TASKS]: 1,
   [ViewState.WHATSAPP]: 1,
   [ViewState.USERS]: 2, // Priority 2 - Restricted for basic plan
@@ -96,6 +102,15 @@ const AppContent: React.FC = () => {
 
       case ViewState.INVOICE_EMITTER:
         return <InvoiceEmitter />;
+
+      case ViewState.PDV:
+        return <PDV />;
+
+      case ViewState.CTE:
+        return <CTe />;
+
+      case ViewState.NFSE:
+        return <NFSe />;
 
       case ViewState.TASKS:
         return <Tasks />;

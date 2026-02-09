@@ -132,6 +132,8 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
             setValue('email', client.email);
             setValue('telefone', client.telefone);
             setValue('regime_tributario', client.regime_tributario);
+            setValue('csc_id', client.csc_id);
+            setValue('csc_token', client.csc_token);
         } else {
             setEditingClient(null);
             reset();
@@ -602,6 +604,65 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                             Enviando certificado...
                                         </div>
                                     )}
+                                </div>
+                            </div>
+
+                            {/* Seção CSC - Código de Segurança do Contribuinte para NFC-e */}
+                            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700">
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Shield size={20} className="text-blue-600 dark:text-blue-400" />
+                                        CSC - Código de Segurança do Contribuinte
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        Necessário para emissão de NFC-e (Cupom Fiscal Eletrônico). Obtenha esses dados no portal da SEFAZ.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            ID do CSC
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="999999"
+                                            {...register('csc_id')}
+                                            placeholder="Ex: 1"
+                                            className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            Identificador do CSC (número de 1 a 999999)
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Token CSC
+                                        </label>
+                                        <input
+                                            type="text"
+                                            {...register('csc_token')}
+                                            placeholder="Ex: A1B2C3D4E5F6..."
+                                            className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            Token alfanumérico fornecido pela SEFAZ
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                                    <div className="text-sm text-blue-800 dark:text-blue-300">
+                                        <p className="font-medium mb-1">Importante sobre o CSC:</p>
+                                        <ul className="list-disc list-inside space-y-0.5 text-xs">
+                                            <li>O CSC é necessário apenas para emissão de NFC-e (Cupom Fiscal)</li>
+                                            <li>Você pode configurar até 2 CSCs ativos simultâneos na SEFAZ</li>
+                                            <li>Nunca compartilhe o token CSC com terceiros</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
 

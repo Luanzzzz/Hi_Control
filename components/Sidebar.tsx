@@ -17,7 +17,10 @@ import {
   Search,
   FileEdit,
   Star,
-  Settings
+  Settings,
+  ShoppingCart,
+  Truck,
+  Briefcase
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,12 +52,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       subModules: [
         {
           id: ViewState.INVOICE_EMITTER,
-          label: 'Emissor de Notas',
+          label: 'NF-e (Modelo 55)',
+          priority: 1
+        },
+        {
+          id: ViewState.PDV,
+          label: 'NFC-e (Cupom Fiscal)',
+          priority: 1
+        },
+        {
+          id: ViewState.CTE,
+          label: 'CT-e (Transporte)',
+          priority: 1
+        },
+        {
+          id: ViewState.NFSE,
+          label: 'NFS-e (Serviços)',
           priority: 1
         },
         {
           id: ViewState.INVOICE_SEARCH,
-          label: 'Buscador de Notas',
+          label: 'Consultar Notas',
           priority: 1,
           isPriority: true // Destacar como prioridade MVP
         }
@@ -128,6 +146,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   const getSubModuleIcon = (subModule: SubModule) => {
     if (subModule.id === ViewState.INVOICE_SEARCH) return Search;
     if (subModule.id === ViewState.INVOICE_EMITTER) return FileEdit;
+    if (subModule.id === ViewState.PDV) return ShoppingCart;
+    if (subModule.id === ViewState.CTE) return Truck;
+    if (subModule.id === ViewState.NFSE) return Briefcase;
     return FileText;
   };
 

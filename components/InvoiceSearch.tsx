@@ -19,6 +19,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { buscarNotasEmpresa, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
+import { downloadDANFCE, downloadDACTE, downloadPDF } from '../src/services/fiscalService';
 import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
 import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 import { empresaService, Empresa } from '../services/empresaService';
@@ -352,6 +353,47 @@ export const InvoiceSearch: React.FC = () => {
     }
   };
 
+  // Download de PDF (DANFCE, DACTE, etc)
+  const handleDownloadPdf = async (nota: NotaFiscal) => {
+    if (!nota.chave_acesso) {
+      setError('Chave de acesso não disponível para esta nota.');
+      return;
+    }
+
+    setDownloadingXml(nota.chave_acesso); // Reutilizando estado de loading
+    try {
+      let blob: Blob;
+      let nomeArquivo: string;
+
+      switch (nota.tipo_nf) {
+        case 'NFCe':
+          blob = await downloadDANFCE(nota.chave_acesso);
+          nomeArquivo = `DANFCE_${nota.chave_acesso}.pdf`;
+          break;
+        case 'CTe':
+          blob = await downloadDACTE(nota.chave_acesso);
+          nomeArquivo = `DACTE_${nota.chave_acesso}.pdf`;
+          break;
+        case 'NFe':
+          // Assumir que existe endpoint para DANFE (pode ser implementado depois)
+          setError('Download de DANFE ainda não implementado. Use o XML.');
+          return;
+        case 'NFSe':
+          setError('Download de PDF para NFS-e ainda não implementado.');
+          return;
+        default:
+          setError('Tipo de documento não suportado para download de PDF.');
+          return;
+      }
+
+      downloadPDF(blob, nomeArquivo);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao baixar PDF. Tente novamente.');
+    } finally {
+      setDownloadingXml(null);
+    }
+  };
+
 
   // Formatar valor
   const formatCurrency = (value: number): string => {
@@ -457,7 +499,11 @@ export const InvoiceSearch: React.FC = () => {
                 onChange={(e) => setSelectedType(e.target.value as TipoNotaFiscal | 'TODAS')}
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
               >
-                <option value="TODAS">Todas</option>
+                <option value="TODAS">Todos os Tipos</option>
+                <option value="NFe">NF-e (Modelo 55 - Nota Fiscal Eletrônica)</option>
+                <option value="NFCe">NFC-e (Modelo 65 - Cupom Fiscal Eletrônico)</option>
+                <option value="CTe">CT-e (Modelo 57 - Conhecimento de Transporte)</option>
+                <option value="NFSe">NFS-e (Nota Fiscal de Serviço Eletrônica)</option>
                 <option value="NFe">NF-e</option>
                 <option value="NFCe">NFC-e</option>
                 <option value="NFSe">NFS-e</option>
@@ -621,6 +667,22 @@ export const InvoiceSearch: React.FC = () => {
                         >
                           <Eye size={18} className="text-gray-600 dark:text-gray-400" />
                         </button>
+                        {/* Botão Download PDF (NFC-e, CT-e) */}
+                        {(invoice.tipo_nf === 'NFCe' || invoice.tipo_nf === 'CTe') && (
+                          <button
+                            className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={`Download ${invoice.tipo_nf === 'NFCe' ? 'DANFCE' : 'DACTE'}`}
+                            onClick={() => handleDownloadPdf(invoice)}
+                            disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
+                          >
+                            {downloadingXml === invoice.chave_acesso ? (
+                              <Loader2 size={18} className="text-blue-600 dark:text-blue-400 animate-spin" />
+                            ) : (
+                              <FileText size={18} className="text-blue-600 dark:text-blue-400" />
+                            )}
+                          </button>
+                        )}
+                        {/* Botão Download XML */}
                         <button
                           className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Download XML"
@@ -722,6 +784,21 @@ export const InvoiceSearch: React.FC = () => {
                       <Eye size={16} />
                       Visualizar
                     </button>
+                    {/* Botão PDF para NFC-e e CT-e */}
+                    {(invoice.tipo_nf === 'NFCe' || invoice.tipo_nf === 'CTe') && (
+                      <button
+                        className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-white"
+                        onClick={() => handleDownloadPdf(invoice)}
+                        disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
+                      >
+                        {downloadingXml === invoice.chave_acesso ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <FileText size={16} />
+                        )}
+                        {invoice.tipo_nf === 'NFCe' ? 'DANFCE' : 'DACTE'}
+                      </button>
+                    )}
                     <button
                       className="flex-1 py-2 px-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-white"
                       onClick={() => invoice.chave_acesso && handleDownloadXml(invoice.chave_acesso)}
@@ -732,7 +809,7 @@ export const InvoiceSearch: React.FC = () => {
                       ) : (
                         <Download size={16} />
                       )}
-                      {downloadingXml === invoice.chave_acesso ? 'Baixando...' : 'Download XML'}
+                      XML
                     </button>
                   </div>
                 </div>

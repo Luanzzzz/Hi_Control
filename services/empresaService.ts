@@ -22,6 +22,8 @@ export interface Empresa {
     certificado_validade?: string;
     certificado_titular?: string;
     certificado_emissor?: string;
+    csc_id?: number; // ID do CSC para NFC-e (1-999999)
+    csc_token?: string; // Token alfanumérico do CSC
 }
 
 export interface CertificateUploadResponse {
@@ -59,6 +61,8 @@ export interface EmpresaCreate {
     email?: string;
     telefone?: string;
     regime_tributario?: 'simples_nacional' | 'lucro_presumido' | 'lucro_real';
+    csc_id?: number; // ID do CSC para NFC-e (1-999999)
+    csc_token?: string; // Token alfanumérico do CSC
 }
 
 export interface CnpjCheckResponse {
