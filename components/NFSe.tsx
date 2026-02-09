@@ -588,15 +588,15 @@ export const NFSe: React.FC = () => {
                 <span className="opacity-80">Valor dos Serviços:</span>
                 <span className="font-medium">R$ {valorServicos.toFixed(2)}</span>
               </div>
-              {valorDeducoes > 0 && (
+              {(valorDeducoes ?? 0) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="opacity-80">(-) Deduções:</span>
-                  <span className="font-medium">R$ {valorDeducoes.toFixed(2)}</span>
+                  <span className="font-medium">R$ {(valorDeducoes ?? 0).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span className="opacity-80">Base de Cálculo ISS:</span>
-                <span className="font-medium">R$ {(valorServicos - (valorDeducoes || 0)).toFixed(2)}</span>
+                <span className="font-medium">R$ {(valorServicos - (valorDeducoes ?? 0)).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="opacity-80">ISS ({aliquotaISS}%):</span>

@@ -525,9 +525,9 @@ const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, pref
               CNPJ/CPF *
             </label>
             <InputMask
-              mask={watch => {
-                const value = watch?.replace(/\D/g, '') || '';
-                return value.length <= 11 ? '999.999.999-99' : '99.999.999/9999-99';
+              mask={(value: string) => {
+                const digits = (value ?? '').replace(/\D/g, '');
+                return digits.length <= 11 ? '999.999.999-99' : '99.999.999/9999-99';
               }}
               {...register(`${prefixo}.cnpj`, { required: true })}
               className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
