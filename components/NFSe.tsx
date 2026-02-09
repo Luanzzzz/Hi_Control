@@ -11,6 +11,7 @@ import { BannerContingenciaCompacto } from '../src/components/fiscal/BannerConti
 import type { NFSeEmitirRequest, TomadorNFSe, ServicoNFSe } from '../src/types/fiscal';
 import { empresaService } from '../services/empresaService';
 import InputMask from 'react-input-mask';
+import { formatarValor, valorNumerico } from '../utils/formatarValor';
 
 interface FormularioNFSe {
   numero_rps?: string;
@@ -68,8 +69,9 @@ export const NFSe: React.FC = () => {
   const aliquotaISS = watch('servico.aliquota_iss', 5.0);
   const valorDeducoes = watch('servico.valor_deducoes', 0);
 
-  // Calcular ISS automaticamente
-  const valorISS = calcularISS(valorServicos - (valorDeducoes || 0), aliquotaISS);
+  // Calcular ISS automaticamente (valores podem vir como string do watch)
+  const baseISS = valorNumerico(valorServicos) - valorNumerico(valorDeducoes);
+  const valorISS = calcularISS(baseISS, valorNumerico(aliquotaISS));
 
   // Carregar empresas
   useEffect(() => {
@@ -518,7 +520,7 @@ export const NFSe: React.FC = () => {
                       Valor do ISS Calculado
                     </div>
                     <div className="text-xl font-bold text-blue-700 dark:text-blue-300">
-                      R$ {valorISS.toFixed(2)}
+                      R$ {formatarValor(valorISS)}
                     </div>
                   </div>
                 </div>
@@ -586,25 +588,25 @@ export const NFSe: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="opacity-80">Valor dos Serviços:</span>
-                <span className="font-medium">R$ {valorServicos.toFixed(2)}</span>
+                <span className="font-medium">R$ {formatarValor(valorServicos)}</span>
               </div>
-              {(valorDeducoes ?? 0) > 0 && (
+              {valorNumerico(valorDeducoes) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="opacity-80">(-) Deduções:</span>
-                  <span className="font-medium">R$ {(valorDeducoes ?? 0).toFixed(2)}</span>
+                  <span className="font-medium">R$ {formatarValor(valorDeducoes)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span className="opacity-80">Base de Cálculo ISS:</span>
-                <span className="font-medium">R$ {(valorServicos - (valorDeducoes ?? 0)).toFixed(2)}</span>
+                <span className="font-medium">R$ {formatarValor(baseISS)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="opacity-80">ISS ({aliquotaISS}%):</span>
-                <span className="font-medium">R$ {valorISS.toFixed(2)}</span>
+                <span className="opacity-80">ISS ({formatarValor(aliquotaISS)}%):</span>
+                <span className="font-medium">R$ {formatarValor(valorISS)}</span>
               </div>
               <div className="pt-2 border-t border-blue-400 flex justify-between text-lg">
                 <span className="font-bold">Valor Total:</span>
-                <span className="font-bold">R$ {valorServicos.toFixed(2)}</span>
+                <span className="font-bold">R$ {formatarValor(valorServicos)}</span>
               </div>
             </div>
           </div>

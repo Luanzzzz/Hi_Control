@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, X, Package, Check, AlertCircle } from 'lucide-react';
 import { buscarProdutos } from '../../services/fiscalService';
 import type { ProdutoCadastrado } from '../../types/fiscal';
+import { formatarValor } from '../../../utils/formatarValor';
 
 interface SeletorProdutosProps {
   isOpen: boolean;
@@ -215,7 +216,7 @@ export const SeletorProdutos: React.FC<SeletorProdutosProps> = ({
                             <span className="font-medium">Unidade:</span> {produto.unidade}
                           </div>
                           <div className="font-medium text-green-600 dark:text-green-400">
-                            R$ {produto.valor_unitario.toFixed(2)}
+                            R$ {formatarValor(produto.valor_unitario)}
                           </div>
                         </div>
                       </div>

@@ -313,20 +313,42 @@ export const validarDocumento = async (
 
 /**
  * Verifica se o sistema SEFAZ está em contingência
- * @returns Status da contingência
+ * @returns Status da contingência (trata 404/500 para não quebrar a UI)
  */
 export const verificarContingencia = async (): Promise<StatusContingenciaResponse> => {
   try {
     const response = await api.get<StatusContingenciaResponse>(
       '/emissao/suporte/contingencia'
     );
-    return response.data;
+    const data = response.data;
+    return {
+      em_contingencia: Boolean(data?.em_contingencia),
+      tipo_contingencia: data?.tipo_contingencia,
+      motivo: data?.motivo,
+      data_inicio: data?.data_inicio,
+      previsao_retorno: data?.previsao_retorno,
+    };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      // Se não conseguir verificar, assume que não está em contingência
+      const status = error.response?.status;
+      // 404: endpoint não existe no backend - assumir contingência desativada
+      if (status === 404) {
+        return {
+          em_contingencia: false,
+          motivo: 'Endpoint de contingência não disponível',
+        };
+      }
+      // 500 ou outro erro: por segurança assumir contingência ativa
+      if (status === 500 || status === 502 || status === 503) {
+        return {
+          em_contingencia: true,
+          motivo: 'Erro ao verificar SEFAZ - modo contingência assumido',
+        };
+      }
+      // Outros (rede, 401, etc): assumir não em contingência
       return { em_contingencia: false };
     }
-    throw error;
+    return { em_contingencia: false };
   }
 };
 

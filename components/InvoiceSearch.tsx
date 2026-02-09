@@ -395,12 +395,13 @@ export const InvoiceSearch: React.FC = () => {
   };
 
 
-  // Formatar valor
-  const formatCurrency = (value: number): string => {
+  // Formatar valor (aceita number, string ou undefined para evitar .toFixed is not a function)
+  const formatCurrency = (value: unknown): string => {
+    const num = typeof value === 'number' && !Number.isNaN(value) ? value : parseFloat(String(value ?? '0')) || 0;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(value);
+    }).format(num);
   };
 
   // Formatar data

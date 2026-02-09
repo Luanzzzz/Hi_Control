@@ -13,6 +13,7 @@ import { AutocompleteNCM } from '../src/components/fiscal/AutocompleteNCM';
 import { BannerContingenciaCompacto } from '../src/components/fiscal/BannerContingencia';
 import type { ItemNFCe, PagamentoNFCe, NFCeAutorizarRequest, ProdutoCadastrado, TipoPagamento } from '../src/types/fiscal';
 import { empresaService } from '../services/empresaService';
+import { formatarValor, valorNumerico } from '../utils/formatarValor';
 
 interface FormularioItem {
   numero_item: number;
@@ -60,7 +61,9 @@ export const PDV: React.FC = () => {
   };
 
   const adicionarItem = (data: FormularioItem) => {
-    const valorTotal = Number((data.quantidade * data.valor_unitario).toFixed(2));
+    const qtd = valorNumerico(data.quantidade);
+    const vUnit = valorNumerico(data.valor_unitario);
+    const valorTotal = Number((qtd * vUnit).toFixed(2));
     
     const novoItem: ItemNFCe = {
       numero_item: itens.length + 1,
@@ -69,8 +72,8 @@ export const PDV: React.FC = () => {
       ncm: data.ncm,
       cfop: data.cfop,
       unidade: data.unidade,
-      quantidade: data.quantidade,
-      valor_unitario: data.valor_unitario,
+      quantidade: qtd,
+      valor_unitario: vUnit,
       valor_total: valorTotal,
     };
 
@@ -88,17 +91,21 @@ export const PDV: React.FC = () => {
   };
 
   const adicionarProdutosCadastrados = (produtos: ProdutoCadastrado[]) => {
-    const novosItens = produtos.map((produto, index) => ({
-      numero_item: itens.length + index + 1,
-      codigo_produto: produto.codigo,
-      descricao: produto.descricao,
-      ncm: produto.ncm,
-      cfop: produto.cfop_padrao || '5102', // CFOP padrão se não especificado
-      unidade: produto.unidade,
-      quantidade: 1,
-      valor_unitario: produto.valor_unitario,
-      valor_total: produto.valor_unitario,
-    }));
+    const vUnit = (p: ProdutoCadastrado) => valorNumerico(p.valor_unitario);
+    const novosItens = produtos.map((produto, index) => {
+      const vu = vUnit(produto);
+      return {
+        numero_item: itens.length + index + 1,
+        codigo_produto: produto.codigo,
+        descricao: produto.descricao,
+        ncm: produto.ncm,
+        cfop: produto.cfop_padrao || '5102',
+        unidade: produto.unidade,
+        quantidade: 1,
+        valor_unitario: vu,
+        valor_total: vu,
+      };
+    });
 
     setItens([...itens, ...novosItens]);
   };
@@ -123,11 +130,11 @@ export const PDV: React.FC = () => {
   };
 
   const calcularTotalGeral = (): number => {
-    return itens.reduce((acc, item) => acc + item.valor_total, 0);
+    return itens.reduce((acc, item) => acc + valorNumerico(item.valor_total), 0);
   };
 
   const calcularTotalPago = (): number => {
-    return pagamentos.reduce((acc, pag) => acc + pag.valor, 0);
+    return pagamentos.reduce((acc, pag) => acc + valorNumerico(pag.valor), 0);
   };
 
   const emitirCupom = async () => {
@@ -145,7 +152,7 @@ export const PDV: React.FC = () => {
     const totalPago = calcularTotalPago();
 
     if (Math.abs(totalGeral - totalPago) > 0.01) {
-      setErro(`Valor pago (R$ ${totalPago.toFixed(2)}) não corresponde ao total (R$ ${totalGeral.toFixed(2)})`);
+      setErro(`Valor pago (R$ ${formatarValor(totalPago)}) não corresponde ao total (R$ ${formatarValor(totalGeral)})`);
       return;
     }
 
@@ -365,7 +372,7 @@ export const PDV: React.FC = () => {
                 </div>
 
                 <div className="text-right text-lg font-bold text-gray-900 dark:text-white">
-                  Total: R$ {((quantidadeWatch || 0) * (valorUnitarioWatch || 0)).toFixed(2)}
+                  Total: R$ {formatarValor(valorNumerico(quantidadeWatch) * valorNumerico(valorUnitarioWatch))}
                 </div>
 
                 <button
@@ -400,12 +407,12 @@ export const PDV: React.FC = () => {
                           {item.descricao}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {item.quantidade} {item.unidade} x R$ {item.valor_unitario.toFixed(2)}
+                          {item.quantidade} {item.unidade} x R$ {formatarValor(item.valor_unitario)}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="font-bold text-gray-900 dark:text-white">
-                          R$ {item.valor_total.toFixed(2)}
+                          R$ {formatarValor(item.valor_total)}
                         </div>
                         <button
                           onClick={() => removerItem(item.numero_item)}
@@ -427,18 +434,18 @@ export const PDV: React.FC = () => {
             <div className="bg-blue-600 text-white rounded-lg shadow-lg p-6">
               <div className="text-sm opacity-80 mb-1">Valor Total</div>
               <div className="text-4xl font-bold">
-                R$ {calcularTotalGeral().toFixed(2)}
+                R$ {formatarValor(calcularTotalGeral())}
               </div>
               {pagamentos.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-blue-400">
                   <div className="flex justify-between text-sm">
                     <span className="opacity-80">Valor Pago:</span>
-                    <span className="font-bold">R$ {calcularTotalPago().toFixed(2)}</span>
+                    <span className="font-bold">R$ {formatarValor(calcularTotalPago())}</span>
                   </div>
                   <div className="flex justify-between text-sm mt-1">
                     <span className="opacity-80">Falta:</span>
                     <span className="font-bold">
-                      R$ {(calcularTotalGeral() - calcularTotalPago()).toFixed(2)}
+                      R$ {formatarValor(calcularTotalGeral() - calcularTotalPago())}
                     </span>
                   </div>
                 </div>
@@ -499,7 +506,7 @@ export const PDV: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="font-bold text-gray-900 dark:text-white">
-                          R$ {pag.valor.toFixed(2)}
+                          R$ {formatarValor(pag.valor)}
                         </div>
                         <button
                           onClick={() => removerPagamento(index)}

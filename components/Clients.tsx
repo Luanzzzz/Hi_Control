@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import InputMask from 'react-input-mask';
-import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle, Mail } from 'lucide-react';
 import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
 import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
 import { formatDate } from '../utils/dateUtils';
+import { ConfiguracaoEmail } from './ConfiguracaoEmail';
+import { ConfiguracaoDrive } from './ConfiguracaoDrive';
 
 // ===== Badge de Certificado Simples (inline) =====
 interface SimpleCertBadgeProps {
@@ -229,12 +231,21 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
         try {
             let empresaId: string;
 
+            // Garantir que CSC seja enviado corretamente (csc_id como number, csc_token como string)
+            const payload: EmpresaCreate = {
+                ...data,
+                csc_id: data.csc_id !== undefined && data.csc_id !== null && String(data.csc_id).trim() !== ''
+                    ? Number(data.csc_id)
+                    : undefined,
+                csc_token: data.csc_token && String(data.csc_token).trim() ? String(data.csc_token).trim() : undefined,
+            };
+
             if (editingClient) {
-                await empresaService.atualizar(editingClient.id, data);
+                await empresaService.atualizar(editingClient.id, payload);
                 empresaId = editingClient.id;
                 setFormMessage({ type: 'success', text: 'Dados do cliente atualizados com sucesso!' });
             } else {
-                const result = await empresaService.criar(data);
+                const result = await empresaService.criar(payload);
                 empresaId = result.id;
 
                 if (result._action === 'updated') {
@@ -665,6 +676,21 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Seção Importação Automática - Email e Drive (apenas ao editar cliente) */}
+                            {editingClient && (
+                                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700 space-y-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Mail size={20} className="text-blue-600 dark:text-blue-400" />
+                                        Importação Automática de Notas
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Configure o email IMAP ou Google Drive deste cliente para importar XMLs fiscais automaticamente.
+                                    </p>
+                                    <ConfiguracaoEmail empresaId={editingClient.id} />
+                                    <ConfiguracaoDrive empresaId={editingClient.id} />
+                                </div>
+                            )}
 
                             <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-slate-700">
                                 <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
