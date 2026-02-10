@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
   FileText,
@@ -19,26 +19,42 @@ import {
   Download,
   Eye,
   Filter,
-  Calendar
+  Calendar,
+  TrendingUp,
+  ArrowUpRight,
+  ArrowDownLeft,
+  DollarSign,
+  Clock,
+  Edit2
 } from 'lucide-react';
+import {
+  BarChart as ReBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Cell,
+  AreaChart as ReAreaChart,
+  Area
+} from 'recharts';
 import { empresaService, Empresa } from '../services/empresaService';
-import { certificadoService, CertificadoStatus, CertificadoUploadResponse } from '../src/services/certificadoService';
+import { certificadoService, CertificadoStatus } from '../src/services/certificadoService';
 import { botService, StatusEmpresa } from '../src/services/botService';
 import { buscarNotasEmpresa, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
 import { downloadDANFCE, downloadDACTE, downloadPDF } from '../src/services/fiscalService';
-import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
-import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
-import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
+import type { NotaFiscal, TipoNotaFiscal } from '../src/types/notaFiscal';
+import { CORES_TIPO_NF } from '../src/types/notaFiscal';
+import { fileToBase64 } from '../utils/fileUtils';
 
 interface ClientDashboardProps {
   empresaId: string;
   onBack: () => void;
 }
 
-type TabType = 'notas' | 'config';
-
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onBack }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('notas');
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [loadingEmpresa, setLoadingEmpresa] = useState(true);
 
@@ -49,8 +65,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
   const [errorNotas, setErrorNotas] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<TipoNotaFiscal | 'TODAS'>('TODAS');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
 
   // Estados da Aba Config/Certificado
@@ -60,6 +74,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
   const [certPassword, setCertPassword] = useState('');
   const [uploadingCert, setUploadingCert] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showCertModal, setShowCertModal] = useState(false);
+
+  // Mock data para o gráfico (baseado na estrutura da imagem)
+  const chartData = [
+    { name: 'Jan/26', prestados: 18000, tomados: 8000 },
+    { name: 'Fev/26', prestados: 10000, tomados: 12000 },
+  ];
 
   const carregarDadosEmpresa = useCallback(async () => {
     setLoadingEmpresa(true);
@@ -112,7 +133,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
         max_notas: 100
       });
       setInvoices(resultado.notas || []);
-      carregarBotStatus(); // Atualizar status após busca
+      carregarBotStatus();
     } catch (err: any) {
       setErrorNotas(err.message || 'Erro ao buscar notas fiscais');
     } finally {
@@ -132,6 +153,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
       setCertPassword('');
       carregarCertStatus();
       carregarBotStatus();
+      setTimeout(() => setShowCertModal(false), 2000);
     } catch (err: any) {
       setUploadResult({ type: 'error', message: err.response?.data?.detail || err.message });
     } finally {
@@ -146,7 +168,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
 
   if (loadingEmpresa) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full min-h-[400px]">
         <Loader2 className="animate-spin text-primary-500" size={40} />
       </div>
     );
@@ -164,238 +186,316 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header com Contexto */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
-            title="Voltar"
+    <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto bg-[#f8fafc] dark:bg-slate-950 min-h-screen">
+      
+      {/* 1. Header Contextual (Inspirado na Imagem 1) */}
+      <div className="bg-slate-900 dark:bg-slate-900 text-white rounded-xl p-4 md:p-6 shadow-lg border border-slate-800">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white">
+              <ArrowLeft size={20} />
+              <span className="ml-2 text-xs font-medium uppercase tracking-wider hidden md:inline">Voltar</span>
+            </button>
+            <div className="h-10 w-[1px] bg-slate-700 hidden md:block mx-2" />
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                {empresa.razao_social}
+                <span className="text-slate-500 text-sm font-normal hidden md:inline">• {empresa.cnpj}</span>
+              </h1>
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  botStatus?.sincronizado ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${botStatus?.sincronizado ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                  {botStatus?.sincronizado ? 'Captura OK' : 'Captura Pendente'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                  Última Sinc: {botStatus?.ultima_nota ? new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '---'}
+                </span>
+                <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase">Ativa</span>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowCertModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm font-semibold border border-white/10"
           >
-            <ArrowLeft size={24} className="text-gray-600 dark:text-gray-400" />
+            <Shield size={16} />
+            Configurar Certificado
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Building2 className="text-primary-500" size={24} />
-              {empresa.razao_social}
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-              CNPJ: {empresa.cnpj}
-            </p>
+        </div>
+      </div>
+
+      {/* 2. Histórico de Movimentação (Inspirado na Imagem 1) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <TrendingUp size={20} className="text-primary-500" />
+              Histórico de Movimentação
+            </h3>
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+              <button className="px-3 py-1 text-xs font-bold bg-white dark:bg-slate-700 shadow-sm rounded-md text-primary-600">Valor (R$)</button>
+              <button className="px-3 py-1 text-xs font-bold text-slate-500">Quantidade</button>
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ReBarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} tickFormatter={(value) => `R$ ${value/1000}k`} />
+                <Tooltip 
+                  cursor={{fill: '#f1f5f9'}}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="prestados" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} name="Prestados" />
+                <Bar dataKey="tomados" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={40} name="Tomados" />
+              </ReBarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Status Rápido do Bot */}
-        {botStatus && (
-          <div className={`px-4 py-2 rounded-lg border flex items-center gap-3 ${
-            botStatus.sincronizado 
-              ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' 
-              : 'bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400'
-          }`}>
-            <Bot size={20} />
-            <div className="text-xs">
-              <p className="font-bold">{botStatus.sincronizado ? 'Bot Ativo' : 'Bot Pendente'}</p>
-              <p>{botStatus.total_notas} notas capturadas</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-slate-700">
-        <button
-          onClick={() => setActiveTab('notas')}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === 'notas'
-              ? 'border-primary-500 text-primary-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <FileText size={18} />
-            Notas Fiscais
-          </div>
-        </button>
-        <button
-          onClick={() => setActiveTab('config')}
-          className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === 'config'
-              ? 'border-primary-500 text-primary-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Shield size={18} />
-            Configurações / Certificado
-          </div>
-        </button>
-      </div>
-
-      {/* Conteúdo das Abas */}
-      <div className="mt-6">
-        {activeTab === 'notas' ? (
-          <div className="space-y-6">
-            {/* Filtros e Busca */}
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex flex-wrap gap-4 items-end">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Buscar</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Número, emissor..."
-                    className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-white"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+        {/* Resumo RBA (Lado do gráfico na Imagem 1) */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-6 flex items-center gap-2">
+              <FileText size={16} />
+              Total Acumulado 2026
+            </h3>
+            <div className="space-y-6">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" /> Prestados
+                  </span>
+                  <span className="font-bold text-slate-800 dark:text-white">16 notas</span>
+                </div>
+                <div className="text-2xl font-black text-blue-600">R$ 28.986,67</div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-blue-500 h-full w-[70%]" />
                 </div>
               </div>
-              <div className="w-40">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
-                <select 
-                  className="w-full p-2 text-sm rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900"
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value as any)}
-                >
-                  <option value="TODAS">Todas</option>
-                  <option value="NFe">NF-e</option>
-                  <option value="NFSe">NFS-e</option>
-                  <option value="CTe">CT-e</option>
-                </select>
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" /> Tomados
+                  </span>
+                  <span className="font-bold text-slate-800 dark:text-white">11 notas</span>
+                </div>
+                <div className="text-2xl font-black text-amber-600">R$ 16.513,16</div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-amber-500 h-full w-[40%]" />
+                </div>
               </div>
-              <button
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+            <span className="text-sm font-bold text-slate-500 uppercase">Diferença (P - T)</span>
+            <span className="text-lg font-black text-emerald-500">R$ 12.473,51</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Resumo do Período (Cards horizontais Imagem 1) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[
+          { label: 'Prestados', value: 'R$ 8.380,00', sub: '5 notas', icon: ArrowUpRight, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Tomados', value: 'R$ 9.302,79', sub: '6 notas', icon: ArrowDownLeft, color: 'text-amber-500', bg: 'bg-amber-50' },
+          { label: 'ISS Retido', value: 'R$ 0,00', sub: '0 notas', icon: DollarSign, color: 'text-slate-400', bg: 'bg-slate-50' },
+          { label: 'Federais Retidos', value: 'R$ 0,00', sub: '0 notas', icon: Shield, color: 'text-slate-400', bg: 'bg-slate-50' },
+          { label: 'Total Retido', value: 'R$ 0,00', sub: '0 notas', icon: CalculatorIcon, color: 'text-slate-400', bg: 'bg-slate-50' },
+          { label: 'Fora Competência', value: 'R$ 0,00', sub: '0 notas', icon: Clock, color: 'text-slate-400', bg: 'bg-slate-50' },
+        ].map((item, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{item.label}</span>
+              <div className={`p-1.5 rounded-lg ${item.bg} dark:bg-slate-800 ${item.color}`}>
+                <item.icon size={14} />
+              </div>
+            </div>
+            <div className="text-sm md:text-base font-black text-slate-800 dark:text-white">{item.value}</div>
+            <div className="text-[10px] text-slate-400 mt-1">{item.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 4. Tabela de Notas Fiscais (Inspirado na Imagem 2) */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Notas Fiscais</h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar nota, CNPJ, emissor..." 
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button 
                 onClick={handleSearchNotas}
                 disabled={loadingNotas}
-                className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
               >
-                {loadingNotas ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={18} />}
+                {loadingNotas ? <Loader2 className="animate-spin" size={14} /> : <RefreshCw size={14} />}
                 Sincronizar SEFAZ
               </button>
             </div>
-
-            {/* Tabela de Notas */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-500">
-                    <tr>
-                      <th className="px-6 py-4 font-medium">Tipo</th>
-                      <th className="px-6 py-4 font-medium">Número</th>
-                      <th className="px-6 py-4 font-medium">Emissor</th>
-                      <th className="px-6 py-4 font-medium">Valor</th>
-                      <th className="px-6 py-4 font-medium">Data</th>
-                      <th className="px-6 py-4 font-medium">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-                    {loadingNotas ? (
-                      <tr><td colSpan={6} className="px-6 py-12 text-center"><Loader2 className="animate-spin mx-auto text-primary-500" size={32} /></td></tr>
-                    ) : invoices.length === 0 ? (
-                      <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">Nenhuma nota encontrada. Clique em Sincronizar.</td></tr>
-                    ) : (
-                      invoices.map((nota) => (
-                        <tr key={nota.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${CORES_TIPO_NF[nota.tipo_nf]}`}>
-                              {nota.tipo_nf}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                            {nota.numero_nf}
-                          </td>
-                          <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
-                            {nota.nome_emitente}
-                          </td>
-                          <td className="px-6 py-4 font-bold text-primary-600">
-                            {formatCurrency(nota.valor_total)}
-                          </td>
-                          <td className="px-6 py-4 text-gray-500">
-                            {new Date(nota.data_emissao).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-2">
-                              <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded text-gray-500" title="XML"><Download size={16} /></button>
-                              <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded text-gray-500" title="Ver"><Eye size={16} /></button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+          </div>
+          
+          {/* Filtros Estilo Imagem 2 */}
+          <div className="flex flex-wrap items-center gap-4 mt-6">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Tipo:</span>
+              <select className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none cursor-pointer">
+                <option>Todos</option>
+                <option>Prestados</option>
+                <option>Tomados</option>
+              </select>
+            </div>
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Status:</span>
+              <select className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none cursor-pointer">
+                <option>Ativa</option>
+                <option>Cancelada</option>
+              </select>
+            </div>
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Retenção:</span>
+              <select className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none cursor-pointer">
+                <option>Todas</option>
+                <option>Com Retenção</option>
+                <option>Sem Retenção</option>
+              </select>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-800 transition-all">
+                <Download size={14} /> EXPORTAR
+              </button>
             </div>
           </div>
-        ) : (
-          <div className="max-w-2xl space-y-6">
-            {/* Status do Certificado */}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <ShieldCheck className="text-primary-500" size={20} />
-                Status do Certificado A1
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-400 font-bold uppercase tracking-wider">
+              <tr>
+                <th className="px-6 py-4">Emissão</th>
+                <th className="px-6 py-4">Competência</th>
+                <th className="px-6 py-4">Tipo</th>
+                <th className="px-6 py-4">Número</th>
+                <th className="px-6 py-4">Contraparte</th>
+                <th className="px-6 py-4">Município</th>
+                <th className="px-6 py-4 text-right">Valor</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {loadingNotas ? (
+                <tr><td colSpan={9} className="px-6 py-12 text-center"><Loader2 className="animate-spin mx-auto text-primary-500" size={32} /></td></tr>
+              ) : invoices.length === 0 ? (
+                <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-400 font-medium">Nenhuma nota encontrada para o período.</td></tr>
+              ) : (
+                invoices.map((nota) => (
+                  <tr key={nota.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{new Date(nota.data_emissao).toLocaleDateString('pt-BR')}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{new Date(nota.data_emissao).toLocaleDateString('pt-BR')}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${nota.tipo_nf === 'NFe' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                        {nota.tipo_nf === 'NFe' ? 'Prest.' : 'Tom.'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200">{nota.numero_nf}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">{nota.nome_emitente}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{nota.cnpj_emitente}</div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Ribeirão das Neves</td>
+                    <td className="px-6 py-4 text-right font-black text-slate-800 dark:text-white">{formatCurrency(nota.valor_total)}</td>
+                    <td className="px-6 py-4">
+                      <span className="bg-emerald-500/10 text-emerald-500 text-[9px] px-2 py-0.5 rounded font-black uppercase">Ativa</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded shadow-sm border border-slate-200 dark:border-slate-600 text-slate-500"><Eye size={14} /></button>
+                        <button className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded shadow-sm border border-slate-200 dark:border-slate-600 text-slate-500"><Download size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal de Certificado (Inspirado na lógica anterior mas com design novo) */}
+      {showCertModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="text-primary-500" />
+                CERTIFICADO DIGITAL A1
               </h3>
-              
-              {loadingCert ? (
-                <div className="flex items-center gap-2 text-gray-500"><Loader2 className="animate-spin" size={16} /> Carregando...</div>
-              ) : certStatus ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    {certStatus.status === 'valido' || certStatus.status === 'expirando_em_breve' ? (
-                      <div className="p-2 bg-green-100 text-green-600 rounded-full"><CheckCircle size={24} /></div>
-                    ) : (
-                      <div className="p-2 bg-red-100 text-red-600 rounded-full"><XCircle size={24} /></div>
-                    )}
-                    <div>
-                      <p className="font-bold text-gray-900 dark:text-white uppercase">{certStatus.status.replace('_', ' ')}</p>
-                      {certStatus.validade && (
-                        <p className="text-sm text-gray-500">Válido até {new Date(certStatus.validade).toLocaleDateString('pt-BR')} ({certStatus.dias_restantes} dias restantes)</p>
-                      )}
-                    </div>
+              <button onClick={() => setShowCertModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><XCircle size={20} /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              {certStatus ? (
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
+                  <div className="p-2 bg-emerald-500 text-white rounded-full shadow-lg shadow-emerald-500/20"><CheckCircle size={24} /></div>
+                  <div>
+                    <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Certificado Ativo</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Vence em {new Date(certStatus.validade!).toLocaleDateString('pt-BR')}</p>
                   </div>
-                  {certStatus.titular && (
-                    <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg">
-                      <p><strong>Titular:</strong> {certStatus.titular}</p>
-                      <p><strong>Emissor:</strong> {certStatus.emissor}</p>
-                    </div>
-                  )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                  <ShieldAlert size={20} />
-                  <span>Nenhum certificado cadastrado para esta empresa.</span>
+                <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-800 flex items-center gap-4">
+                  <div className="p-2 bg-amber-500 text-white rounded-full shadow-lg shadow-amber-500/20"><ShieldAlert size={24} /></div>
+                  <div>
+                    <p className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Ação Necessária</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Nenhum certificado cadastrado.</p>
+                  </div>
                 </div>
               )}
-            </div>
 
-            {/* Upload de Certificado */}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold mb-2">Atualizar Certificado</h3>
-              <p className="text-sm text-gray-500 mb-6">O upload do certificado A1 ativa automaticamente a busca de notas para este cliente.</p>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Arquivo .pfx ou .p12</label>
-                  <input
-                    type="file"
-                    accept=".pfx,.p12"
-                    onChange={(e) => setCertFile(e.target.files?.[0] || null)}
-                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-                  />
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Arquivo (.pfx / .p12)</label>
+                  <div className="relative group">
+                    <input
+                      type="file"
+                      accept=".pfx,.p12"
+                      onChange={(e) => setCertFile(e.target.files?.[0] || null)}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="w-full p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center gap-2 group-hover:border-primary-500 transition-colors bg-slate-50 dark:bg-slate-950">
+                      <Upload size={24} className="text-slate-400 group-hover:text-primary-500" />
+                      <span className="text-xs font-bold text-slate-500">{certFile ? certFile.name : 'Clique ou arraste o arquivo'}</span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Senha do Certificado</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha do Certificado</label>
                   <input
                     type="password"
-                    placeholder="Digite a senha..."
-                    className="w-full p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-white"
+                    placeholder="••••••••"
+                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                     value={certPassword}
                     onChange={(e) => setCertPassword(e.target.value)}
                   />
                 </div>
                 
                 {uploadResult && (
-                  <div className={`p-3 rounded-lg text-sm ${uploadResult.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${uploadResult.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    {uploadResult.type === 'success' ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
                     {uploadResult.message}
                   </div>
                 )}
@@ -403,16 +503,31 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                 <button
                   onClick={handleUploadCertificado}
                   disabled={!certFile || !certPassword || uploadingCert}
-                  className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary-500/20 transition-all disabled:opacity-50 active:scale-[0.98]"
                 >
-                  {uploadingCert ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-                  ATIVAR ROBÔ / SALVAR CERTIFICADO
+                  {uploadingCert ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Ativar Robô de Busca'}
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
+
+// Helper component
+const CalculatorIcon = ({ size }: { size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="16" height="20" x="4" y="2" rx="2" />
+    <line x1="8" x2="16" y1="6" y2="6" />
+    <line x1="16" x2="16" y1="14" y2="18" />
+    <path d="M16 10h.01" />
+    <path d="M12 10h.01" />
+    <path d="M8 10h.01" />
+    <path d="M12 14h.01" />
+    <path d="M8 14h.01" />
+    <path d="M12 18h.01" />
+    <path d="M8 18h.01" />
+  </svg>
+);
