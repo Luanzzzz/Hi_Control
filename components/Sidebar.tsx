@@ -20,8 +20,7 @@ import {
   Settings,
   ShoppingCart,
   Truck,
-  Briefcase,
-  ShieldCheck
+  Briefcase
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -101,12 +100,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       id: ViewState.SETTINGS,
       label: 'Configurações',
       icon: Settings,
-      priority: 1
-    },
-    {
-      id: ViewState.CERTIFICATES,
-      label: 'Certificados',
-      icon: ShieldCheck,
       priority: 1
     }
   ];

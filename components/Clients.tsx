@@ -80,9 +80,9 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
      * Salva o empresaId no localStorage e dispara evento para navegação
      * Compatível com arquitetura ViewState do App.tsx
      */
-    const irParaBuscadorNotas = (empresaId: string, empresaNome?: string) => {
-        // Salvar no localStorage para o BuscadorNotas/InvoiceSearch ler
-        localStorage.setItem('buscador_notas_empresa_selecionada', JSON.stringify({
+    const irParaDetalheCliente = (empresaId: string, empresaNome?: string) => {
+        // Salvar no localStorage para o detalhe ler se necessário
+        localStorage.setItem('cliente_detalhe_selecionado', JSON.stringify({
             id: empresaId,
             nome: empresaNome || ''
         }));
@@ -90,11 +90,6 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
         // Se callback foi passado pelo App.tsx, usar para navegar
         if (onNavigateToBuscador) {
             onNavigateToBuscador(empresaId);
-        } else {
-            // Fallback: disparar evento customizado que App.tsx pode escutar
-            window.dispatchEvent(new CustomEvent('navigate:buscador-notas', {
-                detail: { empresaId }
-            }));
         }
     };
 
@@ -378,7 +373,7 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                             <div
                                 key={client.id}
                                 className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 flex flex-col hover:shadow-lg hover:border-primary-500/50 transition-all cursor-pointer group"
-                                onClick={() => irParaBuscadorNotas(client.id)}
+                                onClick={() => irParaDetalheCliente(client.id, client.razao_social)}
                             >
                                 {/* Header do Card */}
                                 <div className="flex justify-between items-start mb-4">
@@ -432,17 +427,17 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                     )}
                                 </div>
 
-                                {/* Botão de Buscar Notas */}
+                                {/* Botão de Detalhes */}
                                 <div
                                     className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <button
-                                        onClick={() => irParaBuscadorNotas(client.id)}
+                                        onClick={() => irParaDetalheCliente(client.id, client.razao_social)}
                                         className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-medium"
                                     >
                                         <FileSearch size={16} />
-                                        Buscar Notas Fiscais
+                                        Ver Dashboard do Cliente
                                     </button>
                                 </div>
                             </div>

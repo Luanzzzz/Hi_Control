@@ -11,7 +11,7 @@ export enum ViewState {
   WHATSAPP = 'WHATSAPP',
   USERS = 'USERS',
   SETTINGS = 'SETTINGS',
-  CERTIFICATES = 'CERTIFICATES', // Certificados Digitais A1
+  CLIENT_DETAIL = 'CLIENT_DETAIL', // Dashboard Específico do Cliente
   COMING_SOON = 'COMING_SOON'
 }
 
@@ -83,6 +83,6 @@ export interface ModuleAccess {
   [ViewState.WHATSAPP]: ModulePriority;
   [ViewState.USERS]: ModulePriority;
   [ViewState.SETTINGS]: ModulePriority;
-  [ViewState.CERTIFICATES]: ModulePriority;
+  [ViewState.CLIENT_DETAIL]: ModulePriority;
   [ViewState.COMING_SOON]: ModulePriority;
 }

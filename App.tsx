@@ -16,7 +16,7 @@ import { ViewState, UserPlan, ModuleAccess } from './types';
 import { Construction, Lock } from 'lucide-react';
 import { Clients } from './components/Clients';
 import { Configuracoes } from './components/Configuracoes';
-import { Certificados } from './components/Certificados';
+import { ClientDashboard } from './components/ClientDashboard';
 
 
 // Define module access levels
@@ -32,13 +32,14 @@ const moduleAccess: ModuleAccess = {
   [ViewState.WHATSAPP]: 1,
   [ViewState.USERS]: 2, // Priority 2 - Restricted for basic plan
   [ViewState.SETTINGS]: 1,
-  [ViewState.CERTIFICATES]: 1, // Certificados Digitais - todos têm acesso
+  [ViewState.CLIENT_DETAIL]: 1, // Dashboard do Cliente - todos têm acesso
   [ViewState.COMING_SOON]: 2, // Priority 2
 };
 
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -124,17 +125,26 @@ const AppContent: React.FC = () => {
         return (
           <Clients
             onNavigateToBuscador={(empresaId) => {
-              // Navegar para tela de busca de notas
-              setCurrentView(ViewState.INVOICE_SEARCH);
+              // Navegar para o detalhe do cliente
+              setSelectedClientId(empresaId);
+              setCurrentView(ViewState.CLIENT_DETAIL);
+            }}
+          />
+        );
+
+      case ViewState.CLIENT_DETAIL:
+        return (
+          <ClientDashboard
+            empresaId={selectedClientId || ''}
+            onBack={() => {
+              setSelectedClientId(null);
+              setCurrentView(ViewState.USERS);
             }}
           />
         );
 
       case ViewState.SETTINGS:
         return <Configuracoes />;
-
-      case ViewState.CERTIFICATES:
-        return <Certificados />;
 
       case ViewState.COMING_SOON:
       default:
