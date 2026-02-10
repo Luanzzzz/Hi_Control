@@ -23,6 +23,8 @@ import { downloadDANFCE, downloadDACTE, downloadPDF } from '../src/services/fisc
 import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
 import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 import { empresaService, Empresa } from '../services/empresaService';
+import { BotStatus } from '../src/components/BotStatus';
+import { BotMetricas } from '../src/components/BotMetricas';
 
 // ===== Componente ClienteSelector Inline =====
 interface ClienteSelectorProps {
@@ -436,19 +438,28 @@ export const InvoiceSearch: React.FC = () => {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleSearch}
-          disabled={isLoading}
-          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          {isLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <RefreshCw size={16} />
-          )}
-          {isLoading ? 'Buscando...' : 'Buscar'}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* Status do Bot */}
+          <BotStatus />
+          
+          {/* Botão Buscar */}
+          <button
+            onClick={handleSearch}
+            disabled={isLoading}
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            {isLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            {isLoading ? 'Buscando...' : 'Buscar'}
+          </button>
+        </div>
       </div>
+
+      {/* Métricas do Bot (Opcional) */}
+      <BotMetricas />
 
       {/* SELETOR DE CLIENTE - NOVO! */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
