@@ -16,6 +16,7 @@ import { ViewState, UserPlan, ModuleAccess } from './types';
 import { Construction, Lock } from 'lucide-react';
 import { Clients } from './components/Clients';
 import { Configuracoes } from './components/Configuracoes';
+import { Certificados } from './components/Certificados';
 
 
 // Define module access levels
@@ -31,6 +32,7 @@ const moduleAccess: ModuleAccess = {
   [ViewState.WHATSAPP]: 1,
   [ViewState.USERS]: 2, // Priority 2 - Restricted for basic plan
   [ViewState.SETTINGS]: 1,
+  [ViewState.CERTIFICATES]: 1, // Certificados Digitais - todos têm acesso
   [ViewState.COMING_SOON]: 2, // Priority 2
 };
 
@@ -130,6 +132,9 @@ const AppContent: React.FC = () => {
 
       case ViewState.SETTINGS:
         return <Configuracoes />;
+
+      case ViewState.CERTIFICATES:
+        return <Certificados />;
 
       case ViewState.COMING_SOON:
       default:

@@ -7,10 +7,12 @@
 import api from './api';
 
 export interface BotStatus {
-  status: 'ok' | 'atrasado' | 'nunca_executado';
+  status: 'ok' | 'atrasado' | 'nunca_executado' | 'erro_credenciais';
   ultima_sincronizacao: string | null;
   notas_24h: number;
   funcionando: boolean;
+  empresas_sem_certificado?: number;
+  empresas_cert_expirado?: number;
 }
 
 export interface StatusEmpresa {
