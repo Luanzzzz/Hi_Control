@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         </div>
       </aside>
 
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }

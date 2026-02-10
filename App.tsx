@@ -31,6 +31,7 @@ const moduleAccess: ModuleAccess = {
   [ViewState.TASKS]: 1,
   [ViewState.WHATSAPP]: 1,
   [ViewState.USERS]: 2, // Priority 2 - Restricted for basic plan
+  [ViewState.CERTIFICATES]: 1,
   [ViewState.SETTINGS]: 1,
   [ViewState.CLIENT_DETAIL]: 1, // Dashboard do Cliente - todos têm acesso
   [ViewState.COMING_SOON]: 2, // Priority 2
