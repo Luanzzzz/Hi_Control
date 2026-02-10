@@ -183,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           isExpanded && hasSubModules && hasAccess ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
         }`}>
           <div className="ml-4 space-y-1 border-l-2 border-gray-200 dark:border-slate-700 pl-2">
-            {item.subModules!.map((subModule) => (
+            {(item.subModules ?? []).map((subModule) => (
               <button
                 key={subModule.id}
                 onClick={() => {
@@ -275,12 +275,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           <div className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Módulos
           </div>
-          {menuItems.map(renderMenuItem)}
+          {(menuItems ?? []).map(renderMenuItem)}
 
           <div className="px-3 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Módulos Extras
           </div>
-          {extraModules.map(renderExtraModule)}
+          {(extraModules ?? []).map(renderExtraModule)}
         </nav>
 
         {/* Rodapé - Sair Original */}
