@@ -19,10 +19,7 @@ import {
   Settings,
   ShoppingCart,
   Truck,
-  Briefcase,
-  ShieldCheck,
-  User,
-  Zap
+  Briefcase
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,64 +33,83 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleSidebar }) => {
   const { user } = useAuth();
-  // Estado de sanfona: apenas um módulo expandido por vez (ou nenhum)
+  // Lógica de sanfona: apenas um módulo expandido por vez
   const [expandedModule, setExpandedModule] = useState<ViewState | null>(ViewState.INVOICES);
 
-  // Definição dos módulos principais com cores e estilos inspirados no Conthabil
+  // Definição dos módulos principais (Design Original)
   const menuItems: MenuItem[] = [
     {
       id: ViewState.DASHBOARD,
       label: 'Dashboard',
       icon: LayoutDashboard,
-      priority: 1,
-      color: 'text-blue-500'
+      priority: 1
     },
     {
       id: ViewState.INVOICES,
-      label: 'NFS-e 360',
-      icon: Zap,
+      label: 'Notas Fiscais',
+      icon: FileText,
       priority: 1,
-      color: 'text-emerald-500',
-      isNew: true,
       subModules: [
-        { id: ViewState.DASHBOARD, label: 'Dashboard', priority: 1 },
-        { id: ViewState.USERS, label: 'Empresas', priority: 1 },
-        { id: ViewState.COMING_SOON, label: 'Consolidado', priority: 1 },
-        { id: ViewState.SETTINGS, label: 'Configurações', priority: 1 },
+        {
+          id: ViewState.INVOICE_EMITTER,
+          label: 'NF-e (Modelo 55)',
+          priority: 1
+        },
+        {
+          id: ViewState.PDV,
+          label: 'NFC-e (Cupom Fiscal)',
+          priority: 1
+        },
+        {
+          id: ViewState.CTE,
+          label: 'CT-e (Transporte)',
+          priority: 1
+        },
+        {
+          id: ViewState.NFSE,
+          label: 'NFS-e (Serviços)',
+          priority: 1
+        },
+        {
+          id: ViewState.INVOICE_SEARCH,
+          label: 'Consultar Notas',
+          priority: 1,
+          isPriority: true
+        }
       ]
     },
     {
       id: ViewState.TASKS,
-      label: 'Rotinas',
+      label: 'Tarefas',
       icon: CheckSquare,
-      priority: 1,
-      color: 'text-slate-500',
-      subModules: [
-        { id: ViewState.TASKS, label: 'Minhas Tarefas', priority: 1 },
-        { id: ViewState.COMING_SOON, label: 'Calendário', priority: 1 },
-      ]
-    },
-    {
-      id: ViewState.USERS,
-      label: 'Empresas',
-      icon: Briefcase,
-      priority: 1,
-      color: 'text-slate-500'
-    },
-    {
-      id: ViewState.CERTIFICATES,
-      label: 'Certificados',
-      icon: FileText,
-      priority: 1,
-      color: 'text-slate-500'
+      priority: 1
     },
     {
       id: ViewState.WHATSAPP,
-      label: 'Indicações',
+      label: 'WhatsApp',
+      icon: MessageCircle,
+      priority: 1
+    },
+    {
+      id: ViewState.USERS,
+      label: 'Clientes',
       icon: Users,
-      priority: 1,
-      color: 'text-slate-500'
+      priority: 1
+    },
+    {
+      id: ViewState.SETTINGS,
+      label: 'Configurações',
+      icon: Settings,
+      priority: 1
     }
+  ];
+
+  const extraModules: MenuItem[] = [
+    { id: ViewState.COMING_SOON, label: 'Estoque', icon: Package, priority: 2 },
+    { id: ViewState.COMING_SOON, label: 'Faturamento', icon: CreditCard, priority: 2 },
+    { id: ViewState.COMING_SOON, label: 'Serviços', icon: Wrench, priority: 2 },
+    { id: ViewState.COMING_SOON, label: 'Financeiro', icon: PieChart, priority: 2 },
+    { id: ViewState.COMING_SOON, label: 'Agenda Médica', icon: Calendar, priority: 2 }
   ];
 
   const hasModuleAccess = (priority: number): boolean => {
@@ -106,16 +122,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     setExpandedModule(prev => (prev === moduleId ? null : moduleId));
   };
 
+  const getSubModuleIcon = (subModule: SubModule) => {
+    if (subModule.id === ViewState.INVOICE_SEARCH) return Search;
+    if (subModule.id === ViewState.INVOICE_EMITTER) return FileEdit;
+    if (subModule.id === ViewState.PDV) return ShoppingCart;
+    if (subModule.id === ViewState.CTE) return Truck;
+    if (subModule.id === ViewState.NFSE) return Briefcase;
+    return FileText;
+  };
+
   const renderMenuItem = (item: MenuItem) => {
     const hasAccess = hasModuleAccess(item.priority);
     const isExpanded = expandedModule === item.id;
     const hasSubModules = item.subModules && item.subModules.length > 0;
-    
-    const isActive = currentView === item.id || 
+
+    const isActive = currentView === item.id ||
       (item.subModules?.some(sub => sub.id === currentView));
 
     const handleClick = () => {
       if (!hasAccess) return;
+
       if (hasSubModules) {
         toggleAccordion(item.id);
       } else {
@@ -125,58 +151,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     };
 
     return (
-      <div key={item.id} className="mb-1">
+      <div key={item.id}>
         <button
           onClick={handleClick}
           disabled={!hasAccess}
-          className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-            isActive && !hasSubModules
-              ? 'bg-primary-50 text-primary-700 shadow-sm'
-              : isExpanded && hasSubModules
-                ? 'bg-slate-50 text-slate-900'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-          } ${!hasAccess ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
+            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+            : hasAccess
+              ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+              : 'text-gray-400 dark:text-gray-600 opacity-60 cursor-not-allowed'
+            }`}
         >
           <div className="flex items-center gap-3">
-            <div className={`p-1.5 rounded-lg transition-colors ${isActive ? 'bg-white shadow-sm' : ''}`}>
-              <item.icon size={20} className={item.color || 'text-slate-500'} />
-            </div>
-            <span className="tracking-tight">{item.label}</span>
+            <item.icon size={18} />
+            {item.label}
           </div>
 
-          <div className="flex items-center gap-2">
-            {item.isNew && (
-              <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Novo</span>
-            )}
-            {!hasAccess && <Lock size={14} className="text-slate-400" />}
-            {hasSubModules && (
+          <div className="flex items-center gap-1">
+            {!hasAccess && <Lock size={14} />}
+            {hasSubModules && hasAccess && (
               <ChevronDown 
                 size={16} 
-                className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} text-slate-400`} 
+                className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} 
               />
             )}
           </div>
         </button>
 
-        {/* Submódulos com animação de sanfona */}
+        {/* Submódulos com efeito de sanfona */}
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded && hasSubModules ? 'max-h-64 opacity-100 mt-1' : 'max-h-0 opacity-0'
+          isExpanded && hasSubModules && hasAccess ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
         }`}>
-          <div className="ml-12 space-y-1 py-1">
-            {item.subModules?.map((sub) => (
+          <div className="ml-4 space-y-1 border-l-2 border-gray-200 dark:border-slate-700 pl-2">
+            {item.subModules!.map((subModule) => (
               <button
-                key={sub.id}
+                key={subModule.id}
                 onClick={() => {
-                  setView(sub.id);
+                  setView(subModule.id);
                   if (window.innerWidth < 1024) toggleSidebar();
                 }}
-                className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors rounded-lg ${
-                  currentView === sub.id 
-                    ? 'text-primary-600 bg-primary-50/50' 
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                }`}
+                disabled={!hasModuleAccess(subModule.priority)}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${currentView === subModule.id
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+                  : 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
+                  }`}
               >
-                {sub.label}
+                <div className="flex items-center gap-2">
+                  {React.createElement(getSubModuleIcon(subModule), { size: 14 })}
+                  {subModule.label}
+                </div>
               </button>
             ))}
           </div>
@@ -185,80 +208,92 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     );
   };
 
+  const renderExtraModule = (item: MenuItem) => {
+    const hasAccess = hasModuleAccess(item.priority);
+
+    const handleClick = () => {
+      if (hasAccess) {
+        setView(ViewState.COMING_SOON);
+        if (window.innerWidth < 1024) toggleSidebar();
+      }
+    };
+
+    return (
+      <button
+        key={`${item.label}-${item.id}`}
+        onClick={handleClick}
+        disabled={!hasAccess}
+        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${hasAccess
+          ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+          : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
+          }`}
+      >
+        <div className="flex items-center gap-3">
+          <item.icon size={18} />
+          {item.label}
+        </div>
+        {!hasAccess && <Lock size={14} />}
+      </button>
+    );
+  };
+
   return (
     <>
       <div
-        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-20 lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100 block' : 'opacity-0 hidden'}`}
+        className={`fixed inset-0 bg-black/50 z-20 lg:hidden ${isOpen ? 'block' : 'hidden'}`}
         onClick={toggleSidebar}
       />
 
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-100 transform transition-all duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
-      } flex flex-col h-full`}>
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } flex flex-col h-full`}>
         
-        {/* Header: Logo Conthabil Style */}
-        <div className="p-8 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-200">
-            <Zap size={24} className="text-white fill-white" />
+        {/* Logo Original */}
+        <div className="p-6 flex items-center justify-center border-b border-gray-100 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
+              <span className="text-white font-bold text-lg">Hi</span>
+            </div>
+            <span className="text-xl font-bold text-primary-700 dark:text-primary-400">Control</span>
           </div>
-          <span className="text-2xl font-black text-slate-800 tracking-tighter">Conthabil</span>
         </div>
 
-        {/* Perfil do Usuário */}
-        <div className="px-6 mb-8">
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-sm">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <User size={24} className="text-slate-400" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-black text-slate-800 truncate">#02128 • Gestaum</p>
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Gerente • Online
-              </p>
-            </div>
+        {/* Plano do Usuário Original */}
+        {user && (
+          <div className="px-6 py-3 bg-primary-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Plano Atual</p>
+            <p className={`text-sm font-bold ${user.plano === UserPlan.PREMIUM
+              ? 'text-primary-700 dark:text-primary-400'
+              : 'text-gray-700 dark:text-gray-300'
+              }`}>
+              {user.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico'}
+            </p>
           </div>
-        </div>
+        )}
 
         {/* Navegação */}
-        <nav className="flex-1 overflow-y-auto px-4 custom-scrollbar">
-          <div className="px-4 mb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-            Módulos Principais
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+          <div className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Módulos
           </div>
           {menuItems.map(renderMenuItem)}
+
+          <div className="px-3 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Módulos Extras
+          </div>
+          {extraModules.map(renderExtraModule)}
         </nav>
 
-        {/* Rodapé - Sair */}
-        <div className="p-6 mt-auto">
-          <button
-            onClick={() => window.location.href = 'https://site-hi-control.vercel.app'}
-            className="flex items-center justify-center gap-3 px-4 py-4 text-sm font-black text-red-500 hover:bg-red-50 rounded-2xl w-full transition-all border border-transparent hover:border-red-100"
+        {/* Rodapé - Sair Original */}
+        <div className="p-4 border-t border-gray-200 dark:border-slate-700">
+          <a
+            href="https://site-hi-control.vercel.app"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-colors"
           >
-            <LogOut size={20} />
-            SAIR DO SISTEMA
-          </button>
+            <LogOut size={18} />
+            Sair do Sistema
+          </a>
         </div>
       </aside>
-
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e2e8f0;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #cbd5e1;
-        }
-      `}</style>
     </>
   );
 };
