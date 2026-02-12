@@ -171,18 +171,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           <div className="flex items-center gap-1">
             {!hasAccess && <Lock size={14} />}
             {hasSubModules && hasAccess && (
-              <ChevronDown 
-                size={16} 
-                className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} 
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
               />
             )}
           </div>
         </button>
 
         {/* Submódulos com efeito de sanfona */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded && hasSubModules && hasAccess ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
-        }`}>
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded && hasSubModules && hasAccess ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+          }`}>
           <div className="ml-4 space-y-1 border-l-2 border-gray-200 dark:border-slate-700 pl-2">
             {(item.subModules ?? []).map((subModule) => (
               <button
@@ -245,10 +244,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         onClick={toggleSidebar}
       />
 
-      <aside className={`fixed lg:fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-        } flex flex-col h-full`}>
-        
+      <aside className={`fixed lg:relative inset-y-0 left-0 z-30
+        transform transition-all duration-300 ease-in-out
+        border-r border-gray-200 dark:border-slate-700
+        bg-white dark:bg-slate-800
+        flex flex-col h-full
+        ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-0 lg:overflow-hidden'}
+      `}>
+
         {/* Logo Original + Botão de Recolher */}
         <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-slate-700">
           <div className="flex items-center gap-2">
