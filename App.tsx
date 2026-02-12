@@ -41,7 +41,10 @@ const AppContent: React.FC = () => {
   const { user, isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Sidebar aberta por padrão em desktop (>= 1024px), fechada em mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
   const [isDarkMode, setIsDarkMode] = useState(false);
 
 

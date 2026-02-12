@@ -93,11 +93,82 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
   const [uploadResult, setUploadResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showCertModal, setShowCertModal] = useState(false);
 
-  // Mock data para o gráfico (baseado na estrutura da imagem)
-  const chartData = [
-    { name: 'Jan/26', prestados: 18000, tomados: 8000 },
-    { name: 'Fev/26', prestados: 10000, tomados: 12000 },
-  ];
+  // Calcula estatísticas das notas fiscais (SEM MOCKS)
+  const estatisticas = useMemo(() => {
+    if (!invoices || invoices.length === 0) {
+      return {
+        chartData: [],
+        totalPrestados: 0,
+        totalTomados: 0,
+        qtdPrestados: 0,
+        qtdTomados: 0,
+        issRetido: 0,
+        federaisRetidos: 0,
+        totalRetido: 0,
+        foraCompetencia: 0,
+      };
+    }
+
+    // Agrupa notas por mês
+    const notasPorMes: Record<string, { prestados: number; tomados: number }> = {};
+    let totalPrestados = 0;
+    let totalTomados = 0;
+    let qtdPrestados = 0;
+    let qtdTomados = 0;
+    let issRetido = 0;
+    let federaisRetidos = 0;
+
+    invoices.forEach((nota) => {
+      const valor = parseFloat(String(nota.valor_total || 0));
+      const mesAno = nota.data_emissao
+        ? new Date(nota.data_emissao).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+        : 'Sem data';
+
+      // Inicializa mês se não existir
+      if (!notasPorMes[mesAno]) {
+        notasPorMes[mesAno] = { prestados: 0, tomados: 0 };
+      }
+
+      // Classifica como prestado ou tomado (baseado no tipo ou emissor)
+      // Simplificação: NFS-e prestadas, outros tomados
+      const ehPrestado = nota.tipo === 'NFS-e';
+
+      if (ehPrestado) {
+        notasPorMes[mesAno].prestados += valor;
+        totalPrestados += valor;
+        qtdPrestados++;
+      } else {
+        notasPorMes[mesAno].tomados += valor;
+        totalTomados += valor;
+        qtdTomados++;
+      }
+
+      // Calcula impostos retidos (se existir no objeto)
+      if ((nota as any).iss_retido) issRetido += parseFloat(String((nota as any).iss_retido));
+      if ((nota as any).pis_retido) federaisRetidos += parseFloat(String((nota as any).pis_retido));
+      if ((nota as any).cofins_retido) federaisRetidos += parseFloat(String((nota as any).cofins_retido));
+    });
+
+    const chartData = Object.entries(notasPorMes)
+      .map(([name, values]) => ({
+        name,
+        prestados: Math.round(values.prestados),
+        tomados: Math.round(values.tomados),
+      }))
+      .slice(-6); // Últimos 6 meses
+
+    return {
+      chartData,
+      totalPrestados,
+      totalTomados,
+      qtdPrestados,
+      qtdTomados,
+      issRetido,
+      federaisRetidos,
+      totalRetido: issRetido + federaisRetidos,
+      foraCompetencia: 0, // TODO: calcular baseado em competência
+    };
+  }, [invoices]);
 
   const carregarDadosEmpresa = useCallback(async () => {
     setLoadingEmpresa(true);
@@ -132,11 +203,41 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
     }
   }, [empresaId]);
 
+  const carregarNotasDrive = useCallback(async () => {
+    setLoadingNotas(true);
+    setErrorNotas(null);
+    try {
+      // Importa o serviço de notas drive
+      const { buscarNotasDrive } = await import('../src/services/notaFiscalService');
+      const notas = await buscarNotasDrive(empresaId);
+      // Converte NotaDrive para NotaFiscal
+      const notasConvertidas: NotaFiscal[] = notas.map((nota) => ({
+        id: nota.drive_file_id,
+        chave_acesso: nota.chave_acesso || '',
+        numero: nota.numero || '',
+        serie: nota.serie || '',
+        tipo: (nota.tipo as TipoNotaFiscal) || 'NF-e',
+        data_emissao: nota.data_emissao || '',
+        valor_total: nota.valor_total || 0,
+        cnpj_emitente: nota.cnpj_emitente || '',
+        nome_emitente: nota.nome_emitente || '',
+        situacao: nota.situacao || 'pendente',
+      }));
+      setInvoices(notasConvertidas);
+    } catch (err: any) {
+      console.error('Erro ao carregar notas do Drive:', err);
+      setErrorNotas(err.message || 'Erro ao carregar notas fiscais');
+    } finally {
+      setLoadingNotas(false);
+    }
+  }, [empresaId]);
+
   useEffect(() => {
     carregarDadosEmpresa();
     carregarBotStatus();
     carregarCertStatus();
-  }, [carregarDadosEmpresa, carregarBotStatus, carregarCertStatus]);
+    carregarNotasDrive(); // Carrega notas do Drive automaticamente
+  }, [carregarDadosEmpresa, carregarBotStatus, carregarCertStatus, carregarNotasDrive]);
 
   const handleSearchNotas = async () => {
     if (!empresa?.cnpj) return;
@@ -258,7 +359,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ReBarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ReBarChart data={estatisticas.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} tickFormatter={(value) => `R$ ${value/1000}k`} />
@@ -286,11 +387,18 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                   <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-blue-500" /> Prestados
                   </span>
-                  <span className="font-bold text-slate-800 dark:text-white">16 notas</span>
+                  <span className="font-bold text-slate-800 dark:text-white">{estatisticas.qtdPrestados} notas</span>
                 </div>
-                <div className="text-2xl font-black text-blue-600">R$ 28.986,67</div>
+                <div className="text-2xl font-black text-blue-600">{formatCurrency(estatisticas.totalPrestados)}</div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
-                  <div className="bg-blue-500 h-full w-[70%]" />
+                  <div
+                    className="bg-blue-500 h-full"
+                    style={{
+                      width: `${estatisticas.totalPrestados + estatisticas.totalTomados > 0
+                        ? (estatisticas.totalPrestados / (estatisticas.totalPrestados + estatisticas.totalTomados) * 100)
+                        : 0}%`
+                    }}
+                  />
                 </div>
               </div>
               <div>
@@ -298,18 +406,25 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                   <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-amber-500" /> Tomados
                   </span>
-                  <span className="font-bold text-slate-800 dark:text-white">11 notas</span>
+                  <span className="font-bold text-slate-800 dark:text-white">{estatisticas.qtdTomados} notas</span>
                 </div>
-                <div className="text-2xl font-black text-amber-600">R$ 16.513,16</div>
+                <div className="text-2xl font-black text-amber-600">{formatCurrency(estatisticas.totalTomados)}</div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
-                  <div className="bg-amber-500 h-full w-[40%]" />
+                  <div
+                    className="bg-amber-500 h-full"
+                    style={{
+                      width: `${estatisticas.totalPrestados + estatisticas.totalTomados > 0
+                        ? (estatisticas.totalTomados / (estatisticas.totalPrestados + estatisticas.totalTomados) * 100)
+                        : 0}%`
+                    }}
+                  />
                 </div>
               </div>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <span className="text-sm font-bold text-slate-500 uppercase">Diferença (P - T)</span>
-            <span className="text-lg font-black text-emerald-500">R$ 12.473,51</span>
+            <span className="text-lg font-black text-emerald-500">{formatCurrency(estatisticas.totalPrestados - estatisticas.totalTomados)}</span>
           </div>
         </div>
       </div>
@@ -317,12 +432,54 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
       {/* 3. Resumo do Período (Cards horizontais Imagem 1) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Prestados', value: 'R$ 8.380,00', sub: '5 notas', icon: ArrowUpRight, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Tomados', value: 'R$ 9.302,79', sub: '6 notas', icon: ArrowDownLeft, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { label: 'ISS Retido', value: 'R$ 0,00', sub: '0 notas', icon: DollarSign, color: 'text-slate-400', bg: 'bg-slate-50' },
-          { label: 'Federais Retidos', value: 'R$ 0,00', sub: '0 notas', icon: Shield, color: 'text-slate-400', bg: 'bg-slate-50' },
-          { label: 'Total Retido', value: 'R$ 0,00', sub: '0 notas', icon: CalculatorIcon, color: 'text-slate-400', bg: 'bg-slate-50' },
-          { label: 'Fora Competência', value: 'R$ 0,00', sub: '0 notas', icon: Clock, color: 'text-slate-400', bg: 'bg-slate-50' },
+          {
+            label: 'Prestados',
+            value: formatCurrency(estatisticas.totalPrestados),
+            sub: `${estatisticas.qtdPrestados} notas`,
+            icon: ArrowUpRight,
+            color: 'text-blue-500',
+            bg: 'bg-blue-50'
+          },
+          {
+            label: 'Tomados',
+            value: formatCurrency(estatisticas.totalTomados),
+            sub: `${estatisticas.qtdTomados} notas`,
+            icon: ArrowDownLeft,
+            color: 'text-amber-500',
+            bg: 'bg-amber-50'
+          },
+          {
+            label: 'ISS Retido',
+            value: formatCurrency(estatisticas.issRetido),
+            sub: '0 notas',
+            icon: DollarSign,
+            color: estatisticas.issRetido > 0 ? 'text-red-500' : 'text-slate-400',
+            bg: estatisticas.issRetido > 0 ? 'bg-red-50' : 'bg-slate-50'
+          },
+          {
+            label: 'Federais Retidos',
+            value: formatCurrency(estatisticas.federaisRetidos),
+            sub: '0 notas',
+            icon: Shield,
+            color: estatisticas.federaisRetidos > 0 ? 'text-red-500' : 'text-slate-400',
+            bg: estatisticas.federaisRetidos > 0 ? 'bg-red-50' : 'bg-slate-50'
+          },
+          {
+            label: 'Total Retido',
+            value: formatCurrency(estatisticas.totalRetido),
+            sub: '0 notas',
+            icon: CalculatorIcon,
+            color: estatisticas.totalRetido > 0 ? 'text-red-500' : 'text-slate-400',
+            bg: estatisticas.totalRetido > 0 ? 'bg-red-50' : 'bg-slate-50'
+          },
+          {
+            label: 'Fora Competência',
+            value: formatCurrency(estatisticas.foraCompetencia),
+            sub: '0 notas',
+            icon: Clock,
+            color: 'text-slate-400',
+            bg: 'bg-slate-50'
+          },
         ].map((item, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between mb-2">

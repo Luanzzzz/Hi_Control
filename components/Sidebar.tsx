@@ -245,7 +245,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         onClick={toggleSidebar}
       />
 
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      <aside className={`fixed lg:fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
         } flex flex-col h-full`}>
         
         {/* Logo Original + Botão de Recolher */}
@@ -260,7 +261,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           {/* Botão de Recolher Sidebar (3 pontos) */}
           <button
             onClick={toggleSidebar}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors lg:block hidden"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
             title="Recolher menu"
           >
             <Menu size={20} className="text-gray-600 dark:text-gray-400" />
