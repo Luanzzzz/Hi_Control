@@ -131,7 +131,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
 
       // Classifica como prestado ou tomado (baseado no tipo ou emissor)
       // Simplificação: NFS-e prestadas, outros tomados
-      const ehPrestado = nota.tipo === 'NFS-e';
+      const ehPrestado = nota.tipo_nf === 'NFSe';
 
       if (ehPrestado) {
         notasPorMes[mesAno].prestados += valor;
@@ -211,17 +211,21 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
       const { buscarNotasDrive } = await import('../src/services/notaFiscalService');
       const notas = await buscarNotasDrive(empresaId);
       // Converte NotaDrive para NotaFiscal
-      const notasConvertidas: NotaFiscal[] = notas.map((nota) => ({
+      const notasConvertidas: NotaFiscal[] = (notas || []).map((nota) => ({
         id: nota.drive_file_id,
-        chave_acesso: nota.chave_acesso || '',
-        numero: nota.numero || '',
+        empresa_id: empresaId,
+        numero_nf: nota.numero || '',
         serie: nota.serie || '',
-        tipo: (nota.tipo as TipoNotaFiscal) || 'NF-e',
-        data_emissao: nota.data_emissao || '',
+        tipo_nf: (nota.tipo as TipoNotaFiscal) || 'NFe',
+        data_emissao: nota.data_emissao || new Date().toISOString(),
         valor_total: nota.valor_total || 0,
         cnpj_emitente: nota.cnpj_emitente || '',
         nome_emitente: nota.nome_emitente || '',
-        situacao: nota.situacao || 'pendente',
+        cnpj_destinatario: nota.cnpj_destinatario || '',
+        nome_destinatario: nota.nome_destinatario || '',
+        situacao: (nota.situacao as any) || 'autorizada',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }));
       setInvoices(notasConvertidas);
     } catch (err: any) {
@@ -305,7 +309,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto bg-[#f8fafc] dark:bg-slate-950 min-h-screen">
-      
+
       {/* 1. Header Contextual (Inspirado na Imagem 1) */}
       <div className="bg-slate-900 dark:bg-slate-900 text-white rounded-xl p-4 md:p-6 shadow-lg border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -321,20 +325,19 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                 <span className="text-slate-500 text-sm font-normal hidden md:inline">• {empresa.cnpj}</span>
               </h1>
               <div className="flex flex-wrap items-center gap-3 mt-2">
-                <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  botStatus?.sincronizado ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                }`}>
+                <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${botStatus?.sincronizado ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  }`}>
                   <div className={`w-1.5 h-1.5 rounded-full ${botStatus?.sincronizado ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
                   {botStatus?.sincronizado ? 'Captura OK' : 'Captura Pendente'}
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                  Última Sinc: {botStatus?.ultima_nota ? new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '---'}
+                  Última Sinc: {botStatus?.ultima_nota ? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---'}
                 </span>
                 <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase">Ativa</span>
               </div>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setShowCertModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm font-semibold border border-white/10"
           >
@@ -361,10 +364,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
             <ResponsiveContainer width="100%" height="100%">
               <ReBarChart data={estatisticas.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} tickFormatter={(value) => `R$ ${value/1000}k`} />
-                <Tooltip 
-                  cursor={{fill: '#f1f5f9'}}
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(value) => `R$ ${value / 1000}k`} />
+                <Tooltip
+                  cursor={{ fill: '#f1f5f9' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="prestados" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} name="Prestados" />
@@ -502,15 +505,15 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Buscar nota, CNPJ, emissor..." 
+                <input
+                  type="text"
+                  placeholder="Buscar nota, CNPJ, emissor..."
                   className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <button 
+              <button
                 onClick={handleSearchNotas}
                 disabled={loadingNotas}
                 className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
@@ -520,7 +523,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
               </button>
             </div>
           </div>
-          
+
           {/* Filtros Estilo Imagem 2 */}
           <div className="flex flex-wrap items-center gap-4 mt-6">
             <div className="flex items-center gap-2">
@@ -666,7 +669,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                     onChange={(e) => setCertPassword(e.target.value)}
                   />
                 </div>
-                
+
                 {uploadResult && (
                   <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${uploadResult.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                     {uploadResult.type === 'success' ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
