@@ -19,7 +19,8 @@ import {
   Settings,
   ShoppingCart,
   Truck,
-  Briefcase
+  Briefcase,
+  Menu
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -247,14 +248,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } flex flex-col h-full`}>
         
-        {/* Logo Original */}
-        <div className="p-6 flex items-center justify-center border-b border-gray-100 dark:border-slate-700">
+        {/* Logo Original + Botão de Recolher */}
+        <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
               <span className="text-white font-bold text-lg">Hi</span>
             </div>
             <span className="text-xl font-bold text-primary-700 dark:text-primary-400">Control</span>
           </div>
+
+          {/* Botão de Recolher Sidebar (3 pontos) */}
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors lg:block hidden"
+            title="Recolher menu"
+          >
+            <Menu size={20} className="text-gray-600 dark:text-gray-400" />
+          </button>
         </div>
 
         {/* Plano do Usuário Original */}
