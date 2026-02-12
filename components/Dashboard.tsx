@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { DollarSign, Users, AlertCircle, TrendingUp, BarChart, PieChart, LineChart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { DollarSign, Users, AlertCircle, TrendingUp, BarChart, PieChart, LineChart, Loader2 } from 'lucide-react';
 import {
   BarChart as ReBarChart,
   Bar,
@@ -17,28 +17,78 @@ import {
   AreaChart as ReAreaChart,
   Area
 } from 'recharts';
+import { botService, type MetricasBot, type BotStatus } from '../src/services/botService';
+
+interface DashboardMetrics {
+  totalNotas: number;
+  clientesAtivos: number;
+  pendencias: number;
+  notasPorTipo: { name: string; value: number }[];
+  ultimaSincronizacao: string | null;
+}
 
 export const Dashboard = () => {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'pie'>('bar');
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalNotas: 0,
+    clientesAtivos: 0,
+    pendencias: 0,
+    notasPorTipo: [],
+    ultimaSincronizacao: null,
+  });
 
-  // Mock Data
-  const monthlyData = [
-    { name: 'Jan', notas: 40, impostos: 2400 },
-    { name: 'Fev', notas: 30, impostos: 1398 },
-    { name: 'Mar', notas: 20, impostos: 9800 },
-    { name: 'Abr', notas: 27, impostos: 3908 },
-    { name: 'Mai', notas: 18, impostos: 4800 },
-    { name: 'Jun', notas: 23, impostos: 3800 },
-    { name: 'Jul', notas: 34, impostos: 4300 },
-  ];
+  useEffect(() => {
+    const carregarMetricas = async () => {
+      try {
+        setLoading(true);
+        const [metricas, status] = await Promise.all([
+          botService.obterMetricas().catch(() => null),
+          botService.obterStatus().catch(() => null),
+        ]);
 
-  const pieData = [
-    { name: 'Autorizadas', value: 400 },
-    { name: 'Canceladas', value: 30 },
-    { name: 'Denegadas', value: 10 },
-  ];
+        const notasPorTipo = metricas?.notas_por_tipo
+          ? Object.entries(metricas.notas_por_tipo).map(([name, value]) => ({
+              name,
+              value: value as number,
+            }))
+          : [
+              { name: 'NF-e', value: 0 },
+              { name: 'NFS-e', value: 0 },
+              { name: 'CT-e', value: 0 },
+            ];
 
-  const COLORS = ['#0088FE', '#FF8042', '#FFBB28'];
+        setMetrics({
+          totalNotas: metricas?.total_notas || 0,
+          clientesAtivos: metricas?.empresas_sincronizadas || 0,
+          pendencias: (status?.empresas_sem_certificado || 0) + (status?.empresas_cert_expirado || 0),
+          notasPorTipo,
+          ultimaSincronizacao: status?.ultima_sincronizacao || null,
+        });
+      } catch (error) {
+        console.error('Erro ao carregar metricas:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarMetricas();
+  }, []);
+
+  // Dados para graficos baseados nas metricas reais
+  const monthlyData = metrics.notasPorTipo.length > 0
+    ? metrics.notasPorTipo.map((item) => ({
+        name: item.name,
+        notas: item.value,
+        impostos: Math.round(item.value * 150), // Estimativa
+      }))
+    : [{ name: 'Sem dados', notas: 0, impostos: 0 }];
+
+  const pieData = metrics.notasPorTipo.length > 0
+    ? metrics.notasPorTipo
+    : [{ name: 'Sem dados', value: 0 }];
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   const renderChart = () => {
     switch (chartType) {
@@ -118,48 +168,84 @@ export const Dashboard = () => {
   return (
     <div className="space-y-6 p-6">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Receita Total</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">R$ 124.500</h3>
-            </div>
-            <div className="p-2 bg-green-100 text-green-600 rounded-lg">
-              <DollarSign size={20} />
-            </div>
-          </div>
-          <span className="text-xs text-green-600 flex items-center mt-2">
-            <TrendingUp size={12} className="mr-1" /> +12% vs mês anterior
-          </span>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 size={32} className="animate-spin text-primary-600" />
         </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total de Notas</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {metrics.totalNotas.toLocaleString('pt-BR')}
+                </h3>
+              </div>
+              <div className="p-2 bg-green-100 text-green-600 rounded-lg">
+                <DollarSign size={20} />
+              </div>
+            </div>
+            <span className="text-xs text-gray-500 flex items-center mt-2">
+              Notas importadas do Drive
+            </span>
+          </div>
 
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Clientes Ativos</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">48</h3>
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Empresas Sincronizadas</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {metrics.clientesAtivos}
+                </h3>
+              </div>
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                <Users size={20} />
+              </div>
             </div>
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-              <Users size={20} />
-            </div>
+            <span className="text-xs text-blue-600 mt-2 block">Com Drive configurado</span>
           </div>
-          <span className="text-xs text-blue-600 mt-2 block">+3 novos este mês</span>
-        </div>
 
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pendências</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">12</h3>
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pendências</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  {metrics.pendencias}
+                </h3>
+              </div>
+              <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
+                <AlertCircle size={20} />
+              </div>
             </div>
-            <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
-              <AlertCircle size={20} />
-            </div>
+            <span className="text-xs text-orange-600 mt-2 block">
+              {metrics.pendencias > 0 ? 'Certificados pendentes' : 'Tudo em ordem'}
+            </span>
           </div>
-          <span className="text-xs text-orange-600 mt-2 block">Requer atenção imediata</span>
+
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Última Sincronização</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-2">
+                  {metrics.ultimaSincronizacao
+                    ? new Date(metrics.ultimaSincronizacao).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'Nunca'}
+                </h3>
+              </div>
+              <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                <TrendingUp size={20} />
+              </div>
+            </div>
+            <span className="text-xs text-gray-500 mt-2 block">Bot automático</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Chart Section */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
@@ -203,24 +289,49 @@ export const Dashboard = () => {
       {/* Recent Activity */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
         <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Atividades Recentes</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Status do Sistema</h3>
         </div>
         <div className="p-6">
           <div className="space-y-6">
-            {[
-              { title: 'Nota Fiscal Emitida', desc: 'NF-e #4590 para Tech Solutions', time: '2 min atrás', color: 'bg-green-500' },
-              { title: 'Novo Cliente', desc: 'Cadastro de "Padaria Central" finalizado', time: '2h atrás', color: 'bg-blue-500' },
-              { title: 'Alerta de Imposto', desc: 'DAS do Mercado Silva vence hoje', time: '4h atrás', color: 'bg-orange-500' },
-            ].map((item, i) => (
-              <div key={i} className="flex gap-4">
-                <div className={`w-2 h-2 mt-2 rounded-full ${item.color}`} />
+            {metrics.ultimaSincronizacao && (
+              <div className="flex gap-4">
+                <div className="w-2 h-2 mt-2 rounded-full bg-green-500" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{item.title}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
-                  <span className="text-xs text-gray-400">{item.time}</span>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Bot Sincronizado</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Última execução: {new Date(metrics.ultimaSincronizacao).toLocaleString('pt-BR')}
+                  </p>
                 </div>
               </div>
-            ))}
+            )}
+            {metrics.totalNotas > 0 && (
+              <div className="flex gap-4">
+                <div className="w-2 h-2 mt-2 rounded-full bg-blue-500" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Notas Importadas</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {metrics.totalNotas} notas no sistema
+                  </p>
+                </div>
+              </div>
+            )}
+            {metrics.pendencias > 0 && (
+              <div className="flex gap-4">
+                <div className="w-2 h-2 mt-2 rounded-full bg-orange-500" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Atenção Necessária</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {metrics.pendencias} empresas com certificado pendente
+                  </p>
+                </div>
+              </div>
+            )}
+            {!metrics.ultimaSincronizacao && metrics.totalNotas === 0 && (
+              <div className="text-center text-gray-500 py-4">
+                <p>Nenhuma atividade registrada</p>
+                <p className="text-sm mt-1">Configure o Google Drive para começar</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
