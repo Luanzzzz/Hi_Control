@@ -156,8 +156,6 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       const data = await getDashboardEmpresa(empresaId, mesSelecionado, anoSelecionado);
       setDashboard(data);
       setSyncStatus(data.sync);
-      setNotas(data.notas);
-      setTotalNotas(data.total_notas || 0);
       prevStatusRef.current = data.sync.status;
     } catch (error: any) {
       setToast({ type: 'error', message: error?.message || 'Falha ao carregar dashboard.' });
@@ -182,12 +180,11 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const verificarStatusSync = useCallback(async () => {
     try {
       const status = await getSyncStatus(empresaId);
-      const anterior = prevStatusRef.current;
       setSyncStatus(status);
       prevStatusRef.current = status.status;
       pollingAttemptsRef.current = 0;
 
-      if (anterior === 'sincronizando' && status.status === 'ok') {
+      if (isSyncing && status.status === 'ok') {
         setToast({
           type: 'success',
           message: `${status.notas_capturadas_ultima_sync || 0} notas capturadas`,
@@ -195,14 +192,27 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
         setIsSyncing(false);
         await carregarDashboard();
         await carregarNotas();
+        return;
       }
 
-      if (anterior === 'sincronizando' && (status.status === 'erro' || status.status === 'sem_certificado')) {
+      if (isSyncing && (status.status === 'erro' || status.status === 'sem_certificado')) {
         setToast({
           type: 'error',
           message: status.erro_mensagem || 'Erro durante sincronizacao',
         });
         setIsSyncing(false);
+        await carregarDashboard();
+        return;
+      }
+
+      if (isSyncing && status.status === 'pendente' && status.erro_mensagem) {
+        setToast({
+          type: 'error',
+          message: status.erro_mensagem,
+        });
+        setIsSyncing(false);
+        await carregarDashboard();
+        return;
       }
     } catch {
       pollingAttemptsRef.current += 1;
@@ -216,7 +226,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
         setIsSyncing(false);
       }
     }
-  }, [carregarDashboard, carregarNotas, empresaId]);
+  }, [carregarDashboard, carregarNotas, empresaId, isSyncing]);
 
   useEffect(() => {
     carregarDashboard();
@@ -235,7 +245,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   }, [carregarNotas]);
 
   useEffect(() => {
-    if (!isSyncing || syncStatus?.status !== 'sincronizando') {
+    if (!isSyncing) {
       return;
     }
 
