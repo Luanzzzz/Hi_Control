@@ -55,10 +55,10 @@ const SimpleCertBadge: React.FC<SimpleCertBadgeProps> = ({ certificadoValidade }
 
 // Props interface para receber função de navegação do App.tsx
 interface ClientsProps {
-    onNavigateToBuscador?: (empresaId: string) => void;
+    onNavigateToDashboard?: (empresaId: string) => void;
 }
 
-export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
+export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
     const [clients, setClients] = useState<Empresa[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,8 +88,8 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
         }));
 
         // Se callback foi passado pelo App.tsx, usar para navegar
-        if (onNavigateToBuscador) {
-            onNavigateToBuscador(empresaId);
+        if (onNavigateToDashboard) {
+            onNavigateToDashboard(empresaId);
         }
     };
 

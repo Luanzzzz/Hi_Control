@@ -3,7 +3,7 @@ export enum ViewState {
   DASHBOARD = 'DASHBOARD',
   INVOICES = 'INVOICES',
   INVOICE_EMITTER = 'INVOICE_EMITTER',
-  INVOICE_SEARCH = 'INVOICE_SEARCH',
+  CLIENT_DASHBOARD = 'CLIENT_DASHBOARD',
   PDV = 'PDV', // NFC-e - Cupom Fiscal Eletrônico
   CTE = 'CTE', // CT-e - Conhecimento de Transporte
   NFSE = 'NFSE', // NFS-e - Nota Fiscal de Serviço
@@ -79,7 +79,7 @@ export interface ModuleAccess {
   [ViewState.DASHBOARD]: ModulePriority;
   [ViewState.INVOICES]: ModulePriority;
   [ViewState.INVOICE_EMITTER]: ModulePriority;
-  [ViewState.INVOICE_SEARCH]: ModulePriority;
+  [ViewState.CLIENT_DASHBOARD]: ModulePriority;
   [ViewState.PDV]: ModulePriority;
   [ViewState.CTE]: ModulePriority;
   [ViewState.NFSE]: ModulePriority;
@@ -90,4 +90,78 @@ export interface ModuleAccess {
   [ViewState.SETTINGS]: ModulePriority;
   [ViewState.CLIENT_DETAIL]: ModulePriority;
   [ViewState.COMING_SOON]: ModulePriority;
+}
+
+// ============================================================
+// TIPOS DO BOT DE CAPTURA SEFAZ + DASHBOARD
+// ============================================================
+
+export interface SyncStatus {
+  empresa_id: string;
+  status: 'pendente' | 'sincronizando' | 'ok' | 'erro' | 'sem_certificado';
+  ultima_sync: string | null;
+  proximo_sync: string | null;
+  total_notas_capturadas: number;
+  notas_capturadas_ultima_sync: number;
+  erro_mensagem: string | null;
+  ultimo_nsu?: number;
+}
+
+export interface NotaFiscalDashboard {
+  id: string;
+  chave_acesso: string;
+  numero_nf: string;
+  serie: string;
+  tipo_nf: 'NFe' | 'NFSe' | 'NFCe' | 'CTe';
+  tipo_operacao: 'entrada' | 'saida';
+  data_emissao: string;
+  valor_total: number;
+  cnpj_emitente: string;
+  nome_emitente: string;
+  cnpj_destinatario: string;
+  nome_destinatario: string;
+  situacao: 'autorizada' | 'cancelada' | 'denegada' | 'processando';
+  municipio_nome?: string;
+  fonte_captura: 'sefaz_nacional' | 'manual' | 'importacao';
+}
+
+export interface ResumoFinanceiro {
+  prestados_valor: number;
+  prestados_quantidade: number;
+  tomados_valor: number;
+  tomados_quantidade: number;
+  iss_retido: number;
+  federais_retidos: number;
+  total_retido: number;
+  fora_competencia: number;
+  diferenca: number;
+  variacao_mes_anterior_percent: number | null;
+}
+
+export interface PontoHistorico {
+  periodo: string;
+  prestados: number;
+  tomados: number;
+}
+
+export interface DashboardEmpresa {
+  empresa: {
+    id: string;
+    razao_social: string;
+    cnpj: string;
+    ativa: boolean;
+  };
+  sync: SyncStatus;
+  resumo: ResumoFinanceiro;
+  historico: PontoHistorico[];
+  notas: NotaFiscalDashboard[];
+  total_notas: number;
+}
+
+export interface FiltrosNotas {
+  tipo?: string;
+  status?: string;
+  retencao?: string;
+  busca?: string;
+  pagina?: number;
 }
