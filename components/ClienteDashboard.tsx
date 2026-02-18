@@ -143,6 +143,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const [certLoading, setCertLoading] = useState<boolean>(false);
 
   const prevStatusRef = useRef<SyncStatus['status'] | null>(null);
+  const pollingAttemptsRef = useRef<number>(0);
 
   const anosDisponiveis = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -184,6 +185,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       const anterior = prevStatusRef.current;
       setSyncStatus(status);
       prevStatusRef.current = status.status;
+      pollingAttemptsRef.current = 0;
 
       if (anterior === 'sincronizando' && status.status === 'ok') {
         setToast({
@@ -203,7 +205,16 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
         setIsSyncing(false);
       }
     } catch {
-      setIsSyncing(false);
+      pollingAttemptsRef.current += 1;
+      if (pollingAttemptsRef.current >= 3) {
+        setSyncStatus((prev) =>
+          prev
+            ? { ...prev, status: 'erro', erro_mensagem: 'Falha ao consultar status da sincronizacao' }
+            : null
+        );
+        setToast({ type: 'error', message: 'Falha ao consultar status da sincronizacao' });
+        setIsSyncing(false);
+      }
     }
   }, [carregarDashboard, carregarNotas, empresaId]);
 
@@ -224,7 +235,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   }, [carregarNotas]);
 
   useEffect(() => {
-    if (syncStatus?.status !== 'sincronizando' && !isSyncing) {
+    if (!isSyncing || syncStatus?.status !== 'sincronizando') {
       return;
     }
 
@@ -244,6 +255,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const handleForcarSync = async () => {
     try {
       setIsSyncing(true);
+      pollingAttemptsRef.current = 0;
       setSyncStatus((prev) =>
         prev
           ? { ...prev, status: 'sincronizando', erro_mensagem: null }
@@ -259,8 +271,14 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       );
       prevStatusRef.current = 'sincronizando';
       await forceSyncEmpresa(empresaId);
+      await verificarStatusSync();
     } catch (error: any) {
       setIsSyncing(false);
+      setSyncStatus((prev) =>
+        prev
+          ? { ...prev, status: 'erro', erro_mensagem: error?.message || 'Falha ao agendar sincronizacao' }
+          : null
+      );
       setToast({ type: 'error', message: error?.message || 'Falha ao agendar sincronizacao' });
     }
   };
