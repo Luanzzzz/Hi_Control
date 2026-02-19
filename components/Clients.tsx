@@ -328,9 +328,60 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
         try {
             let empresaId: string;
 
+            const limparTextoOpcional = (value?: string): string | undefined => {
+                if (typeof value !== 'string') return undefined;
+                const trimmed = value.trim();
+                return trimmed.length > 0 ? trimmed : undefined;
+            };
+
+            const limparCepOpcional = (value?: string): string | undefined => {
+                const texto = limparTextoOpcional(value);
+                if (!texto) return undefined;
+                const digits = texto.replace(/\D/g, '');
+                return digits.length === 8 ? digits : undefined;
+            };
+
+            const limparEstadoOpcional = (value?: string): string | undefined => {
+                const texto = limparTextoOpcional(value);
+                if (!texto) return undefined;
+                const uf = texto.toUpperCase();
+                return uf.length === 2 ? uf : undefined;
+            };
+
+            const limparRegimeOpcional = (
+                value?: string
+            ): EmpresaCreate['regime_tributario'] | undefined => {
+                const texto = limparTextoOpcional(value);
+                if (!texto) return undefined;
+
+                if (
+                    texto === 'simples_nacional' ||
+                    texto === 'lucro_presumido' ||
+                    texto === 'lucro_real'
+                ) {
+                    return texto;
+                }
+
+                return undefined;
+            };
+
             // Garantir que CSC seja enviado corretamente (csc_id como number, csc_token como string)
             const payload: EmpresaCreate = {
-                ...data,
+                razao_social: data.razao_social?.trim(),
+                cnpj: data.cnpj,
+                nome_fantasia: limparTextoOpcional(data.nome_fantasia),
+                inscricao_estadual: limparTextoOpcional(data.inscricao_estadual),
+                inscricao_municipal: limparTextoOpcional(data.inscricao_municipal),
+                cep: limparCepOpcional(data.cep),
+                logradouro: limparTextoOpcional(data.logradouro),
+                numero: limparTextoOpcional(data.numero),
+                complemento: limparTextoOpcional(data.complemento),
+                bairro: limparTextoOpcional(data.bairro),
+                cidade: limparTextoOpcional(data.cidade),
+                estado: limparEstadoOpcional(data.estado),
+                email: limparTextoOpcional(data.email),
+                telefone: limparTextoOpcional(data.telefone),
+                regime_tributario: limparRegimeOpcional(data.regime_tributario),
                 csc_id: data.csc_id !== undefined && data.csc_id !== null && String(data.csc_id).trim() !== ''
                     ? Number(data.csc_id)
                     : undefined,
