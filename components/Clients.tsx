@@ -74,6 +74,8 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
     const [certFile, setCertFile] = useState<File | null>(null);
     const [certPassword, setCertPassword] = useState('');
     const [uploadingCert, setUploadingCert] = useState(false);
+    const [readingCertData, setReadingCertData] = useState(false);
+    const [certPreviewSignature, setCertPreviewSignature] = useState('');
     const [certMessage, setCertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     /**
@@ -93,7 +95,7 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
         }
     };
 
-    const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<EmpresaCreate>();
+    const { register, handleSubmit, reset, setValue, getValues, formState: { errors, dirtyFields } } = useForm<EmpresaCreate>();
 
     useEffect(() => {
         loadClients();
@@ -112,6 +114,7 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
     };
 
     const handleOpenModal = (client?: Empresa) => {
+        setCertPreviewSignature('');
         if (client) {
             setEditingClient(client);
             setValue('razao_social', client.razao_social);
@@ -148,6 +151,8 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
         setFormMessage(null);
         setCertFile(null);
         setCertPassword('');
+        setReadingCertData(false);
+        setCertPreviewSignature('');
         setCertMessage(null);
     };
 
@@ -183,6 +188,98 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
         }
     };
 
+    const preencherDadosPorCertificado = async (fileParam?: File, senhaParam?: string, forcar: boolean = false) => {
+        const file = fileParam || certFile;
+        const senha = (senhaParam || certPassword).trim();
+
+        if (!file || !senha) {
+            return;
+        }
+
+        const assinaturaPreview = `${file.name}:${file.size}:${file.lastModified}:${senha}`;
+        if (!forcar && assinaturaPreview === certPreviewSignature) {
+            return;
+        }
+
+        setReadingCertData(true);
+        try {
+            const certBase64 = await fileToBase64(file);
+            const preview = await empresaService.previewCertificado(certBase64, senha);
+            const camposAtualizados: string[] = [];
+            const camposMantidos: string[] = [];
+
+            const cnpjAtual = (getValues('cnpj') || '').trim();
+            const cnpjPreview = (preview.cnpj || '').trim();
+            if (cnpjPreview) {
+                const cnpjAtualDigits = cnpjAtual.replace(/\D/g, '');
+                const cnpjPreviewDigits = cnpjPreview.replace(/\D/g, '');
+                const podePreencherCnpj = !dirtyFields.cnpj || !cnpjAtual;
+
+                if (podePreencherCnpj || cnpjAtualDigits === cnpjPreviewDigits) {
+                    if (cnpjAtualDigits !== cnpjPreviewDigits) {
+                        setValue('cnpj', cnpjPreview, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                            shouldValidate: true,
+                        });
+                        camposAtualizados.push('CNPJ');
+                    }
+
+                    if (cnpjPreviewDigits.length === 14 && !editingClient) {
+                        setCheckingCnpj(true);
+                        try {
+                            const result = await empresaService.verificarCnpj(cnpjPreviewDigits);
+                            setCnpjCheck(result);
+                            if (result.exists && result.empresa) {
+                                setFormMessage({
+                                    type: 'warning',
+                                    text: `Cliente "${result.empresa.razao_social}" ja cadastrado com este CNPJ. Ao salvar, os dados serao atualizados.`
+                                });
+                            }
+                        } finally {
+                            setCheckingCnpj(false);
+                        }
+                    }
+                } else {
+                    camposMantidos.push('CNPJ');
+                }
+            }
+
+            const razaoAtual = (getValues('razao_social') || '').trim();
+            const razaoPreview = (preview.razao_social || '').trim();
+            if (razaoPreview) {
+                const podePreencherRazao = !dirtyFields.razao_social || !razaoAtual;
+                if (podePreencherRazao || razaoAtual.toLowerCase() === razaoPreview.toLowerCase()) {
+                    if (razaoAtual !== razaoPreview) {
+                        setValue('razao_social', razaoPreview, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                            shouldValidate: true,
+                        });
+                        camposAtualizados.push('Razao Social');
+                    }
+                } else {
+                    camposMantidos.push('Razao Social');
+                }
+            }
+
+            setCertPreviewSignature(assinaturaPreview);
+            setCertMessage({
+                type: 'success',
+                text: camposAtualizados.length > 0
+                    ? `Dados carregados do certificado (${camposAtualizados.join(', ')}).${camposMantidos.length > 0 ? ` Campos mantidos: ${camposMantidos.join(', ')}.` : ''}`
+                    : 'Dados do certificado lidos. Campos preenchidos manualmente foram mantidos.',
+            });
+        } catch (error: any) {
+            setCertMessage({
+                type: 'error',
+                text: error?.message || 'Nao foi possivel extrair os dados do certificado.',
+            });
+        } finally {
+            setReadingCertData(false);
+        }
+    };
+
     const handleCertificateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -200,7 +297,12 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
         }
 
         setCertFile(file);
+        setCertPreviewSignature('');
         setCertMessage(null);
+
+        if (certPassword.trim()) {
+            void preencherDadosPorCertificado(file, certPassword);
+        }
     };
 
     const handleCertificateUpload = async (empresaId: string) => {
@@ -594,20 +696,48 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
                                         <input
                                             type="password"
                                             value={certPassword}
-                                            onChange={(e) => setCertPassword(e.target.value)}
+                                            onChange={(e) => {
+                                                setCertPassword(e.target.value);
+                                                setCertPreviewSignature('');
+                                                if (certMessage?.type === 'success') {
+                                                    setCertMessage(null);
+                                                }
+                                            }}
+                                            onBlur={() => {
+                                                if (certFile && certPassword.trim()) {
+                                                    void preencherDadosPorCertificado();
+                                                }
+                                            }}
                                             placeholder="Digite a senha do certificado"
                                             disabled={!certFile}
                                             className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                            {certFile ? "A senha será validada no momento do envio." : "Selecione um arquivo .pfx ou .p12 para habilitar o campo de senha."}
+                                            {certFile ? "Ao sair do campo, os dados da empresa serão lidos do certificado." : "Selecione um arquivo .pfx ou .p12 para habilitar o campo de senha."}
                                         </p>
+                                    </div>
+
+                                    <div>
+                                        <button
+                                            type="button"
+                                            onClick={() => void preencherDadosPorCertificado(undefined, undefined, true)}
+                                            disabled={!certFile || !certPassword.trim() || readingCertData}
+                                            className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {readingCertData ? 'Lendo certificado...' : 'Preencher dados pelo certificado'}
+                                        </button>
                                     </div>
 
                                     {uploadingCert && (
                                         <div className="flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400">
                                             <Upload size={16} className="animate-pulse" />
                                             Enviando certificado...
+                                        </div>
+                                    )}
+                                    {readingCertData && (
+                                        <div className="flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400">
+                                            <Upload size={16} className="animate-pulse" />
+                                            Extraindo dados da empresa a partir do certificado...
                                         </div>
                                     )}
                                 </div>

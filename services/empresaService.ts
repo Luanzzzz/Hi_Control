@@ -45,6 +45,16 @@ export interface CertificateStatus {
     emissor?: string;
 }
 
+export interface CertificadoPreviewResponse {
+    titular: string;
+    emissor: string;
+    validade: string;
+    dias_restantes: number;
+    requer_atencao: boolean;
+    cnpj?: string | null;
+    razao_social?: string | null;
+}
+
 export interface EmpresaCreate {
     razao_social: string;
     nome_fantasia?: string;
@@ -183,6 +193,32 @@ class EmpresaService {
             throw new Error(
                 error.response?.data?.detail ||
                 'Erro ao verificar status do certificado'
+            );
+        }
+    }
+
+    /**
+     * Pré-visualiza dados do certificado sem persistir no banco.
+     * Usado para auto-preencher CNPJ e Razão Social no cadastro de cliente.
+     */
+    async previewCertificado(
+        certBase64: string,
+        senha: string
+    ): Promise<CertificadoPreviewResponse> {
+        try {
+            const response = await api.post<CertificadoPreviewResponse>(
+                '/empresas/preview-certificado',
+                {
+                    certificado_base64: certBase64,
+                    senha,
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            console.error('[EmpresaService] Erro ao pré-visualizar certificado:', error);
+            throw new Error(
+                error.response?.data?.detail ||
+                'Erro ao ler dados do certificado'
             );
         }
     }
