@@ -142,6 +142,8 @@ export interface PontoHistorico {
   periodo: string;
   prestados: number;
   tomados: number;
+  prestados_quantidade?: number;
+  tomados_quantidade?: number;
 }
 
 export interface DashboardEmpresa {
@@ -156,6 +158,8 @@ export interface DashboardEmpresa {
   historico: PontoHistorico[];
   notas: NotaFiscalDashboard[];
   total_notas: number;
+  periodo_referencia_mes?: number;
+  periodo_referencia_ano?: number;
 }
 
 export interface FiltrosNotas {
@@ -164,4 +168,6 @@ export interface FiltrosNotas {
   retencao?: string;
   busca?: string;
   pagina?: number;
+  dataInicio?: string;
+  dataFim?: string;
 }

@@ -70,7 +70,7 @@ const badgeConfig: Record<
   { color: string; text: string; icon: string; animate?: boolean }
 > = {
   ok: { color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40', text: 'CAPTURA OK', icon: '●' },
-  sincronizando: { color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/40', text: 'SINCRONIZANDO...', icon: '⟳', animate: true },
+  sincronizando: { color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/40', text: 'CAPTURANDO NOTAS...', icon: '⟳', animate: true },
   erro: { color: 'text-red-600 bg-red-100 dark:bg-red-900/40', text: 'ERRO NA CAPTURA', icon: '⚠' },
   sem_certificado: { color: 'text-amber-700 bg-amber-100 dark:bg-amber-900/40', text: 'SEM CERTIFICADO', icon: '⚠' },
   pendente: { color: 'text-slate-600 bg-slate-100 dark:bg-slate-800', text: 'AGUARDANDO...', icon: '○' },
@@ -112,10 +112,18 @@ const normalizeSituacao = (situacao: NotaFiscalDashboard['situacao']): string =>
   return 'PROCESSANDO';
 };
 
+const getMesAnoFromDataEmissao = (value: string): { mes: number; ano: number } | null => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return { mes: parsed.getMonth() + 1, ano: parsed.getFullYear() };
+};
+
 export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, onVoltar }) => {
   const now = new Date();
   const [mesSelecionado, setMesSelecionado] = useState<number>(now.getMonth() + 1);
   const [anoSelecionado, setAnoSelecionado] = useState<number>(now.getFullYear());
+  const [periodoFixadoManualmente, setPeriodoFixadoManualmente] = useState<boolean>(false);
 
   const [dashboard, setDashboard] = useState<DashboardEmpresa | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
@@ -135,6 +143,8 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     retencao: 'Todas',
     busca: '',
     pagina: 1,
+    dataInicio: '',
+    dataFim: '',
   });
 
   const [showCertModal, setShowCertModal] = useState<boolean>(false);
@@ -157,12 +167,24 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       setDashboard(data);
       setSyncStatus(data.sync);
       prevStatusRef.current = data.sync.status;
+      if (
+        !periodoFixadoManualmente &&
+        data.periodo_referencia_mes &&
+        data.periodo_referencia_ano &&
+        (
+          data.periodo_referencia_mes !== mesSelecionado ||
+          data.periodo_referencia_ano !== anoSelecionado
+        )
+      ) {
+        setMesSelecionado(data.periodo_referencia_mes);
+        setAnoSelecionado(data.periodo_referencia_ano);
+      }
     } catch (error: any) {
       setToast({ type: 'error', message: error?.message || 'Falha ao carregar dashboard.' });
     } finally {
       setLoadingDashboard(false);
     }
-  }, [anoSelecionado, empresaId, mesSelecionado]);
+  }, [anoSelecionado, empresaId, mesSelecionado, periodoFixadoManualmente]);
 
   const carregarNotas = useCallback(async () => {
     setLoadingNotas(true);
@@ -170,12 +192,31 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       const response = await filtrarNotas(empresaId, filtros);
       setNotas(response.notas);
       setTotalNotas(response.total);
+      return response;
     } catch (error: any) {
       setToast({ type: 'error', message: error?.message || 'Falha ao carregar notas.' });
+      return null;
     } finally {
       setLoadingNotas(false);
     }
   }, [empresaId, filtros]);
+
+  const ajustarPeriodoPelaUltimaNota = useCallback((lista: NotaFiscalDashboard[]): boolean => {
+    if (periodoFixadoManualmente) return false;
+    if (!lista.length) return false;
+    if (Number(filtros.pagina || 1) !== 1) return false;
+
+    const referencia = getMesAnoFromDataEmissao(lista[0].data_emissao);
+    if (!referencia) return false;
+
+    if (referencia.mes === mesSelecionado && referencia.ano === anoSelecionado) {
+      return false;
+    }
+
+    setMesSelecionado(referencia.mes);
+    setAnoSelecionado(referencia.ano);
+    return true;
+  }, [anoSelecionado, filtros.pagina, mesSelecionado, periodoFixadoManualmente]);
 
   const verificarStatusSync = useCallback(async () => {
     try {
@@ -190,8 +231,23 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
           message: `${status.notas_capturadas_ultima_sync || 0} notas capturadas`,
         });
         setIsSyncing(false);
+        setPeriodoFixadoManualmente(false);
+        setBuscaInput('');
+        const filtrosPosSync: FiltrosNotas = {
+          tipo: 'Todos',
+          status: 'Todos',
+          retencao: 'Todas',
+          busca: '',
+          pagina: 1,
+          dataInicio: '',
+          dataFim: '',
+        };
+        setFiltros(filtrosPosSync);
+        const notasPosSync = await filtrarNotas(empresaId, filtrosPosSync);
+        setNotas(notasPosSync.notas);
+        setTotalNotas(notasPosSync.total);
+        ajustarPeriodoPelaUltimaNota(notasPosSync.notas);
         await carregarDashboard();
-        await carregarNotas();
         return;
       }
 
@@ -226,7 +282,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
         setIsSyncing(false);
       }
     }
-  }, [carregarDashboard, carregarNotas, empresaId, isSyncing]);
+  }, [ajustarPeriodoPelaUltimaNota, carregarDashboard, empresaId, isSyncing]);
 
   useEffect(() => {
     carregarDashboard();
@@ -243,6 +299,12 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   useEffect(() => {
     carregarNotas();
   }, [carregarNotas]);
+
+  useEffect(() => {
+    if (loadingNotas) return;
+    if (!notas.length) return;
+    ajustarPeriodoPelaUltimaNota(notas);
+  }, [ajustarPeriodoPelaUltimaNota, loadingNotas, notas]);
 
   useEffect(() => {
     if (!isSyncing) {
@@ -265,6 +327,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const handleForcarSync = async () => {
     try {
       setIsSyncing(true);
+      setPeriodoFixadoManualmente(false);
       pollingAttemptsRef.current = 0;
       setSyncStatus((prev) =>
         prev
@@ -349,8 +412,8 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
   const chartData = useMemo(() => {
     return (dashboard?.historico || []).map((item) => {
-      const quantidadePrestados = Math.max(0, Math.round((item as any).prestados_quantidade ?? item.prestados / 1000));
-      const quantidadeTomados = Math.max(0, Math.round((item as any).tomados_quantidade ?? item.tomados / 1000));
+      const quantidadePrestados = Math.max(0, Number(item.prestados_quantidade || 0));
+      const quantidadeTomados = Math.max(0, Number(item.tomados_quantidade || 0));
       return {
         periodo: item.periodo,
         prestados_valor: Number(item.prestados || 0),
@@ -363,6 +426,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
   const statusAtual = syncStatus?.status || 'pendente';
   const statusBadge = badgeConfig[statusAtual];
+  const syncInProgress = isSyncing || statusAtual === 'sincronizando';
   const diferenca = Number(resumo?.diferenca || 0);
   const variacao = resumo?.variacao_mes_anterior_percent;
   const totalAcumulado = Number(resumo?.prestados_valor || 0) + Number(resumo?.tomados_valor || 0);
@@ -440,11 +504,11 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
             </button>
             <button
               onClick={handleForcarSync}
-              disabled={isSyncing || statusAtual === 'sincronizando'}
+              disabled={syncInProgress}
               className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSyncing || statusAtual === 'sincronizando' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              {isSyncing || statusAtual === 'sincronizando' ? 'Sincronizando...' : 'Sincronizar SEFAZ'}
+              {syncInProgress ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              {syncInProgress ? 'Capturando notas...' : 'Sincronizar SEFAZ'}
             </button>
           </div>
         </div>
@@ -535,7 +599,10 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
               </div>
               <select
                 value={mesSelecionado}
-                onChange={(event) => setMesSelecionado(Number(event.target.value))}
+                onChange={(event) => {
+                  setPeriodoFixadoManualmente(true);
+                  setMesSelecionado(Number(event.target.value));
+                }}
                 className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 {MESES.map((mes) => (
@@ -546,7 +613,10 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
               </select>
               <select
                 value={anoSelecionado}
-                onChange={(event) => setAnoSelecionado(Number(event.target.value))}
+                onChange={(event) => {
+                  setPeriodoFixadoManualmente(true);
+                  setAnoSelecionado(Number(event.target.value));
+                }}
                 className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 {anosDisponiveis.map((ano) => (
@@ -634,11 +704,11 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
               </div>
               <button
                 onClick={handleForcarSync}
-                disabled={isSyncing || statusAtual === 'sincronizando'}
+                disabled={syncInProgress}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white hover:bg-primary-700 disabled:opacity-60"
               >
-                {isSyncing || statusAtual === 'sincronizando' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                Sincronizar SEFAZ
+                {syncInProgress ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {syncInProgress ? 'Capturando notas...' : 'Sincronizar SEFAZ'}
               </button>
               <button
                 onClick={handleExportarCsv}
@@ -690,6 +760,43 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
                 <option>Sem retencao</option>
               </select>
             </label>
+            <label className="font-semibold text-slate-500 dark:text-slate-400">
+              DE:
+              <input
+                type="date"
+                value={filtros.dataInicio || ''}
+                onChange={(event) =>
+                  setFiltros((prev) => ({ ...prev, dataInicio: event.target.value, pagina: 1 }))
+                }
+                className="ml-2 rounded border border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
+              />
+            </label>
+            <label className="font-semibold text-slate-500 dark:text-slate-400">
+              ATE:
+              <input
+                type="date"
+                value={filtros.dataFim || ''}
+                onChange={(event) =>
+                  setFiltros((prev) => ({ ...prev, dataFim: event.target.value, pagina: 1 }))
+                }
+                className="ml-2 rounded border border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
+              />
+            </label>
+            {(filtros.dataInicio || filtros.dataFim) && (
+              <button
+                onClick={() =>
+                  setFiltros((prev) => ({
+                    ...prev,
+                    dataInicio: '',
+                    dataFim: '',
+                    pagina: 1,
+                  }))
+                }
+                className="rounded border border-slate-300 px-2 py-1 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Limpar datas
+              </button>
+            )}
           </div>
         </div>
 
@@ -797,11 +904,11 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
             </p>
             <button
               onClick={handleForcarSync}
-              disabled={isSyncing || statusAtual === 'sincronizando'}
+              disabled={syncInProgress}
               className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
             >
-              <RefreshCw size={16} />
-              Sincronizar agora
+              {syncInProgress ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              {syncInProgress ? 'Capturando notas...' : 'Sincronizar agora'}
             </button>
           </div>
         )}

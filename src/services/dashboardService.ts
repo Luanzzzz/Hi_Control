@@ -14,6 +14,8 @@ interface RawDashboardResponse {
   notas: any[];
   total_notas?: number;
   notas_total?: number;
+  periodo_referencia_mes?: number;
+  periodo_referencia_ano?: number;
 }
 
 const SITUACAO_FALLBACK: NotaFiscalDashboard['situacao'] = 'processando';
@@ -71,6 +73,8 @@ const normalizeDashboard = (data: RawDashboardResponse): DashboardEmpresa => {
     historico: data.historico || [],
     notas,
     total_notas: Number(data.total_notas ?? data.notas_total ?? notas.length),
+    periodo_referencia_mes: data.periodo_referencia_mes,
+    periodo_referencia_ano: data.periodo_referencia_ano,
   };
 };
 
@@ -79,6 +83,8 @@ const filtrarNotasLocal = (
   filtros: FiltrosNotas
 ): NotaFiscalDashboard[] => {
   const termo = (filtros.busca || '').trim().toLowerCase();
+  const dataInicio = filtros.dataInicio ? new Date(`${filtros.dataInicio}T00:00:00`) : null;
+  const dataFim = filtros.dataFim ? new Date(`${filtros.dataFim}T23:59:59`) : null;
 
   return notas.filter((nota) => {
     if (filtros.tipo && filtros.tipo !== 'Todos' && filtros.tipo !== 'todos') {
@@ -107,6 +113,19 @@ const filtrarNotasLocal = (
         .join(' ')
         .toLowerCase();
       if (!alvo.includes(termo)) {
+        return false;
+      }
+    }
+
+    if (dataInicio || dataFim) {
+      const emissao = new Date(nota.data_emissao);
+      if (Number.isNaN(emissao.getTime())) {
+        return false;
+      }
+      if (dataInicio && emissao < dataInicio) {
+        return false;
+      }
+      if (dataFim && emissao > dataFim) {
         return false;
       }
     }
@@ -153,6 +172,8 @@ export async function filtrarNotas(
   if (filtros.retencao) params.retencao = filtros.retencao;
   if (filtros.busca) params.busca = filtros.busca;
   if (filtros.pagina) params.pagina = filtros.pagina;
+  if (filtros.dataInicio) params.data_inicio = filtros.dataInicio;
+  if (filtros.dataFim) params.data_fim = filtros.dataFim;
 
   try {
     const response = await api.get<{ notas?: any[]; total?: number }>(`/empresas/${empresaId}/notas`, { params });
