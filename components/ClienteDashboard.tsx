@@ -7,10 +7,13 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Download,
   FileText,
   Loader2,
+  MoreVertical,
   RefreshCw,
+  Search,
   Shield,
   ShieldCheck,
   Wallet,
@@ -151,6 +154,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const [certFile, setCertFile] = useState<File | null>(null);
   const [certSenha, setCertSenha] = useState<string>('');
   const [certLoading, setCertLoading] = useState<boolean>(false);
+  const [acaoAbertaNotaId, setAcaoAbertaNotaId] = useState<string | null>(null);
 
   const prevStatusRef = useRef<SyncStatus['status'] | null>(null);
   const pollingAttemptsRef = useRef<number>(0);
@@ -324,6 +328,12 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  useEffect(() => {
+    const fecharMenuAcoes = () => setAcaoAbertaNotaId(null);
+    window.addEventListener('click', fecharMenuAcoes);
+    return () => window.removeEventListener('click', fecharMenuAcoes);
+  }, []);
+
   const handleForcarSync = async () => {
     try {
       setIsSyncing(true);
@@ -404,6 +414,43 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     }
   };
 
+  const obterNomeContraparte = (nota: NotaFiscalDashboard): string => {
+    if (nota.tipo_operacao === 'saida') {
+      return nota.nome_destinatario || nota.nome_emitente || '';
+    }
+    return nota.nome_emitente || nota.nome_destinatario || '';
+  };
+
+  const obterCnpjContraparte = (nota: NotaFiscalDashboard): string => {
+    if (nota.tipo_operacao === 'saida') {
+      return nota.cnpj_destinatario || nota.cnpj_emitente || '';
+    }
+    return nota.cnpj_emitente || nota.cnpj_destinatario || '';
+  };
+
+  const copiarTexto = async (texto: string, mensagemSucesso: string) => {
+    if (!texto) {
+      setToast({ type: 'error', message: 'Nao ha valor para copiar' });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(texto);
+      setToast({ type: 'success', message: mensagemSucesso });
+    } catch {
+      setToast({ type: 'error', message: 'Falha ao copiar para a area de transferencia' });
+    }
+  };
+
+  const aplicarBuscaContraparte = (nota: NotaFiscalDashboard) => {
+    const nome = obterNomeContraparte(nota);
+    if (!nome) {
+      setToast({ type: 'error', message: 'Contraparte sem nome para filtrar' });
+      return;
+    }
+    setBuscaInput(nome);
+    setFiltros((prev) => ({ ...prev, busca: nome, pagina: 1 }));
+  };
+
   const resumo = dashboard?.resumo;
   const paginaAtual = Number(filtros.pagina || 1);
   const inicio = totalNotas === 0 ? 0 : (paginaAtual - 1) * PAGE_SIZE + 1;
@@ -481,6 +528,12 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
                 <span className={statusBadge.animate ? 'animate-spin' : ''}>{statusBadge.icon}</span>
                 {statusBadge.text}
               </span>
+              {syncStatus?.prioridade_recente_ativa && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                  <Loader2 size={11} className="animate-spin" />
+                  MODO PRIORIDADE RECENTE ATIVO
+                </span>
+              )}
               <span className="text-xs text-slate-500 dark:text-slate-400">Ultima sinc: {formatTime(syncStatus?.ultima_sync || null)}</span>
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${
@@ -888,7 +941,62 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
                         {normalizeSituacao(nota.situacao)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-slate-500 dark:text-slate-300">⋮</td>
+                    <td className="px-4 py-3 text-center text-slate-500 dark:text-slate-300">
+                      <div className="relative inline-block text-left">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setAcaoAbertaNotaId((prev) => (prev === nota.id ? null : nota.id));
+                          }}
+                          className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                          title="Acoes da nota"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+
+                        {acaoAbertaNotaId === nota.id && (
+                          <div className="absolute right-0 z-20 mt-1 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                            <button
+                              type="button"
+                              onClick={async (event) => {
+                                event.stopPropagation();
+                                await copiarTexto(nota.chave_acesso || '', 'Chave de acesso copiada');
+                                setAcaoAbertaNotaId(null);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <Copy size={13} />
+                              Copiar chave de acesso
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async (event) => {
+                                event.stopPropagation();
+                                await copiarTexto(obterCnpjContraparte(nota), 'CNPJ da contraparte copiado');
+                                setAcaoAbertaNotaId(null);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <Copy size={13} />
+                              Copiar CNPJ da contraparte
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                aplicarBuscaContraparte(nota);
+                                setAcaoAbertaNotaId(null);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <Search size={13} />
+                              Buscar mesma contraparte
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
             </tbody>

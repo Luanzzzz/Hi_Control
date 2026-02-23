@@ -105,6 +105,8 @@ export interface SyncStatus {
   notas_capturadas_ultima_sync: number;
   erro_mensagem: string | null;
   ultimo_nsu?: number;
+  prioridade_recente_ativa?: boolean;
+  prioridade_recente_concluida?: boolean;
 }
 
 export interface NotaFiscalDashboard {
