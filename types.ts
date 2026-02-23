@@ -105,6 +105,14 @@ export interface SyncStatus {
   notas_capturadas_ultima_sync: number;
   erro_mensagem: string | null;
   ultimo_nsu?: number;
+  inicio_sync_at?: string | null;
+  etapa_atual?: string | null;
+  mensagem_progresso?: string | null;
+  progresso_percentual?: number;
+  notas_processadas_parcial?: number;
+  notas_estimadas_total?: number | null;
+  notas_restantes_estimadas?: number | null;
+  tempo_restante_estimado_segundos?: number | null;
   prioridade_recente_ativa?: boolean;
   prioridade_recente_concluida?: boolean;
 }

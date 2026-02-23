@@ -18,6 +18,10 @@ interface RawDashboardResponse {
   periodo_referencia_ano?: number;
 }
 
+interface RawNotaDetalheResponse {
+  nota: any;
+}
+
 const SITUACAO_FALLBACK: NotaFiscalDashboard['situacao'] = 'processando';
 const FONTE_FALLBACK: NotaFiscalDashboard['fonte_captura'] = 'manual';
 
@@ -196,4 +200,22 @@ export async function filtrarNotas(
       total: filtradas.length,
     };
   }
+}
+
+export async function getNotaDetalhe(
+  empresaId: string,
+  notaId: string
+): Promise<any> {
+  const response = await api.get<RawNotaDetalheResponse>(`/empresas/${empresaId}/notas/${notaId}`);
+  return response.data?.nota || null;
+}
+
+export async function baixarXmlNota(
+  empresaId: string,
+  notaId: string
+): Promise<Blob> {
+  const response = await api.get(`/empresas/${empresaId}/notas/${notaId}/xml`, {
+    responseType: 'blob',
+  });
+  return response.data;
 }
