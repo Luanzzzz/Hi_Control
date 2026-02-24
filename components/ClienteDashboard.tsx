@@ -646,7 +646,34 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error: any) {
-      setToast({ type: 'error', message: error?.message || 'Falha ao abrir PDF da nota' });
+      try {
+        const detalhe = await getNotaDetalhe(empresaId, nota.id);
+        const linkOficial = String(detalhe?.link_visualizacao || '').trim();
+        if (linkOficial) {
+          const aba = window.open(linkOficial, '_blank', 'noopener,noreferrer');
+          if (!aba) {
+            setToast({
+              type: 'error',
+              message: 'Bloqueador de pop-up ativo. Permita pop-ups para abrir o PDF oficial.',
+            });
+          } else {
+            setToast({
+              type: 'success',
+              message: 'PDF oficial aberto no portal governamental.',
+            });
+          }
+          return;
+        }
+      } catch {
+        // Mantem tratamento original abaixo
+      }
+
+      setToast({
+        type: 'error',
+        message:
+          error?.message ||
+          'PDF oficial indisponivel para esta nota no momento.',
+      });
     } finally {
       setVisualizandoPdfNotaId(null);
       setAcaoAbertaNotaId(null);
@@ -668,7 +695,34 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       URL.revokeObjectURL(url);
       setToast({ type: 'success', message: 'PDF baixado com sucesso' });
     } catch (error: any) {
-      setToast({ type: 'error', message: error?.message || 'Falha ao baixar PDF da nota' });
+      try {
+        const detalhe = await getNotaDetalhe(empresaId, nota.id);
+        const linkOficial = String(detalhe?.link_visualizacao || '').trim();
+        if (linkOficial) {
+          const aba = window.open(linkOficial, '_blank', 'noopener,noreferrer');
+          if (!aba) {
+            setToast({
+              type: 'error',
+              message: 'Bloqueador de pop-up ativo. Permita pop-ups para abrir o portal oficial.',
+            });
+          } else {
+            setToast({
+              type: 'success',
+              message: 'Portal oficial aberto para download/impressao da nota.',
+            });
+          }
+          return;
+        }
+      } catch {
+        // Mantem tratamento original abaixo
+      }
+
+      setToast({
+        type: 'error',
+        message:
+          error?.message ||
+          'Falha ao baixar PDF oficial da nota.',
+      });
     } finally {
       setBaixandoPdfNotaId(null);
       setAcaoAbertaNotaId(null);
