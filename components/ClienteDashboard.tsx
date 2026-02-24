@@ -149,6 +149,23 @@ const normalizeSituacao = (situacao: NotaFiscalDashboard['situacao']): string =>
   return 'PROCESSANDO';
 };
 
+const getTipoBaseClass = (tipo: NotaFiscalDashboard['tipo_nf']): string => {
+  if (tipo === 'NFe') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/35 dark:text-blue-300';
+  if (tipo === 'NFSe') return 'bg-green-100 text-green-700 dark:bg-green-900/35 dark:text-green-300';
+  if (tipo === 'CTe') return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/35 dark:text-yellow-300';
+  return 'bg-purple-100 text-purple-700 dark:bg-purple-900/35 dark:text-purple-300';
+};
+
+const getOperacaoAccentClass = (operacao: NotaFiscalDashboard['tipo_operacao']): string =>
+  operacao === 'saida'
+    ? 'ring-1 ring-emerald-400/70 dark:ring-emerald-500/45'
+    : 'ring-1 ring-amber-400/75 dark:ring-amber-500/50';
+
+const getOperacaoPrefixClass = (operacao: NotaFiscalDashboard['tipo_operacao']): string =>
+  operacao === 'saida'
+    ? 'text-emerald-800 dark:text-emerald-200'
+    : 'text-amber-800 dark:text-amber-200';
+
 const getMesAnoFromDataEmissao = (value: string): { mes: number; ano: number } | null => {
   if (!value) return null;
   const parsed = new Date(value);
@@ -1041,17 +1058,14 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{formatDate(nota.data_emissao)}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold ${
-                          nota.tipo_nf === 'NFe'
-                            ? 'bg-blue-100 text-blue-700'
-                            : nota.tipo_nf === 'NFSe'
-                            ? 'bg-green-100 text-green-700'
-                            : nota.tipo_nf === 'CTe'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-purple-100 text-purple-700'
-                        }`}
+                        className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${getTipoBaseClass(
+                          nota.tipo_nf
+                        )} ${getOperacaoAccentClass(nota.tipo_operacao)}`}
                       >
-                        {nota.tipo_operacao === 'saida' ? 'PREST.' : 'TOM.'} {nota.tipo_nf}
+                        <span className={`${getOperacaoPrefixClass(nota.tipo_operacao)}`}>
+                          {nota.tipo_operacao === 'saida' ? 'PREST.' : 'TOM.'}
+                        </span>
+                        <span>{nota.tipo_nf}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">{nota.numero_nf}</td>
