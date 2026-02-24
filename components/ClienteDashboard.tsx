@@ -45,9 +45,16 @@ import {
   getDashboardEmpresa,
   getNotaDetalhe,
   getSyncStatus,
+  obterPdfNota,
 } from '../src/services/dashboardService';
 import { certificadoService } from '../src/services/certificadoService';
 import { useAuth } from '../contexts/AuthContext';
+import { ExportNotasModal } from './ExportNotasModal';
+import {
+  createDefaultExportConfig,
+  exportarNotasComConfiguracao,
+} from '../src/services/notasExportService';
+import type { ExportNotasConfig } from '../src/services/notasExportService';
 
 interface ClienteDashboardProps {
   empresaId: string;
@@ -210,7 +217,14 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const [certLoading, setCertLoading] = useState<boolean>(false);
   const [acaoAbertaNotaId, setAcaoAbertaNotaId] = useState<string | null>(null);
   const [carregandoVisualizacaoNotaId, setCarregandoVisualizacaoNotaId] = useState<string | null>(null);
+  const [visualizandoPdfNotaId, setVisualizandoPdfNotaId] = useState<string | null>(null);
+  const [baixandoPdfNotaId, setBaixandoPdfNotaId] = useState<string | null>(null);
   const [baixandoXmlNotaId, setBaixandoXmlNotaId] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  const [exportLoading, setExportLoading] = useState<boolean>(false);
+  const [exportConfig, setExportConfig] = useState<ExportNotasConfig>(() =>
+    createDefaultExportConfig(empresaId)
+  );
   const [notaVisualizacao, setNotaVisualizacao] = useState<NotaDetalhadaVisualizacao | null>(null);
 
   const prevStatusRef = useRef<SyncStatus['status'] | null>(null);
@@ -450,31 +464,71 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   };
 
   const handleExportarCsv = () => {
-    if (!notas.length) return;
+    if (!notas.length) {
+      setToast({ type: 'error', message: 'Nao ha notas para exportar.' });
+      return;
+    }
+    setShowExportModal(true);
+  };
 
-    const linhas = [
-      ['emissao', 'competencia', 'tipo', 'numero', 'contraparte', 'municipio', 'valor', 'status'].join(','),
-      ...notas.map((nota) =>
-        [
-          formatDate(nota.data_emissao),
-          formatDate(nota.data_emissao),
-          `${nota.tipo_operacao === 'saida' ? 'PREST.' : 'TOM.'} ${nota.tipo_nf}`,
-          nota.numero_nf,
-          `"${nota.nome_emitente || nota.nome_destinatario || ''}"`,
-          `"${nota.municipio_nome || ''}"`,
-          String(nota.valor_total || 0).replace('.', ','),
-          normalizeSituacao(nota.situacao),
-        ].join(',')
-      ),
-    ].join('\n');
+  const handleConfirmExportacao = async (config: ExportNotasConfig) => {
+    setExportLoading(true);
+    try {
+      const filtrosExportacao: FiltrosNotas = {
+        ...filtros,
+        pagina: 1,
+      };
 
-    const blob = new Blob([linhas], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `notas-${empresaId}-${mesSelecionado}-${anoSelecionado}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+      let notasParaExportar: NotaFiscalDashboard[] = notas;
+
+      if (config.scope === 'todas_filtradas') {
+        const totalEsperado = Math.max(0, Number(totalNotas || 0));
+        const totalPaginas = Math.max(1, Math.ceil(totalEsperado / PAGE_SIZE));
+        const acumuladas: NotaFiscalDashboard[] = [];
+
+        for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
+          const resposta = await filtrarNotas(empresaId, {
+            ...filtrosExportacao,
+            pagina,
+          });
+
+          if (!resposta.notas.length) {
+            break;
+          }
+
+          acumuladas.push(...resposta.notas);
+          if (acumuladas.length >= Number(resposta.total || totalEsperado)) {
+            break;
+          }
+        }
+
+        notasParaExportar = acumuladas;
+      }
+
+      const resultado = exportarNotasComConfiguracao({
+        notas: notasParaExportar,
+        config,
+        empresa: dashboard?.empresa || null,
+        resumo: dashboard?.resumo || null,
+        filtros,
+        periodo: { mes: mesSelecionado, ano: anoSelecionado },
+        totalNotasFiltradas: totalNotas,
+      });
+
+      setExportConfig(config);
+      setShowExportModal(false);
+      setToast({
+        type: 'success',
+        message: `${resultado.exported} notas exportadas (${resultado.filename}).`,
+      });
+    } catch (error: any) {
+      setToast({
+        type: 'error',
+        message: error?.message || 'Falha ao exportar notas.',
+      });
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   const handleSalvarCertificado = async () => {
@@ -569,6 +623,54 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       setToast({ type: 'error', message: error?.message || 'Falha ao baixar XML da nota' });
     } finally {
       setBaixandoXmlNotaId(null);
+      setAcaoAbertaNotaId(null);
+    }
+  };
+
+  const handleVisualizarPdfNota = async (nota: NotaFiscalDashboard) => {
+    setVisualizandoPdfNotaId(nota.id);
+    try {
+      const blob = await obterPdfNota(empresaId, nota.id, false);
+      const url = URL.createObjectURL(blob);
+      const novaAba = window.open(url, '_blank', 'noopener,noreferrer');
+
+      if (!novaAba) {
+        const link = document.createElement('a');
+        const identificador = nota.chave_acesso || nota.numero_nf || nota.id;
+        link.href = url;
+        link.download = `${nota.tipo_nf}_${identificador}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error: any) {
+      setToast({ type: 'error', message: error?.message || 'Falha ao abrir PDF da nota' });
+    } finally {
+      setVisualizandoPdfNotaId(null);
+      setAcaoAbertaNotaId(null);
+    }
+  };
+
+  const handleBaixarPdfNota = async (nota: NotaFiscalDashboard) => {
+    setBaixandoPdfNotaId(nota.id);
+    try {
+      const blob = await obterPdfNota(empresaId, nota.id, true);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const identificador = nota.chave_acesso || nota.numero_nf || nota.id;
+      link.href = url;
+      link.download = `${nota.tipo_nf}_${identificador}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setToast({ type: 'success', message: 'PDF baixado com sucesso' });
+    } catch (error: any) {
+      setToast({ type: 'error', message: error?.message || 'Falha ao baixar PDF da nota' });
+    } finally {
+      setBaixandoPdfNotaId(null);
       setAcaoAbertaNotaId(null);
     }
   };
@@ -1151,6 +1253,38 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
                               type="button"
                               onClick={async (event) => {
                                 event.stopPropagation();
+                                await handleVisualizarPdfNota(nota);
+                              }}
+                              disabled={visualizandoPdfNotaId === nota.id}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              {visualizandoPdfNotaId === nota.id ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <Eye size={13} />
+                              )}
+                              Visualizar PDF
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async (event) => {
+                                event.stopPropagation();
+                                await handleBaixarPdfNota(nota);
+                              }}
+                              disabled={baixandoPdfNotaId === nota.id}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              {baixandoPdfNotaId === nota.id ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <Download size={13} />
+                              )}
+                              Baixar PDF
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async (event) => {
+                                event.stopPropagation();
                                 await handleBaixarXmlNota(nota);
                               }}
                               disabled={baixandoXmlNotaId === nota.id}
@@ -1255,6 +1389,15 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
           </div>
         </div>
       </section>
+
+      <ExportNotasModal
+        isOpen={showExportModal}
+        loading={exportLoading}
+        totalNotas={totalNotas}
+        config={exportConfig}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleConfirmExportacao}
+      />
 
       {notaVisualizacao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

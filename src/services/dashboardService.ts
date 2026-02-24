@@ -219,3 +219,15 @@ export async function baixarXmlNota(
   });
   return response.data;
 }
+
+export async function obterPdfNota(
+  empresaId: string,
+  notaId: string,
+  download: boolean = false
+): Promise<Blob> {
+  const response = await api.get(`/empresas/${empresaId}/notas/${notaId}/pdf`, {
+    params: { download },
+    responseType: 'blob',
+  });
+  return response.data;
+}
