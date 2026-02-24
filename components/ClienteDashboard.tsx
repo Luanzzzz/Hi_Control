@@ -37,6 +37,7 @@ import type {
   NotaFiscalDashboard,
   SyncStatus,
 } from '../types';
+import { UserPlan } from '../types';
 import {
   baixarXmlNota,
   filtrarNotas,
@@ -46,6 +47,7 @@ import {
   getSyncStatus,
 } from '../src/services/dashboardService';
 import { certificadoService } from '../src/services/certificadoService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ClienteDashboardProps {
   empresaId: string;
@@ -174,6 +176,7 @@ const getMesAnoFromDataEmissao = (value: string): { mes: number; ano: number } |
 };
 
 export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, onVoltar }) => {
+  const { user } = useAuth();
   const now = new Date();
   const [mesSelecionado, setMesSelecionado] = useState<number>(now.getMonth() + 1);
   const [anoSelecionado, setAnoSelecionado] = useState<number>(now.getFullYear());
@@ -389,6 +392,14 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   }, []);
 
   const handleForcarSync = async () => {
+    if (!podeForcarSincronizacao) {
+      setToast({
+        type: 'error',
+        message: 'Sincronizacao manual disponivel apenas para plano admin.',
+      });
+      return;
+    }
+
     try {
       setIsSyncing(true);
       setPeriodoFixadoManualmente(false);
@@ -584,6 +595,8 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
   const statusAtual = syncStatus?.status || 'pendente';
   const statusBadge = badgeConfig[statusAtual];
+  const usuarioEhAdmin = user?.plano === UserPlan.ADMIN;
+  const podeForcarSincronizacao = Boolean(syncStatus?.pode_forcar_sincronizacao ?? usuarioEhAdmin);
   const syncInProgress = isSyncing || statusAtual === 'sincronizando';
   const progressoPercentualBruto = Number(syncStatus?.progresso_percentual ?? (syncInProgress ? 2 : statusAtual === 'ok' ? 100 : 0));
   const progressoPercentual = Math.max(0, Math.min(100, Number.isFinite(progressoPercentualBruto) ? progressoPercentualBruto : 0));
@@ -711,14 +724,20 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
               <Shield size={16} />
               Configurar Certificado
             </button>
-            <button
-              onClick={handleForcarSync}
-              disabled={syncInProgress}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {syncInProgress ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              {syncInProgress ? 'Capturando notas...' : 'Sincronizar SEFAZ'}
-            </button>
+            {podeForcarSincronizacao ? (
+              <button
+                onClick={handleForcarSync}
+                disabled={syncInProgress}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {syncInProgress ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                {syncInProgress ? 'Capturando notas...' : 'Sincronizar SEFAZ'}
+              </button>
+            ) : (
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Sincronizacao manual apenas no plano admin
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -911,14 +930,16 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
                   className="w-72 rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 />
               </div>
-              <button
-                onClick={handleForcarSync}
-                disabled={syncInProgress}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white hover:bg-primary-700 disabled:opacity-60"
-              >
-                {syncInProgress ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                {syncInProgress ? 'Capturando notas...' : 'Sincronizar SEFAZ'}
-              </button>
+              {podeForcarSincronizacao && (
+                <button
+                  onClick={handleForcarSync}
+                  disabled={syncInProgress}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white hover:bg-primary-700 disabled:opacity-60"
+                >
+                  {syncInProgress ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                  {syncInProgress ? 'Capturando notas...' : 'Sincronizar SEFAZ'}
+                </button>
+              )}
               <button
                 onClick={handleExportarCsv}
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -1193,16 +1214,20 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
             <FileText size={48} className="text-slate-400" />
             <p className="text-base font-semibold text-slate-700 dark:text-slate-200">Nenhuma nota encontrada</p>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Clique em Sincronizar SEFAZ para buscar automaticamente
+              {podeForcarSincronizacao
+                ? 'Clique em Sincronizar SEFAZ para buscar automaticamente'
+                : 'A sincronizacao automatica deve ser configurada em Gestao de Clientes'}
             </p>
-            <button
-              onClick={handleForcarSync}
-              disabled={syncInProgress}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
-            >
-              {syncInProgress ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              {syncInProgress ? 'Capturando notas...' : 'Sincronizar agora'}
-            </button>
+            {podeForcarSincronizacao && (
+              <button
+                onClick={handleForcarSync}
+                disabled={syncInProgress}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
+              >
+                {syncInProgress ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                {syncInProgress ? 'Capturando notas...' : 'Sincronizar agora'}
+              </button>
+            )}
           </div>
         )}
 

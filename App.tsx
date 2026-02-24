@@ -88,7 +88,7 @@ const AppContent: React.FC = () => {
   const hasModuleAccess = (view: ViewState): boolean => {
     if (!user) return false;
     const modulePriority = moduleAccess[view];
-    if (user.plano === UserPlan.PREMIUM) return true;
+    if (user.plano === UserPlan.PREMIUM || user.plano === UserPlan.ADMIN) return true;
     return modulePriority === 1;
   };
 

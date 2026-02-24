@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Users, AlertCircle, TrendingUp, BarChart, PieChart, LineChart, Loader2 } from 'lucide-react';
+import { DollarSign, Users, AlertCircle, CheckCircle, TrendingUp, BarChart, PieChart, LineChart, Loader2 } from 'lucide-react';
 import {
   BarChart as ReBarChart,
   Bar,
@@ -95,45 +95,50 @@ export const Dashboard = () => {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <ReBarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
+            <ReBarChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Volume']} />
               <Legend />
-              <Bar dataKey="notas" name="Volume de Notas" fill="#8884d8" />
+              <Bar dataKey="notas" name="Volume de Notas" radius={[4, 4, 0, 0]}>
+                {monthlyData.map((_, index) => (
+                  <Cell key={`bar-${index}`} fill={monthlyData[index].name === 'Sem dados' ? '#94a3b8' : COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
             </ReBarChart>
           </ResponsiveContainer>
         );
       case 'line':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <ReLineChart data={monthlyData}>
+            <ReLineChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Impostos (est.)']} />
               <Legend />
-              <Line type="monotone" dataKey="impostos" name="Impostos Recuperados (R$)" stroke="#82ca9d" />
+              <Line type="monotone" dataKey="impostos" name="Impostos recuperados – estimativa (R$)" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
             </ReLineChart>
           </ResponsiveContainer>
         );
       case 'area':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <ReAreaChart data={monthlyData}>
+            <ReAreaChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Volume']} />
               <Legend />
               <Area
                 type="monotone"
                 dataKey="notas"
                 name="Volume de Notas"
-                stroke="#8884d8"
-                fill="#8884d8"
-                fillOpacity={0.6}
+                stroke="#7c3aed"
+                fill="#7c3aed"
+                fillOpacity={0.4}
+                strokeWidth={2}
               />
             </ReAreaChart>
           </ResponsiveContainer>
@@ -156,7 +161,7 @@ export const Dashboard = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Quantidade']} />
             </RePieChart>
           </ResponsiveContainer>
         );
@@ -166,14 +171,19 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Stats Grid */}
+    <div className="space-y-8 p-6">
+      {/* Visão geral */}
       {loading ? (
-        <div className="flex items-center justify-center py-8">
+        <div className="flex items-center justify-center py-12">
           <Loader2 size={32} className="animate-spin text-primary-600" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Visão geral</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Métricas consolidadas do escritório</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
             <div className="flex justify-between items-start">
               <div>
@@ -182,11 +192,11 @@ export const Dashboard = () => {
                   {metrics.totalNotas.toLocaleString('pt-BR')}
                 </h3>
               </div>
-              <div className="p-2 bg-green-100 text-green-600 rounded-lg">
+              <div className="p-2.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
                 <DollarSign size={20} />
               </div>
             </div>
-            <span className="text-xs text-gray-500 flex items-center mt-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center mt-2">
               Notas importadas do Drive
             </span>
           </div>
@@ -199,11 +209,11 @@ export const Dashboard = () => {
                   {metrics.clientesAtivos}
                 </h3>
               </div>
-              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+              <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
                 <Users size={20} />
               </div>
             </div>
-            <span className="text-xs text-blue-600 mt-2 block">Com Drive configurado</span>
+            <span className="text-xs text-blue-600 dark:text-blue-400 mt-2 block">Com Drive configurado</span>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
@@ -214,11 +224,11 @@ export const Dashboard = () => {
                   {metrics.pendencias}
                 </h3>
               </div>
-              <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
-                <AlertCircle size={20} />
+              <div className={`p-2.5 rounded-lg ${metrics.pendencias > 0 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'}`}>
+                {metrics.pendencias > 0 ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
               </div>
             </div>
-            <span className="text-xs text-orange-600 mt-2 block">
+            <span className={`text-xs mt-2 block ${metrics.pendencias > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {metrics.pendencias > 0 ? 'Certificados pendentes' : 'Tudo em ordem'}
             </span>
           </div>
@@ -238,19 +248,23 @@ export const Dashboard = () => {
                     : 'Nunca'}
                 </h3>
               </div>
-              <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+              <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
                 <TrendingUp size={20} />
               </div>
             </div>
-            <span className="text-xs text-gray-500 mt-2 block">Bot automático</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 mt-2 block">Bot automático</span>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Chart Section */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Análise de Desempenho</h3>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Volume por tipo de nota</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Análise de desempenho por tipo de documento fiscal</p>
+          </div>
           <div className="flex bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
             <button
               onClick={() => setChartType('bar')}
@@ -286,16 +300,17 @@ export const Dashboard = () => {
         {renderChart()}
       </div>
 
-      {/* Recent Activity */}
+      {/* Status do Sistema */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
         <div className="p-6 border-b border-gray-200 dark:border-slate-700">
           <h3 className="font-semibold text-gray-900 dark:text-white">Status do Sistema</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Monitoramento do bot e das importações</p>
         </div>
         <div className="p-6">
           <div className="space-y-6">
             {metrics.ultimaSincronizacao && (
-              <div className="flex gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-green-500" />
+              <div className="flex gap-4 items-start">
+                <div className="w-2.5 h-2.5 mt-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">Bot Sincronizado</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -305,31 +320,31 @@ export const Dashboard = () => {
               </div>
             )}
             {metrics.totalNotas > 0 && (
-              <div className="flex gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-blue-500" />
+              <div className="flex gap-4 items-start">
+                <div className="w-2.5 h-2.5 mt-1.5 rounded-full bg-blue-500 shrink-0" aria-hidden />
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">Notas Importadas</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {metrics.totalNotas} notas no sistema
+                    {metrics.totalNotas.toLocaleString('pt-BR')} notas no sistema
                   </p>
                 </div>
               </div>
             )}
             {metrics.pendencias > 0 && (
-              <div className="flex gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-orange-500" />
+              <div className="flex gap-4 items-start">
+                <div className="w-2.5 h-2.5 mt-1.5 rounded-full bg-orange-500 shrink-0" aria-hidden />
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">Atenção Necessária</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {metrics.pendencias} empresas com certificado pendente
+                    {metrics.pendencias} empresa(s) com certificado pendente
                   </p>
                 </div>
               </div>
             )}
             {!metrics.ultimaSincronizacao && metrics.totalNotas === 0 && (
-              <div className="text-center text-gray-500 py-4">
-                <p>Nenhuma atividade registrada</p>
-                <p className="text-sm mt-1">Configure o Google Drive para começar</p>
+              <div className="text-center py-8 px-4 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-dashed border-gray-200 dark:border-slate-600">
+                <p className="text-gray-600 dark:text-gray-300 font-medium">Nenhuma atividade registrada</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure o Google Drive em um cliente para começar a importar notas.</p>
               </div>
             )}
           </div>

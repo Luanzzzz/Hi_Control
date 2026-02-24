@@ -34,7 +34,8 @@ export interface ChatMessage {
 // Authentication Types
 export enum UserPlan {
   BASICO = 'basico',
-  PREMIUM = 'premium'
+  PREMIUM = 'premium',
+  ADMIN = 'admin',
 }
 
 export interface User {
@@ -115,6 +116,7 @@ export interface SyncStatus {
   tempo_restante_estimado_segundos?: number | null;
   prioridade_recente_ativa?: boolean;
   prioridade_recente_concluida?: boolean;
+  pode_forcar_sincronizacao?: boolean;
 }
 
 export interface NotaFiscalDashboard {
@@ -180,4 +182,33 @@ export interface FiltrosNotas {
   pagina?: number;
   dataInicio?: string;
   dataFim?: string;
+}
+
+export interface SyncConfiguracaoBase {
+  auto_sync_ativo: boolean;
+  intervalo_horas: number;
+  prioridade_recente: boolean;
+  reparar_incompletas: boolean;
+  tipos_notas: Array<'NFSE' | 'NFE' | 'NFCE' | 'CTE'>;
+  horario_inicio: string;
+  horario_fim: string;
+}
+
+export interface SyncConfiguracaoGeralResponse {
+  usuario_id: string;
+  configuracao: SyncConfiguracaoBase;
+}
+
+export interface SyncConfiguracaoEmpresaResponse {
+  empresa_id: string;
+  configuracao_contador: SyncConfiguracaoBase;
+  configuracao_empresa: SyncConfiguracaoBase & {
+    usar_configuracao_contador: boolean;
+  };
+  configuracao_efetiva: SyncConfiguracaoBase;
+  janela_execucao?: {
+    agora_na_janela: boolean;
+    proximo_inicio_janela_utc: string;
+    timezone: string;
+  };
 }

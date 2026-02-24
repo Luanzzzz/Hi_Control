@@ -91,12 +91,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const userData = userResponse.data;
 
             // 4. Mapear plano do backend para frontend
-            // Backend: "basico", "profissional", "enterprise"
-            // Frontend: UserPlan.BASICO ou UserPlan.PREMIUM
+            // Backend: "basico", "profissional", "enterprise", "admin"
+            // Frontend: UserPlan.BASICO | UserPlan.PREMIUM | UserPlan.ADMIN
             let userPlan: UserPlan = UserPlan.BASICO;
             if (userData.plano_nome) {
                 const planoNormalizado = userData.plano_nome.toLowerCase();
-                if (planoNormalizado.includes('profissional') ||
+                if (planoNormalizado.includes('admin')) {
+                    userPlan = UserPlan.ADMIN;
+                } else if (planoNormalizado.includes('profissional') ||
                     planoNormalizado.includes('premium') ||
                     planoNormalizado.includes('enterprise')) {
                     userPlan = UserPlan.PREMIUM;

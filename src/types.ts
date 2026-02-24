@@ -16,4 +16,7 @@ export type {
   PontoHistorico,
   DashboardEmpresa,
   FiltrosNotas,
+  SyncConfiguracaoBase,
+  SyncConfiguracaoGeralResponse,
+  SyncConfiguracaoEmpresaResponse,
 } from '../types';

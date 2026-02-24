@@ -139,9 +139,11 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
                   </div>
                 </div>
                 <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                  {user?.plano === UserPlan.PREMIUM && <Crown size={14} className="text-yellow-300" />}
+                  {(user?.plano === UserPlan.PREMIUM || user?.plano === UserPlan.ADMIN) && (
+                    <Crown size={14} className="text-yellow-300" />
+                  )}
                   <span className="text-white text-xs font-medium">
-                    Plano {user?.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico'}
+                    Plano {user?.plano === UserPlan.ADMIN ? 'Admin' : user?.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico'}
                   </span>
                 </div>
               </div>

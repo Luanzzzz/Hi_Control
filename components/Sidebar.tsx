@@ -111,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
   const hasModuleAccess = (priority: number): boolean => {
     if (!user) return false;
-    if (user.plano === UserPlan.PREMIUM) return true;
+    if (user.plano === UserPlan.PREMIUM || user.plano === UserPlan.ADMIN) return true;
     return priority === 1;
   };
 
@@ -287,12 +287,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
             <p className="text-xs text-gray-500 dark:text-gray-400">Plano Atual</p>
             <p
               className={`text-sm font-bold ${
-                user.plano === UserPlan.PREMIUM
+                user.plano === UserPlan.PREMIUM || user.plano === UserPlan.ADMIN
                   ? 'text-primary-700 dark:text-primary-400'
                   : 'text-gray-700 dark:text-gray-300'
               }`}
             >
-              {user.plano === UserPlan.PREMIUM ? 'Premium' : 'Basico'}
+              {user.plano === UserPlan.ADMIN ? 'Admin' : user.plano === UserPlan.PREMIUM ? 'Premium' : 'Basico'}
             </p>
           </div>
         )}

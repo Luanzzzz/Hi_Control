@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import InputMask from 'react-input-mask';
-import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle, Mail } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle, Mail, Settings2 } from 'lucide-react';
 import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
 import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
 import { formatDate } from '../utils/dateUtils';
 import { ConfiguracaoEmail } from './ConfiguracaoEmail';
 import { ConfiguracaoDrive } from './ConfiguracaoDrive';
+import { SyncConfigModal } from './SyncConfigModal';
 
 // ===== Badge de Certificado Simples (inline) =====
 interface SimpleCertBadgeProps {
@@ -77,6 +78,8 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
     const [readingCertData, setReadingCertData] = useState(false);
     const [certPreviewSignature, setCertPreviewSignature] = useState('');
     const [certMessage, setCertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [isSyncConfigModalOpen, setIsSyncConfigModalOpen] = useState(false);
+    const [syncConfigEmpresa, setSyncConfigEmpresa] = useState<Empresa | null>(null);
 
     /**
      * Salva o empresaId no localStorage e dispara evento para navegação
@@ -139,6 +142,16 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
             reset();
         }
         setIsModalOpen(true);
+    };
+
+    const handleOpenSyncConfig = (client?: Empresa) => {
+        setSyncConfigEmpresa(client || null);
+        setIsSyncConfigModalOpen(true);
+    };
+
+    const handleCloseSyncConfig = () => {
+        setSyncConfigEmpresa(null);
+        setIsSyncConfigModalOpen(false);
     };
 
     const handleCloseModal = () => {
@@ -493,15 +506,26 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
 
     return (
         <div className="p-6 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-6">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Gestão de Clientes</h2>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                >
-                    <Plus size={20} />
-                    Novo Cliente
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        onClick={() => handleOpenSyncConfig()}
+                        className="rounded-lg border border-primary-400/50 px-4 py-2 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50 dark:border-primary-700 dark:text-primary-300 dark:hover:bg-primary-900/20"
+                    >
+                        <span className="inline-flex items-center gap-2">
+                            <Settings2 size={16} />
+                            Configurar busca de notas
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                        <Plus size={20} />
+                        Novo Cliente
+                    </button>
+                </div>
             </div>
 
             {/* Search */}
@@ -545,6 +569,13 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
                                         className="flex gap-2"
                                         onClick={(e) => e.stopPropagation()}
                                     >
+                                        <button
+                                            onClick={() => handleOpenSyncConfig(client)}
+                                            className="text-gray-400 hover:text-primary-500 transition-colors p-1 rounded hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                                            title="Configurar busca de notas"
+                                        >
+                                            <Settings2 size={18} />
+                                        </button>
                                         <button
                                             onClick={() => handleOpenModal(client)}
                                             className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -876,6 +907,17 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToDashboard }) => {
                     </div>
                 </div>
             )}
+
+            <SyncConfigModal
+                isOpen={isSyncConfigModalOpen}
+                onClose={handleCloseSyncConfig}
+                empresa={syncConfigEmpresa ? {
+                    id: syncConfigEmpresa.id,
+                    razao_social: syncConfigEmpresa.razao_social,
+                    cnpj: syncConfigEmpresa.cnpj,
+                } : null}
+                onSaved={loadClients}
+            />
         </div>
     );
 };
