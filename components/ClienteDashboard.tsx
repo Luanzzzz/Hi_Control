@@ -684,6 +684,14 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
         return;
       }
 
+      if (nota.tipo_nf === 'NFSe') {
+        setToast({
+          type: 'error',
+          message: 'PDF oficial da NFS-e indisponivel para esta nota.',
+        });
+        return;
+      }
+
       // Contingencia opcional: gera auxiliar apenas quando oficial nao puder ser obtido
       // sem alterar o fluxo da busca/sincronizacao de notas.
       try {
@@ -734,6 +742,14 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     } catch (error: any) {
       const abriuPortal = await abrirPortalOficialDaNota(nota);
       if (abriuPortal) {
+        return;
+      }
+
+      if (nota.tipo_nf === 'NFSe') {
+        setToast({
+          type: 'error',
+          message: 'PDF oficial da NFS-e indisponivel para esta nota.',
+        });
         return;
       }
 
