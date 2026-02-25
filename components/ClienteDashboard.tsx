@@ -627,6 +627,39 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     }
   };
 
+  const abrirPortalOficialDaNota = async (nota: NotaFiscalDashboard): Promise<boolean> => {
+    try {
+      let linkOficial = String(nota.link_visualizacao || '').trim();
+
+      if (!linkOficial) {
+        const detalhe = await getNotaDetalhe(empresaId, nota.id);
+        linkOficial = String(detalhe?.link_visualizacao || '').trim();
+      }
+
+      if (!linkOficial) return false;
+
+      if (!/^https?:\/\//i.test(linkOficial)) {
+        linkOficial = `https://${linkOficial.replace(/^\/+/, '')}`;
+      }
+
+      const aba = window.open(linkOficial, '_blank', 'noopener,noreferrer');
+      if (!aba) {
+        setToast({
+          type: 'error',
+          message: 'Bloqueador de pop-up ativo. Permita pop-ups para abrir o portal oficial.',
+        });
+      } else {
+        setToast({
+          type: 'success',
+          message: 'Portal oficial da nota aberto.',
+        });
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleVisualizarPdfNota = async (nota: NotaFiscalDashboard) => {
     setVisualizandoPdfNotaId(nota.id);
     try {
@@ -646,34 +679,38 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error: any) {
-      try {
-        const detalhe = await getNotaDetalhe(empresaId, nota.id);
-        const linkOficial = String(detalhe?.link_visualizacao || '').trim();
-        if (linkOficial) {
-          const aba = window.open(linkOficial, '_blank', 'noopener,noreferrer');
-          if (!aba) {
-            setToast({
-              type: 'error',
-              message: 'Bloqueador de pop-up ativo. Permita pop-ups para abrir o PDF oficial.',
-            });
-          } else {
-            setToast({
-              type: 'success',
-              message: 'PDF oficial aberto no portal governamental.',
-            });
-          }
-          return;
-        }
-      } catch {
-        // Mantem tratamento original abaixo
+      const abriuPortal = await abrirPortalOficialDaNota(nota);
+      if (abriuPortal) {
+        return;
       }
 
-      setToast({
-        type: 'error',
-        message:
-          error?.message ||
-          'PDF oficial indisponivel para esta nota no momento.',
-      });
+      // Contingencia opcional: gera auxiliar apenas quando oficial nao puder ser obtido
+      // sem alterar o fluxo da busca/sincronizacao de notas.
+      try {
+        const blobAux = await obterPdfNota(empresaId, nota.id, false, true);
+        const urlAux = URL.createObjectURL(blobAux);
+        const abaAux = window.open(urlAux, '_blank', 'noopener,noreferrer');
+        if (!abaAux) {
+          const link = document.createElement('a');
+          const identificador = nota.chave_acesso || nota.numero_nf || nota.id;
+          link.href = urlAux;
+          link.download = `${nota.tipo_nf}_${identificador}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        window.setTimeout(() => URL.revokeObjectURL(urlAux), 60_000);
+        setToast({
+          type: 'success',
+          message: 'PDF auxiliar aberto (oficial indisponivel no momento).',
+        });
+        return;
+      } catch {
+        setToast({
+          type: 'error',
+          message: 'PDF oficial nao encontrado para esta nota.',
+        });
+      }
     } finally {
       setVisualizandoPdfNotaId(null);
       setAcaoAbertaNotaId(null);
@@ -695,34 +732,33 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       URL.revokeObjectURL(url);
       setToast({ type: 'success', message: 'PDF baixado com sucesso' });
     } catch (error: any) {
-      try {
-        const detalhe = await getNotaDetalhe(empresaId, nota.id);
-        const linkOficial = String(detalhe?.link_visualizacao || '').trim();
-        if (linkOficial) {
-          const aba = window.open(linkOficial, '_blank', 'noopener,noreferrer');
-          if (!aba) {
-            setToast({
-              type: 'error',
-              message: 'Bloqueador de pop-up ativo. Permita pop-ups para abrir o portal oficial.',
-            });
-          } else {
-            setToast({
-              type: 'success',
-              message: 'Portal oficial aberto para download/impressao da nota.',
-            });
-          }
-          return;
-        }
-      } catch {
-        // Mantem tratamento original abaixo
+      const abriuPortal = await abrirPortalOficialDaNota(nota);
+      if (abriuPortal) {
+        return;
       }
 
-      setToast({
-        type: 'error',
-        message:
-          error?.message ||
-          'Falha ao baixar PDF oficial da nota.',
-      });
+      try {
+        const blobAux = await obterPdfNota(empresaId, nota.id, true, true);
+        const urlAux = URL.createObjectURL(blobAux);
+        const linkAux = document.createElement('a');
+        const identificador = nota.chave_acesso || nota.numero_nf || nota.id;
+        linkAux.href = urlAux;
+        linkAux.download = `${nota.tipo_nf}_${identificador}.pdf`;
+        document.body.appendChild(linkAux);
+        linkAux.click();
+        document.body.removeChild(linkAux);
+        URL.revokeObjectURL(urlAux);
+        setToast({
+          type: 'success',
+          message: 'PDF auxiliar baixado (oficial indisponivel no momento).',
+        });
+        return;
+      } catch {
+        setToast({
+          type: 'error',
+          message: 'PDF oficial nao encontrado para esta nota.',
+        });
+      }
     } finally {
       setBaixandoPdfNotaId(null);
       setAcaoAbertaNotaId(null);

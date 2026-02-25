@@ -66,6 +66,7 @@ const normalizeNota = (nota: any): NotaFiscalDashboard => ({
   situacao: mapSituacao(nota.situacao),
   municipio_nome: nota.municipio_nome ? String(nota.municipio_nome) : undefined,
   fonte_captura: mapFonte(nota.fonte_captura ?? nota.fonte),
+  link_visualizacao: nota.link_visualizacao ? String(nota.link_visualizacao) : undefined,
 });
 
 const normalizeDashboard = (data: RawDashboardResponse): DashboardEmpresa => {
@@ -223,10 +224,11 @@ export async function baixarXmlNota(
 export async function obterPdfNota(
   empresaId: string,
   notaId: string,
-  download: boolean = false
+  download: boolean = false,
+  fallback: boolean = false
 ): Promise<Blob> {
   const response = await api.get(`/empresas/${empresaId}/notas/${notaId}/pdf`, {
-    params: { download },
+    params: { download, fallback },
     responseType: 'blob',
   });
   return response.data;

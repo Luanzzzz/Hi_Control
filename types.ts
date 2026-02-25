@@ -135,6 +135,7 @@ export interface NotaFiscalDashboard {
   situacao: 'autorizada' | 'cancelada' | 'denegada' | 'processando';
   municipio_nome?: string;
   fonte_captura: 'sefaz_nacional' | 'manual' | 'importacao';
+  link_visualizacao?: string;
 }
 
 export interface ResumoFinanceiro {
