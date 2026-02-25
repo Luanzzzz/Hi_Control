@@ -233,3 +233,11 @@ export async function obterPdfNota(
   });
   return response.data;
 }
+
+export async function obterPortalOficialNota(
+  empresaId: string,
+  notaId: string
+): Promise<string> {
+  const response = await api.get<{ url: string }>(`/empresas/${empresaId}/notas/${notaId}/portal-oficial`);
+  return String(response.data?.url || '');
+}

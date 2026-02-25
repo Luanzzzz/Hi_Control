@@ -45,6 +45,7 @@ import {
   getDashboardEmpresa,
   getNotaDetalhe,
   getSyncStatus,
+  obterPortalOficialNota,
   obterPdfNota,
 } from '../src/services/dashboardService';
 import { certificadoService } from '../src/services/certificadoService';
@@ -678,7 +679,17 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
   const abrirPortalOficialDaNota = async (nota: NotaFiscalDashboard): Promise<boolean> => {
     try {
-      let linkOficial = String(nota.link_visualizacao || '').trim();
+      let linkOficial = '';
+
+      try {
+        linkOficial = await obterPortalOficialNota(empresaId, nota.id);
+      } catch {
+        // fallback local abaixo
+      }
+
+      if (!linkOficial) {
+        linkOficial = String(nota.link_visualizacao || '').trim();
+      }
 
       if (!linkOficial) {
         const detalhe = await getNotaDetalhe(empresaId, nota.id);
