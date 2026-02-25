@@ -139,6 +139,55 @@ const formatEta = (seconds: number | null | undefined): string | null => {
   return `${horas}h ${restoMin}m`;
 };
 
+const urlTecnicaNaoFiscal = (url: string): boolean => {
+  const valor = String(url || '').toLowerCase();
+  if (!valor) return true;
+  const bloqueios = [
+    'w3.org',
+    'etsi.org',
+    'xmlsoap.org',
+    'nist.gov',
+    'csrc.nist.gov',
+    'xmldsig',
+    'xmlenc',
+    'xades',
+    'fips',
+    'sha256',
+    'rsa-sha',
+  ];
+  return bloqueios.some((b) => valor.includes(b));
+};
+
+const urlParecePortalFiscal = (url: string): boolean => {
+  const valor = String(url || '').toLowerCase();
+  if (!/^https?:\/\//i.test(valor)) return false;
+  if (urlTecnicaNaoFiscal(valor)) return false;
+
+  const sinais = [
+    'nfse',
+    'nfs-e',
+    'danfse',
+    'consulta',
+    'visualiz',
+    'imprimir',
+    'download',
+    'nota',
+    'chave',
+    'codigo',
+    'verificacao',
+    'dps',
+    'prefeitura',
+    'fazenda',
+    'sefin',
+    'sefaz',
+    'tribut',
+    'iss',
+    'gov.br',
+    '.pdf',
+  ];
+  return sinais.some((s) => valor.includes(s));
+};
+
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -640,6 +689,14 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
       if (!/^https?:\/\//i.test(linkOficial)) {
         linkOficial = `https://${linkOficial.replace(/^\/+/, '')}`;
+      }
+
+      if (!urlParecePortalFiscal(linkOficial)) {
+        setToast({
+          type: 'error',
+          message: 'Link oficial da nota indisponivel ou invalido para consulta fiscal.',
+        });
+        return false;
       }
 
       const aba = window.open(linkOficial, '_blank', 'noopener,noreferrer');
