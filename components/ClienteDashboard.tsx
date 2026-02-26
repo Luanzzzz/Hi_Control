@@ -144,6 +144,8 @@ const urlTecnicaNaoFiscal = (url: string): boolean => {
   const valor = String(url || '').toLowerCase();
   if (!valor) return true;
   const bloqueios = [
+    'sped.fazenda.gov.br/nfse',
+    'nvlpubs.nist.gov',
     'w3.org',
     'etsi.org',
     'xmlsoap.org',
@@ -153,6 +155,7 @@ const urlTecnicaNaoFiscal = (url: string): boolean => {
     'xmlenc',
     'xades',
     'fips',
+    'fips-197',
     'sha256',
     'rsa-sha',
   ];
@@ -687,11 +690,11 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
         // fallback local abaixo
       }
 
-      if (!linkOficial) {
+      if (!linkOficial && nota.tipo_nf !== 'NFSe') {
         linkOficial = String(nota.link_visualizacao || '').trim();
       }
 
-      if (!linkOficial) {
+      if (!linkOficial && nota.tipo_nf !== 'NFSe') {
         const detalhe = await getNotaDetalhe(empresaId, nota.id);
         linkOficial = String(detalhe?.link_visualizacao || '').trim();
       }
