@@ -216,7 +216,7 @@ export const PerfilContadorModal: React.FC<PerfilContadorModalProps> = ({ isOpen
               <Building size={24} />
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              Configurações da Contabilidade
+              Configuração da conta
             </h3>
           </div>
           <button

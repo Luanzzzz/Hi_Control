@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
 import { Login } from './components/Login';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
@@ -177,26 +178,28 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-slate-900 transition-colors duration-200">
-      <Sidebar
-        currentView={currentView}
-        setView={setCurrentView}
-        isOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-      />
-
-      <div className="flex-1 flex flex-col overflow-hidden w-full relative">
-        <TopBar
+    <NotificationsProvider>
+      <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-slate-900 transition-colors duration-200">
+        <Sidebar
+          currentView={currentView}
+          setView={setCurrentView}
+          isOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
-          isDarkMode={isDarkMode}
-          toggleTheme={toggleTheme}
         />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">
-          {renderContent()}
-        </main>
+        <div className="flex-1 flex flex-col overflow-hidden w-full relative">
+          <TopBar
+            toggleSidebar={toggleSidebar}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+          />
+
+          <main className="flex-1 overflow-x-hidden overflow-y-auto">
+            {renderContent()}
+          </main>
+        </div>
       </div>
-    </div>
+    </NotificationsProvider>
   );
 };
 

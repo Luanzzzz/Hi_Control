@@ -1,23 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { DollarSign, Users, AlertCircle, CheckCircle, TrendingUp, BarChart, PieChart, LineChart, Loader2 } from 'lucide-react';
-import {
-  BarChart as ReBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart as ReLineChart,
-  Line,
-  PieChart as RePieChart,
-  Pie,
-  Cell,
-  AreaChart as ReAreaChart,
-  Area
-} from 'recharts';
-import { botService, type MetricasBot, type BotStatus } from '../src/services/botService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { DollarSign, Users, AlertCircle, CheckCircle, TrendingUp, Loader2 } from 'lucide-react';
+import { botService } from '../src/services/botService';
 
 interface DashboardMetrics {
   totalNotas: number;
@@ -27,8 +10,9 @@ interface DashboardMetrics {
   ultimaSincronizacao: string | null;
 }
 
+const BAR_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
 export const Dashboard = () => {
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'pie'>('bar');
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalNotas: 0,
@@ -38,137 +22,47 @@ export const Dashboard = () => {
     ultimaSincronizacao: null,
   });
 
-  useEffect(() => {
-    const carregarMetricas = async () => {
-      try {
-        setLoading(true);
-        const [metricas, status] = await Promise.all([
-          botService.obterMetricas().catch(() => null),
-          botService.obterStatus().catch(() => null),
-        ]);
+  const carregarMetricas = useCallback(async (isInitial = true) => {
+    try {
+      if (isInitial) setLoading(true);
+      const [metricas, status] = await Promise.all([
+        botService.obterMetricas().catch(() => null),
+        botService.obterStatus().catch(() => null),
+      ]);
 
-        const notasPorTipo = metricas?.notas_por_tipo
-          ? Object.entries(metricas.notas_por_tipo).map(([name, value]) => ({
-              name,
-              value: value as number,
-            }))
-          : [
-              { name: 'NF-e', value: 0 },
-              { name: 'NFS-e', value: 0 },
-              { name: 'CT-e', value: 0 },
-            ];
+      const notasPorTipo = metricas?.notas_por_tipo
+        ? Object.entries(metricas.notas_por_tipo).map(([name, value]) => ({
+            name,
+            value: value as number,
+          }))
+        : [
+            { name: 'NF-e', value: 0 },
+            { name: 'NFS-e', value: 0 },
+            { name: 'CT-e', value: 0 },
+          ];
 
-        setMetrics({
-          totalNotas: metricas?.total_notas || 0,
-          clientesAtivos: metricas?.empresas_sincronizadas || 0,
-          pendencias: (status?.empresas_sem_certificado || 0) + (status?.empresas_cert_expirado || 0),
-          notasPorTipo,
-          ultimaSincronizacao: status?.ultima_sincronizacao || null,
-        });
-      } catch (error) {
-        console.error('Erro ao carregar metricas:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    carregarMetricas();
+      setMetrics({
+        totalNotas: metricas?.total_notas || 0,
+        clientesAtivos: metricas?.empresas_sincronizadas || 0,
+        pendencias: (status?.empresas_sem_certificado || 0) + (status?.empresas_cert_expirado || 0),
+        notasPorTipo,
+        ultimaSincronizacao: status?.ultima_sincronizacao || null,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar metricas:', error);
+    } finally {
+      if (isInitial) setLoading(false);
+    }
   }, []);
 
-  // Dados para graficos baseados nas metricas reais
-  const monthlyData = metrics.notasPorTipo.length > 0
-    ? metrics.notasPorTipo.map((item) => ({
-        name: item.name,
-        notas: item.value,
-        impostos: Math.round(item.value * 150), // Estimativa
-      }))
-    : [{ name: 'Sem dados', notas: 0, impostos: 0 }];
+  useEffect(() => {
+    carregarMetricas(true);
+    const intervalId = setInterval(() => carregarMetricas(false), 90000);
+    return () => clearInterval(intervalId);
+  }, [carregarMetricas]);
 
-  const pieData = metrics.notasPorTipo.length > 0
-    ? metrics.notasPorTipo
-    : [{ name: 'Sem dados', value: 0 }];
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
-  const renderChart = () => {
-    switch (chartType) {
-      case 'bar':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <ReBarChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Volume']} />
-              <Legend />
-              <Bar dataKey="notas" name="Volume de Notas" radius={[4, 4, 0, 0]}>
-                {monthlyData.map((_, index) => (
-                  <Cell key={`bar-${index}`} fill={monthlyData[index].name === 'Sem dados' ? '#94a3b8' : COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </ReBarChart>
-          </ResponsiveContainer>
-        );
-      case 'line':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <ReLineChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Impostos (est.)']} />
-              <Legend />
-              <Line type="monotone" dataKey="impostos" name="Impostos recuperados – estimativa (R$)" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
-            </ReLineChart>
-          </ResponsiveContainer>
-        );
-      case 'area':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <ReAreaChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Volume']} />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="notas"
-                name="Volume de Notas"
-                stroke="#7c3aed"
-                fill="#7c3aed"
-                fillOpacity={0.4}
-                strokeWidth={2}
-              />
-            </ReAreaChart>
-          </ResponsiveContainer>
-        );
-      case 'pie':
-        return (
-          <ResponsiveContainer width="100%" height={300}>
-            <RePieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Quantidade']} />
-            </RePieChart>
-          </ResponsiveContainer>
-        );
-      default:
-        return null;
-    }
-  };
+  const totalVolume = metrics.notasPorTipo.reduce((acc, item) => acc + item.value, 0);
+  const displayItems = metrics.notasPorTipo.filter((item) => item.name !== 'Sem dados');
 
   return (
     <div className="space-y-8 p-6">
@@ -258,46 +152,43 @@ export const Dashboard = () => {
         </>
       )}
 
-      {/* Chart Section */}
+      {/* Volume por tipo de nota - barras de progresso */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Volume por tipo de nota</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Análise de desempenho por tipo de documento fiscal</p>
-          </div>
-          <div className="flex bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
-            <button
-              onClick={() => setChartType('bar')}
-              className={`p-2 rounded-md transition-all ${chartType === 'bar' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Volume de Notas"
-            >
-              <BarChart size={20} />
-            </button>
-            <button
-              onClick={() => setChartType('line')}
-              className={`p-2 rounded-md transition-all ${chartType === 'line' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Evolução de Impostos"
-            >
-              <LineChart size={20} />
-            </button>
-            <button
-              onClick={() => setChartType('area')}
-              className={`p-2 rounded-md transition-all ${chartType === 'area' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Área de Notas"
-            >
-              <TrendingUp size={20} />
-            </button>
-            <button
-              onClick={() => setChartType('pie')}
-              className={`p-2 rounded-md transition-all ${chartType === 'pie' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Status das Notas"
-            >
-              <PieChart size={20} />
-            </button>
-          </div>
+        <div className="mb-6">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Volume por tipo de nota</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Análise de desempenho por tipo de documento fiscal</p>
         </div>
-
-        {renderChart()}
+        <div className="space-y-4">
+          {displayItems.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum dado de volume disponível.</p>
+          ) : (
+            displayItems.map((item, index) => {
+              const pct = totalVolume > 0 ? (item.value / totalVolume) * 100 : 0;
+              const color = item.name === 'Sem dados' ? '#94a3b8' : BAR_COLORS[index % BAR_COLORS.length];
+              return (
+                <div key={`${item.name}-${index}`} className="space-y-1.5">
+                  <div className="flex justify-between items-baseline text-sm">
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {item.name} — {item.value.toLocaleString('pt-BR')}
+                    </span>
+                    {totalVolume > 0 && (
+                      <span className="text-gray-500 dark:text-gray-400">{pct.toFixed(0)}%</span>
+                    )}
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-slate-600 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500 ease-out"
+                      style={{
+                        width: `${totalVolume > 0 ? pct : 0}%`,
+                        backgroundColor: color,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Status do Sistema */}

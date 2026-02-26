@@ -50,7 +50,7 @@ export const Configuracoes = () => {
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Configurações da Contabilidade</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Configuração da plataforma</h2>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
