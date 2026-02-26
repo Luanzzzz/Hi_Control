@@ -881,22 +881,27 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     [mesSelecionado, anoSelecionado]
   );
 
+  const chartDataDoAno = useMemo(() => {
+    const year2 = String(anoSelecionado).slice(-2);
+    return chartData.filter((item) => item.periodo.slice(-2) === year2);
+  }, [chartData, anoSelecionado]);
+
   const chartDataFiltered = useMemo(() => {
     if (viewMode === 'focus') {
       return chartData.filter((item) => item.periodo === periodLabelForMesAno);
     }
-    return chartData;
-  }, [chartData, viewMode, periodLabelForMesAno]);
+    return chartDataDoAno;
+  }, [chartData, viewMode, periodLabelForMesAno, chartDataDoAno]);
 
   const resumoAnual = useMemo(() => {
-    if (viewMode !== 'general' || chartData.length === 0) return null;
+    if (viewMode !== 'general' || chartDataDoAno.length === 0) return null;
     return {
-      prestados_valor: chartData.reduce((a, i) => a + i.prestados_valor, 0),
-      tomados_valor: chartData.reduce((a, i) => a + i.tomados_valor, 0),
-      prestados_quantidade: chartData.reduce((a, i) => a + i.prestados_quantidade, 0),
-      tomados_quantidade: chartData.reduce((a, i) => a + i.tomados_quantidade, 0),
+      prestados_valor: chartDataDoAno.reduce((a, i) => a + i.prestados_valor, 0),
+      tomados_valor: chartDataDoAno.reduce((a, i) => a + i.tomados_valor, 0),
+      prestados_quantidade: chartDataDoAno.reduce((a, i) => a + i.prestados_quantidade, 0),
+      tomados_quantidade: chartDataDoAno.reduce((a, i) => a + i.tomados_quantidade, 0),
     };
-  }, [viewMode, chartData]);
+  }, [viewMode, chartDataDoAno]);
 
   const statusAtual = syncStatus?.status || 'pendente';
   const statusBadge = badgeConfig[statusAtual];
