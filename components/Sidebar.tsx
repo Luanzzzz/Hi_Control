@@ -64,8 +64,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       priority: 1,
     },
     {
+      id: ViewState.USERS,
+      label: 'Clientes',
+      icon: Users,
+      priority: 1,
+    },
+    {
+      id: ViewState.WHATSAPP,
+      label: 'WhatsApp',
+      icon: MessageCircle,
+      priority: 1,
+    },
+    {
       id: ViewState.INVOICES,
-      label: 'Notas Fiscais',
+      label: 'Emissão de Notas',
       icon: FileText,
       priority: 1,
       subModules: [
@@ -79,24 +91,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       id: ViewState.TASKS,
       label: 'Tarefas',
       icon: CheckSquare,
-      priority: 1,
-    },
-    {
-      id: ViewState.WHATSAPP,
-      label: 'WhatsApp',
-      icon: MessageCircle,
-      priority: 1,
-    },
-    {
-      id: ViewState.USERS,
-      label: 'Clientes',
-      icon: Users,
-      priority: 1,
-    },
-    {
-      id: ViewState.SETTINGS,
-      label: 'Configuracoes',
-      icon: Settings,
       priority: 1,
     },
   ];
@@ -313,7 +307,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           {(extraModules ?? []).map(renderExtraModule)}
         </nav>
 
-        <div className="p-3 border-t border-gray-200 dark:border-slate-700">
+        <div className="p-3 border-t border-gray-200 dark:border-slate-700 space-y-1">
+          <button
+            onClick={() => {
+              setView(ViewState.SETTINGS);
+              if (isMobile) toggleSidebar();
+            }}
+            title={!showText ? 'Configurações' : undefined}
+            className={`flex items-center ${showText ? 'gap-3 px-3' : 'justify-center px-2'} py-2 text-sm font-medium rounded-lg w-full transition-colors ${
+              currentView === ViewState.SETTINGS
+                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+            }`}
+          >
+            <Settings size={18} />
+            {showText && <span>Configurações</span>}
+          </button>
           <a
             href="https://site-hi-control.vercel.app"
             title={!showText ? 'Sair do Sistema' : undefined}

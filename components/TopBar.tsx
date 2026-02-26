@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Menu, Moon, Sun, Bell, Search, Sparkles, User, LogOut, Crown, Settings } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { PanelLeftOpen, Moon, Sun, Bell, Search, Sparkles, User, LogOut, Crown, Settings, FileCheck, ShieldAlert, ShieldOff } from 'lucide-react';
 import { generateAIResponse } from '../services/geminiService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationsContext';
 import { UserPlan } from '../types';
 import { PerfilContadorModal } from './PerfilContadorModal';
 
@@ -18,8 +19,22 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
   const [loadingAi, setLoadingAi] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const { user, signOut } = useAuth();
+  const { notifications, count } = useNotifications();
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isNotificationsOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isNotificationsOpen]);
 
   const handleAiSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +62,7 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
           onClick={toggleSidebar}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300"
         >
-          <Menu size={24} />
+          <PanelLeftOpen size={24} />
         </button>
 
         <div className="hidden md:flex items-center bg-gray-100 dark:bg-slate-700/50 rounded-lg px-3 py-2 w-64 lg:w-96">
@@ -112,10 +127,53 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
-        <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300">
-          <Bell size={20} />
-          <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
-        </button>
+        <div className="relative" ref={notificationsRef}>
+          <button
+            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300"
+            title="Notificações"
+          >
+            <Bell size={20} />
+            {count > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-primary-600 text-white text-xs font-semibold rounded-full border-2 border-white dark:border-slate-800">
+                {count > 99 ? '99+' : count}
+              </span>
+            )}
+          </button>
+          {isNotificationsOpen && (
+            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden z-50">
+              <div className="p-3 border-b border-gray-200 dark:border-slate-700">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Notificações</h3>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {count === 0 ? (
+                  <div className="p-6 text-center">
+                    <Bell size={32} className="mx-auto text-gray-300 dark:text-slate-600 mb-2" />
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Nenhuma notificação no momento</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Sincronização e certificados aparecerão aqui</p>
+                  </div>
+                ) : (
+                  <ul className="p-2 space-y-1">
+                    {notifications.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left"
+                      >
+                        {item.type === 'sync' && <FileCheck size={18} className="text-blue-500 shrink-0 mt-0.5" />}
+                        {item.type === 'cert_missing' && <ShieldAlert size={18} className="text-amber-500 shrink-0 mt-0.5" />}
+                        {item.type === 'cert_expired' && <ShieldOff size={18} className="text-red-500 shrink-0 mt-0.5" />}
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{item.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="p-2 border-t border-gray-200 dark:border-slate-700">
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center">Atualizado a cada 1 min</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* User Profile Dropdown */}
         <div className="relative">
@@ -157,7 +215,7 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
                   className="w-full flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <Settings size={18} />
-                  <span className="text-sm font-medium">Configurações da Contabilidade</span>
+                  <span className="text-sm font-medium">Configuração da conta</span>
                 </button>
                 <button
                   onClick={handleLogout}
