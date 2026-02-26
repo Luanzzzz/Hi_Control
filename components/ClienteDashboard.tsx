@@ -101,6 +101,9 @@ const MESES = [
   { value: 12, label: 'Dezembro' },
 ];
 
+/** Abreviações do backend (periodo no historico: "fev. 26") */
+const MESES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
 const badgeConfig: Record<
   SyncStatus['status'],
   { color: string; text: string; icon: string; animate?: boolean }
@@ -252,6 +255,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [chartMode, setChartMode] = useState<'valor' | 'quantidade'>('valor');
+  const [viewMode, setViewMode] = useState<'focus' | 'general'>('general');
 
   const [buscaInput, setBuscaInput] = useState<string>('');
   const [filtros, setFiltros] = useState<FiltrosNotas>({
@@ -872,6 +876,28 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     });
   }, [dashboard?.historico]);
 
+  const periodLabelForMesAno = useMemo(
+    () => `${MESES_ABREV[mesSelecionado - 1]}. ${String(anoSelecionado).slice(-2)}`,
+    [mesSelecionado, anoSelecionado]
+  );
+
+  const chartDataFiltered = useMemo(() => {
+    if (viewMode === 'focus') {
+      return chartData.filter((item) => item.periodo === periodLabelForMesAno);
+    }
+    return chartData;
+  }, [chartData, viewMode, periodLabelForMesAno]);
+
+  const resumoAnual = useMemo(() => {
+    if (viewMode !== 'general' || chartData.length === 0) return null;
+    return {
+      prestados_valor: chartData.reduce((a, i) => a + i.prestados_valor, 0),
+      tomados_valor: chartData.reduce((a, i) => a + i.tomados_valor, 0),
+      prestados_quantidade: chartData.reduce((a, i) => a + i.prestados_quantidade, 0),
+      tomados_quantidade: chartData.reduce((a, i) => a + i.tomados_quantidade, 0),
+    };
+  }, [viewMode, chartData]);
+
   const statusAtual = syncStatus?.status || 'pendente';
   const statusBadge = badgeConfig[statusAtual];
   const usuarioEhAdmin = user?.plano === UserPlan.ADMIN;
@@ -895,11 +921,15 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   );
   const mensagemProgresso = syncStatus?.mensagem_progresso || (syncInProgress ? 'Capturando notas...' : null);
   const etapaAtual = syncStatus?.etapa_atual || null;
-  const diferenca = Number(resumo?.diferenca || 0);
-  const variacao = resumo?.variacao_mes_anterior_percent;
-  const totalAcumulado = Number(resumo?.prestados_valor || 0) + Number(resumo?.tomados_valor || 0);
-  const prestadosPct = totalAcumulado > 0 ? (Number(resumo?.prestados_valor || 0) / totalAcumulado) * 100 : 0;
-  const tomadosPct = totalAcumulado > 0 ? (Number(resumo?.tomados_valor || 0) / totalAcumulado) * 100 : 0;
+  const displayPrestadosValor = viewMode === 'focus' ? Number(resumo?.prestados_valor || 0) : (resumoAnual?.prestados_valor ?? 0);
+  const displayTomadosValor = viewMode === 'focus' ? Number(resumo?.tomados_valor || 0) : (resumoAnual?.tomados_valor ?? 0);
+  const displayPrestadosQtd = viewMode === 'focus' ? Number(resumo?.prestados_quantidade || 0) : (resumoAnual?.prestados_quantidade ?? 0);
+  const displayTomadosQtd = viewMode === 'focus' ? Number(resumo?.tomados_quantidade || 0) : (resumoAnual?.tomados_quantidade ?? 0);
+  const diferenca = displayPrestadosValor - displayTomadosValor;
+  const variacao = viewMode === 'focus' ? resumo?.variacao_mes_anterior_percent : null;
+  const totalAcumulado = displayPrestadosValor + displayTomadosValor;
+  const prestadosPct = totalAcumulado > 0 ? (displayPrestadosValor / totalAcumulado) * 100 : 0;
+  const tomadosPct = totalAcumulado > 0 ? (displayTomadosValor / totalAcumulado) * 100 : 0;
 
   if (!empresaId) {
     return (
@@ -1092,6 +1122,20 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
             <div className="flex flex-wrap items-center gap-2">
               <div className="rounded-lg border border-slate-200 p-1 dark:border-slate-700">
                 <button
+                  onClick={() => setViewMode('focus')}
+                  className={`rounded px-3 py-1 text-xs font-semibold ${viewMode === 'focus' ? 'bg-primary-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}
+                >
+                  Foco (mês)
+                </button>
+                <button
+                  onClick={() => setViewMode('general')}
+                  className={`rounded px-3 py-1 text-xs font-semibold ${viewMode === 'general' ? 'bg-primary-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}
+                >
+                  Geral (ano)
+                </button>
+              </div>
+              <div className="rounded-lg border border-slate-200 p-1 dark:border-slate-700">
+                <button
                   onClick={() => setChartMode('valor')}
                   className={`rounded px-3 py-1 text-xs font-semibold ${chartMode === 'valor' ? 'bg-primary-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}
                 >
@@ -1137,7 +1181,7 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
 
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
+              <BarChart data={chartDataFiltered}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="periodo" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
@@ -1159,9 +1203,9 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
             <div>
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-600 dark:text-slate-300">Prestados</span>
-                <span className="text-slate-500 dark:text-slate-400">{Number(resumo?.prestados_quantidade || 0)} notas</span>
+                <span className="text-slate-500 dark:text-slate-400">{displayPrestadosQtd} notas</span>
               </div>
-              <p className="text-lg font-black text-blue-600">{formatCurrency(Number(resumo?.prestados_valor || 0))}</p>
+              <p className="text-lg font-black text-blue-600">{formatCurrency(displayPrestadosValor)}</p>
               <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                 <div className="h-2 rounded-full bg-blue-600" style={{ width: `${prestadosPct}%` }} />
               </div>
@@ -1170,9 +1214,9 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
             <div>
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-600 dark:text-slate-300">Tomados</span>
-                <span className="text-slate-500 dark:text-slate-400">{Number(resumo?.tomados_quantidade || 0)} notas</span>
+                <span className="text-slate-500 dark:text-slate-400">{displayTomadosQtd} notas</span>
               </div>
-              <p className="text-lg font-black text-amber-600">{formatCurrency(Number(resumo?.tomados_valor || 0))}</p>
+              <p className="text-lg font-black text-amber-600">{formatCurrency(displayTomadosValor)}</p>
               <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                 <div className="h-2 rounded-full bg-amber-500" style={{ width: `${tomadosPct}%` }} />
               </div>
