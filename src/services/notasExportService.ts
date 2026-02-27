@@ -7,6 +7,7 @@ import type {
 
 export type ExportFormat = 'xlsx' | 'csv';
 export type ExportScope = 'pagina' | 'todas_filtradas';
+export type ExportDestination = 'local' | 'google_drive';
 
 export interface ExportColumn {
   key: string;
@@ -18,10 +19,14 @@ export interface ExportColumn {
 export interface ExportNotasConfig {
   format: ExportFormat;
   scope: ExportScope;
+  destination: ExportDestination;
   filename: string;
   includeSummarySheet: boolean;
   includeMetadata: boolean;
   csvDelimiter: ';' | ',' | '\t';
+  driveOrganizarPorMes: boolean;
+  driveSepararPorOperacao: boolean;
+  driveSobrescreverArquivos: boolean;
   columns: ExportColumn[];
 }
 
@@ -112,10 +117,14 @@ export const getDefaultExportColumns = (): ExportColumn[] =>
 export const createDefaultExportConfig = (empresaId?: string): ExportNotasConfig => ({
   format: 'xlsx',
   scope: 'pagina',
+  destination: 'local',
   filename: `notas-${empresaId || 'empresa'}`,
   includeSummarySheet: true,
   includeMetadata: true,
   csvDelimiter: ';',
+  driveOrganizarPorMes: true,
+  driveSepararPorOperacao: true,
+  driveSobrescreverArquivos: false,
   columns: getDefaultExportColumns(),
 });
 

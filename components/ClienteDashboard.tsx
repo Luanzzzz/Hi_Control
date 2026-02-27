@@ -48,6 +48,7 @@ import {
   obterPortalOficialNota,
   obterPdfNota,
 } from '../src/services/dashboardService';
+import { driveService, type DriveExportJob } from '../src/services/driveService';
 import { certificadoService } from '../src/services/certificadoService';
 import { useAuth } from '../contexts/AuthContext';
 import { ExportNotasModal } from './ExportNotasModal';
@@ -282,6 +283,9 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const [exportConfig, setExportConfig] = useState<ExportNotasConfig>(() =>
     createDefaultExportConfig(empresaId)
   );
+  const [driveConnected, setDriveConnected] = useState<boolean>(false);
+  const [driveConnecting, setDriveConnecting] = useState<boolean>(false);
+  const [driveExportStatus, setDriveExportStatus] = useState<DriveExportJob | null>(null);
   const [notaVisualizacao, setNotaVisualizacao] = useState<NotaDetalhadaVisualizacao | null>(null);
 
   const prevStatusRef = useRef<SyncStatus['status'] | null>(null);
@@ -332,6 +336,34 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
       setLoadingNotas(false);
     }
   }, [empresaId, filtros]);
+
+  const carregarEstadoDrive = useCallback(async () => {
+    try {
+      const configs = await driveService.listarConfiguracoes();
+      setDriveConnected(configs.some((item) => Boolean(item.ativo)));
+    } catch {
+      setDriveConnected(false);
+    }
+  }, []);
+
+  const handleConectarDriveExport = useCallback(async () => {
+    setDriveConnecting(true);
+    try {
+      const authUrl = await driveService.gerarUrlAutorizacao();
+      window.open(authUrl, '_blank', 'width=700,height=800');
+      setToast({
+        type: 'success',
+        message: 'Janela de autorizacao do Drive aberta. Conclua a permissao e depois atualize o modal.',
+      });
+    } catch (error: any) {
+      setToast({
+        type: 'error',
+        message: error?.message || 'Falha ao iniciar conexao com Google Drive.',
+      });
+    } finally {
+      setDriveConnecting(false);
+    }
+  }, []);
 
   const ajustarPeriodoPelaUltimaNota = useCallback((lista: NotaFiscalDashboard[]): boolean => {
     if (periodoFixadoManualmente) return false;
@@ -433,6 +465,11 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   }, [carregarNotas]);
 
   useEffect(() => {
+    if (!showExportModal) return;
+    carregarEstadoDrive();
+  }, [carregarEstadoDrive, showExportModal]);
+
+  useEffect(() => {
     if (loadingNotas) return;
     if (!notas.length) return;
     ajustarPeriodoPelaUltimaNota(notas);
@@ -455,6 +492,75 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
     const timeout = window.setTimeout(() => setToast(null), 3000);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    if (!driveExportStatus?.id) return;
+    if (
+      driveExportStatus.status === 'concluido' ||
+      driveExportStatus.status === 'concluido_com_erros' ||
+      driveExportStatus.status === 'erro' ||
+      driveExportStatus.status === 'cancelado'
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const intervalId = window.setInterval(async () => {
+      try {
+        const statusAtualizado = await driveService.obterStatusExportacaoXml(driveExportStatus.id);
+        if (cancelled) return;
+        setDriveExportStatus(statusAtualizado);
+
+        const finalizado =
+          statusAtualizado.status === 'concluido' ||
+          statusAtualizado.status === 'concluido_com_erros' ||
+          statusAtualizado.status === 'erro' ||
+          statusAtualizado.status === 'cancelado';
+
+        if (!finalizado) return;
+
+        if (statusAtualizado.status === 'concluido') {
+          setToast({
+            type: 'success',
+            message: `Exportacao Drive concluida: ${statusAtualizado.notas_exportadas} XMLs enviados.`,
+          });
+        } else if (statusAtualizado.status === 'concluido_com_erros') {
+          setToast({
+            type: 'error',
+            message: `Exportacao concluida com erros: ${statusAtualizado.notas_exportadas} enviados, ${statusAtualizado.notas_erro} erros.`,
+          });
+        } else {
+          setToast({
+            type: 'error',
+            message: statusAtualizado.mensagem || 'Falha na exportacao em massa para Google Drive.',
+          });
+        }
+
+        await carregarNotas();
+        await carregarDashboard();
+      } catch (error: any) {
+        if (cancelled) return;
+        setToast({
+          type: 'error',
+          message: error?.message || 'Falha ao consultar status da exportacao em Drive.',
+        });
+        setDriveExportStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: 'erro',
+                mensagem: error?.message || 'Falha ao consultar status da exportacao.',
+              }
+            : prev
+        );
+      }
+    }, 3500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [carregarDashboard, carregarNotas, driveExportStatus]);
 
   useEffect(() => {
     const fecharMenuAcoes = () => setAcaoAbertaNotaId(null);
@@ -531,6 +637,41 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
   const handleConfirmExportacao = async (config: ExportNotasConfig) => {
     setExportLoading(true);
     try {
+      if (config.destination === 'google_drive') {
+        if (!driveConnected) {
+          throw new Error('Google Drive nao conectado. Conecte o Drive para exportar em massa.');
+        }
+
+        const filtrosDrive = {
+          tipo: filtros.tipo,
+          status: filtros.status,
+          retencao: filtros.retencao,
+          busca: filtros.busca,
+          data_inicio: filtros.dataInicio,
+          data_fim: filtros.dataFim,
+          organizar_por_mes: config.driveOrganizarPorMes,
+          separar_por_operacao: config.driveSepararPorOperacao,
+          sobrescrever_arquivos: config.driveSobrescreverArquivos,
+          incluir_tomadas: true,
+          incluir_prestadas: true,
+        };
+
+        await driveService.sincronizarPastasClientes([empresaId]);
+        const job = await driveService.iniciarExportacaoXmlMassa({
+          empresa_ids: [empresaId],
+          filtros: filtrosDrive,
+        });
+
+        setExportConfig(config);
+        setShowExportModal(false);
+        setDriveExportStatus(job);
+        setToast({
+          type: 'success',
+          message: `Exportacao para Drive iniciada. Job ${job.id.slice(0, 8)} em processamento.`,
+        });
+        return;
+      }
+
       const filtrosExportacao: FiltrosNotas = {
         ...filtros,
         pagina: 1,
@@ -1278,6 +1419,28 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
             </div>
           </div>
 
+          {driveExportStatus && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2 text-[11px] dark:border-slate-700 dark:bg-slate-800/50">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Exportacao Drive:
+                </span>
+                <span className="rounded bg-primary-100 px-2 py-0.5 font-semibold text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                  {driveExportStatus.status.toUpperCase()}
+                </span>
+                <span className="text-slate-600 dark:text-slate-300">
+                  {driveExportStatus.notas_processadas}/{driveExportStatus.total_notas} processadas
+                </span>
+                <span className="text-slate-600 dark:text-slate-300">
+                  {Number(driveExportStatus.progresso_percentual || 0).toFixed(1)}%
+                </span>
+              </div>
+              {driveExportStatus.mensagem && (
+                <p className="mt-1 text-slate-500 dark:text-slate-400">{driveExportStatus.mensagem}</p>
+              )}
+            </div>
+          )}
+
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
             <label className="font-semibold text-slate-500 dark:text-slate-400">
               TIPO:
@@ -1621,6 +1784,9 @@ export const ClienteDashboard: React.FC<ClienteDashboardProps> = ({ empresaId, o
         loading={exportLoading}
         totalNotas={totalNotas}
         config={exportConfig}
+        driveConnected={driveConnected}
+        connectingDrive={driveConnecting}
+        onConnectDrive={handleConectarDriveExport}
         onClose={() => setShowExportModal(false)}
         onConfirm={handleConfirmExportacao}
       />
