@@ -6,6 +6,10 @@
 import api from './api';
 import axios from 'axios';
 import type {
+  // NF-e
+  NFEAutorizarRequest,
+  NFEAutorizarResponse,
+  NFECancelarResponse,
   // NFC-e
   NFCeAutorizarRequest,
   NFCeAutorizarResponse,
@@ -29,6 +33,76 @@ import type {
   ProdutoCadastrado,
   ProdutoBuscarRequest,
 } from '../types/fiscal';
+
+// ============================================
+// NF-e (MODELO 55) - NOTA FISCAL ELETRÔNICA
+// ============================================
+
+/**
+ * Autoriza uma NF-e (Nota Fiscal Eletrônica modelo 55) junto à SEFAZ
+ */
+export const autorizarNFe = async (
+  dados: NFEAutorizarRequest
+): Promise<NFEAutorizarResponse> => {
+  try {
+    const response = await api.post<NFEAutorizarResponse>('/nfe/autorizar', dados);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const sefazErro = error.response?.data;
+      const mensagem =
+        sefazErro?.message?.sefaz_response?.rejeicoes?.[0]?.motivo ||
+        sefazErro?.detail?.message ||
+        sefazErro?.detail ||
+        'Erro ao autorizar NF-e na SEFAZ';
+      const correcao = sefazErro?.message?.sefaz_response?.rejeicoes?.[0]?.correcao;
+      throw new Error(correcao ? `${mensagem}\n\nSugestão: ${correcao}` : mensagem);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Cancela uma NF-e autorizada (prazo de 24h após autorização)
+ */
+export const cancelarNFe = async (
+  chaveAcesso: string,
+  motivo: string
+): Promise<NFECancelarResponse> => {
+  try {
+    const response = await api.post<NFECancelarResponse>(
+      `/nfe/cancelar/${chaveAcesso}`,
+      { motivo }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const mensagem = error.response?.data?.detail?.message ||
+        error.response?.data?.detail ||
+        'Erro ao cancelar NF-e';
+      throw new Error(mensagem);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Faz download do DANFE (Documento Auxiliar da NF-e) em PDF
+ */
+export const downloadDANFE = async (chaveAcesso: string): Promise<Blob> => {
+  try {
+    const response = await api.get(`/nfe/${chaveAcesso}/danfe`, {
+      responseType: 'blob',
+      timeout: 60000,
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error('Erro ao baixar DANFE. Verifique se a nota foi autorizada.');
+    }
+    throw error;
+  }
+};
 
 // ============================================
 // NFC-e (MODELO 65) - CUPOM FISCAL ELETRÔNICO

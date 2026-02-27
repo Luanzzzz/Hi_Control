@@ -376,3 +376,159 @@ export interface ProdutoBuscarRequest {
   ativo?: boolean;
   limit?: number;
 }
+
+// ============================================
+// NF-e (MODELO 55) - NOTA FISCAL ELETRÔNICA
+// ============================================
+
+export interface ICMSNFe {
+  origem: string; // "0"-"8"
+  cst: string;    // "00"-"90"
+  csosn?: string; // Simples Nacional
+  modalidade_bc?: number;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+  base_calculo_st?: number;
+  aliquota_st?: number;
+  valor_st?: number;
+}
+
+export interface IPINFe {
+  cst: string;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+}
+
+export interface PISNFe {
+  cst: string;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+}
+
+export interface COFINSNFe {
+  cst: string;
+  base_calculo: number;
+  aliquota: number;
+  valor: number;
+}
+
+export interface ItemNFe {
+  numero_item: number;
+  codigo_produto: string;
+  descricao: string;
+  ncm: string;   // 8 dígitos
+  cfop: string;  // 4 dígitos
+  unidade_comercial: string;
+  quantidade_comercial: number;
+  valor_unitario_comercial: number;
+  valor_total_bruto: number;
+  valor_desconto?: number;
+  valor_frete?: number;
+  valor_seguro?: number;
+  valor_outras_despesas?: number;
+  ean?: string;
+  cest?: string;
+  icms: ICMSNFe;
+  pis: PISNFe;
+  cofins: COFINSNFe;
+  ipi?: IPINFe;
+  informacoes_adicionais?: string;
+}
+
+export interface DestinatarioNFe {
+  cnpj?: string;
+  cpf?: string;
+  nome: string;
+  inscricao_estadual?: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string;
+  telefone?: string;
+  email?: string;
+}
+
+export interface TransportadoraNFe {
+  cnpj?: string;
+  cpf?: string;
+  razao_social?: string;
+  inscricao_estadual?: string;
+  endereco_completo?: string;
+  municipio?: string;
+  uf?: string;
+}
+
+export interface TransporteNFe {
+  modalidade_frete: 0 | 1 | 2 | 9; // 0=CIF, 1=FOB, 2=Terceiros, 9=Sem
+  transportadora?: TransportadoraNFe;
+}
+
+export interface DuplicataNFe {
+  numero: string;
+  vencimento: string; // ISO date YYYY-MM-DD
+  valor: number;
+}
+
+export interface CobrancaNFe {
+  duplicatas: DuplicataNFe[];
+}
+
+export interface NFEAutorizarRequest {
+  empresa_id: string;
+  numero_nf: string;
+  serie: string;
+  modelo: "55";
+  tipo_operacao: "0" | "1"; // 0=Entrada, 1=Saída
+  ambiente: TipoAmbiente;
+  data_emissao: string; // ISO datetime
+  destinatario: DestinatarioNFe;
+  itens: ItemNFe[];
+  transporte: TransporteNFe;
+  cobranca?: CobrancaNFe;
+  informacoes_complementares?: string;
+  informacoes_fisco?: string;
+}
+
+export interface NFEAutorizarResponse {
+  id: string;
+  empresa_id: string;
+  chave_acesso?: string;
+  protocolo?: string;
+  numero_nf: string;
+  serie: string;
+  modelo: string;
+  situacao: "processando" | "autorizada" | "rejeitada" | "cancelada";
+  situacao_sefaz_codigo?: string;
+  situacao_sefaz_motivo?: string;
+  ambiente: string;
+  data_emissao: string;
+  data_autorizacao?: string;
+  cnpj_emitente: string;
+  nome_emitente: string;
+  destinatario_documento: string;
+  destinatario_nome: string;
+  valor_produtos: number;
+  valor_total: number;
+  total_icms: number;
+  total_pis: number;
+  total_cofins: number;
+  total_ipi: number;
+  xml_url?: string;
+  pdf_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NFECancelarResponse {
+  status_codigo: string;
+  status_descricao: string;
+  protocolo?: string;
+  chave_acesso?: string;
+  rejeicoes: Array<{ codigo: string; motivo: string; correcao?: string }>;
+}
