@@ -43,6 +43,7 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
   return (
     <header className="h-16 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
       <div className="flex items-center gap-4">
+        {/* Botão único de toggle do sidebar (mobile) */}
         <button
           onClick={toggleSidebar}
           className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300"
