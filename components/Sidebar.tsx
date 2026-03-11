@@ -16,8 +16,11 @@ import {
   Lock,
   Search,
   FileEdit,
-  Star,
-  Settings
+  Settings,
+  ShoppingCart,
+  Truck,
+  Briefcase,
+  Menu
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,9 +34,10 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleSidebar }) => {
   const { user } = useAuth();
-  const [expandedModules, setExpandedModules] = useState<Set<ViewState>>(new Set([ViewState.INVOICES]));
+  // Lógica de sanfona: apenas um módulo expandido por vez
+  const [expandedModule, setExpandedModule] = useState<ViewState | null>(ViewState.INVOICES);
 
-  // Definição dos módulos principais
+  // Definição dos módulos principais (Design Original)
   const menuItems: MenuItem[] = [
     {
       id: ViewState.DASHBOARD,
@@ -49,14 +53,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       subModules: [
         {
           id: ViewState.INVOICE_EMITTER,
-          label: 'Emissor de Notas',
+          label: 'NF-e (Modelo 55)',
+          priority: 1
+        },
+        {
+          id: ViewState.PDV,
+          label: 'NFC-e (Cupom Fiscal)',
+          priority: 1
+        },
+        {
+          id: ViewState.CTE,
+          label: 'CT-e (Transporte)',
+          priority: 1
+        },
+        {
+          id: ViewState.NFSE,
+          label: 'NFS-e (Serviços)',
           priority: 1
         },
         {
           id: ViewState.INVOICE_SEARCH,
-          label: 'Buscador de Notas',
+          label: 'Consultar Notas',
           priority: 1,
-          isPriority: true // Destacar como prioridade MVP
+          isPriority: true
         }
       ]
     },
@@ -94,47 +113,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     { id: ViewState.COMING_SOON, label: 'Agenda Médica', icon: Calendar, priority: 2 }
   ];
 
-  // Verificar se o usuário tem acesso ao módulo
   const hasModuleAccess = (priority: number): boolean => {
     if (!user) return false;
-
-    // Usuários Premium têm acesso a tudo
     if (user.plano === UserPlan.PREMIUM) return true;
-
-    // Usuários Básico só têm acesso a prioridade 1
     return priority === 1;
   };
 
-  // Verificar se módulo específico está disponível
-  const isModuleAvailable = (moduleId: ViewState): boolean => {
-    if (!user?.availableModules) return hasModuleAccess(1);
-    return user.availableModules.includes(moduleId);
+  const toggleAccordion = (moduleId: ViewState) => {
+    setExpandedModule(prev => (prev === moduleId ? null : moduleId));
   };
 
-  // Toggle de expansão de submódulos
-  const toggleExpanded = (moduleId: ViewState) => {
-    setExpandedModules(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(moduleId)) {
-        newSet.delete(moduleId);
-      } else {
-        newSet.add(moduleId);
-      }
-      return newSet;
-    });
-  };
-
-  // Renderizar ícone do submódulo
   const getSubModuleIcon = (subModule: SubModule) => {
     if (subModule.id === ViewState.INVOICE_SEARCH) return Search;
     if (subModule.id === ViewState.INVOICE_EMITTER) return FileEdit;
+    if (subModule.id === ViewState.PDV) return ShoppingCart;
+    if (subModule.id === ViewState.CTE) return Truck;
+    if (subModule.id === ViewState.NFSE) return Briefcase;
     return FileText;
   };
 
-  // Renderizar item do menu principal
   const renderMenuItem = (item: MenuItem) => {
     const hasAccess = hasModuleAccess(item.priority);
-    const isExpanded = expandedModules.has(item.id);
+    const isExpanded = expandedModule === item.id;
     const hasSubModules = item.subModules && item.subModules.length > 0;
 
     const isActive = currentView === item.id ||
@@ -144,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       if (!hasAccess) return;
 
       if (hasSubModules) {
-        toggleExpanded(item.id);
+        toggleAccordion(item.id);
       } else {
         setView(item.id);
         if (window.innerWidth < 1024) toggleSidebar();
@@ -171,62 +171,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           <div className="flex items-center gap-1">
             {!hasAccess && <Lock size={14} />}
             {hasSubModules && hasAccess && (
-              isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+              />
             )}
           </div>
         </button>
 
-        {/* Submódulos */}
-        {hasSubModules && isExpanded && hasAccess && (
-          <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-slate-700 pl-2">
-            {item.subModules!.map((subModule) => renderSubModule(subModule))}
+        {/* Submódulos com efeito de sanfona */}
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded && hasSubModules && hasAccess ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+          }`}>
+          <div className="ml-4 space-y-1 border-l-2 border-gray-200 dark:border-slate-700 pl-2">
+            {(item.subModules ?? []).map((subModule) => (
+              <button
+                key={subModule.id}
+                onClick={() => {
+                  setView(subModule.id);
+                  if (window.innerWidth < 1024) toggleSidebar();
+                }}
+                disabled={!hasModuleAccess(subModule.priority)}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${currentView === subModule.id
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+                  : 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
+                  }`}
+              >
+                <div className="flex items-center gap-2">
+                  {React.createElement(getSubModuleIcon(subModule), { size: 14 })}
+                  {subModule.label}
+                </div>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     );
   };
 
-  // Renderizar submódulo
-  const renderSubModule = (subModule: SubModule) => {
-    const hasAccess = hasModuleAccess(subModule.priority);
-    const isActive = currentView === subModule.id;
-    const SubModuleIcon = getSubModuleIcon(subModule);
-
-    const handleClick = () => {
-      if (!hasAccess) return;
-      setView(subModule.id);
-      if (window.innerWidth < 1024) toggleSidebar();
-    };
-
-    return (
-      <button
-        key={subModule.id}
-        onClick={handleClick}
-        disabled={!hasAccess}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${isActive
-          ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-          : hasAccess
-            ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
-            : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
-          }`}
-      >
-        <div className="flex items-center gap-2">
-          <SubModuleIcon size={14} />
-          {subModule.label}
-        </div>
-
-        <div className="flex items-center gap-1">
-          {subModule.isPriority && hasAccess && (
-            // Star removida conforme solicitado
-            null
-          )}
-          {!hasAccess && <Lock size={12} />}
-        </div>
-      </button>
-    );
-  };
-
-  // Renderizar módulo extra (bloqueado)
   const renderExtraModule = (item: MenuItem) => {
     const hasAccess = hasModuleAccess(item.priority);
 
@@ -258,25 +239,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
   return (
     <>
-      {/* Mobile Overlay */}
       <div
         className={`fixed inset-0 bg-black/50 z-20 lg:hidden ${isOpen ? 'block' : 'hidden'}`}
         onClick={toggleSidebar}
       />
 
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } flex flex-col h-full`}>
-        {/* Logo */}
-        <div className="p-6 flex items-center justify-center border-b border-gray-100 dark:border-slate-700">
+      <aside className={`fixed lg:relative inset-y-0 left-0 z-30
+        transform transition-all duration-300 ease-in-out
+        border-r border-gray-200 dark:border-slate-700
+        bg-white dark:bg-slate-800
+        flex flex-col h-full
+        ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-0 lg:overflow-hidden'}
+      `}>
+
+        {/* Logo Original + Botão de Recolher */}
+        <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
               <span className="text-white font-bold text-lg">Hi</span>
             </div>
             <span className="text-xl font-bold text-primary-700 dark:text-primary-400">Control</span>
           </div>
+
+          {/* Botão de Recolher Sidebar (3 pontos) */}
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            title="Recolher menu"
+          >
+            <Menu size={20} className="text-gray-600 dark:text-gray-400" />
+          </button>
         </div>
 
-        {/* Plano do Usuário */}
+        {/* Plano do Usuário Original */}
         {user && (
           <div className="px-6 py-3 bg-primary-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
             <p className="text-xs text-gray-500 dark:text-gray-400">Plano Atual</p>
@@ -291,20 +286,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
         {/* Navegação */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {/* Módulos Principais */}
           <div className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Módulos
           </div>
-          {menuItems.map(renderMenuItem)}
+          {(menuItems ?? []).map(renderMenuItem)}
 
-          {/* Módulos Extras */}
           <div className="px-3 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Módulos Extras
           </div>
-          {extraModules.map(renderExtraModule)}
+          {(extraModules ?? []).map(renderExtraModule)}
         </nav>
 
-        {/* Rodapé - Sair */}
+        {/* Rodapé - Sair Original */}
         <div className="p-4 border-t border-gray-200 dark:border-slate-700">
           <a
             href="https://site-hi-control.vercel.app"

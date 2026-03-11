@@ -7,12 +7,16 @@ import { Dashboard } from './components/Dashboard';
 import { Invoices } from './components/Invoices';
 import { InvoiceSearch } from './components/InvoiceSearch';
 import { InvoiceEmitter } from './components/InvoiceEmitter';
+import { PDV } from './components/PDV';
+import { CTe } from './components/CTe';
+import { NFSe } from './components/NFSe';
 import { Tasks } from './components/Tasks';
 import { WhatsAppModule } from './components/WhatsAppModule';
 import { ViewState, UserPlan, ModuleAccess } from './types';
 import { Construction, Lock } from 'lucide-react';
 import { Clients } from './components/Clients';
 import { Configuracoes } from './components/Configuracoes';
+import { ClientDashboard } from './components/ClientDashboard';
 
 
 // Define module access levels
@@ -21,17 +25,26 @@ const moduleAccess: ModuleAccess = {
   [ViewState.INVOICES]: 1,
   [ViewState.INVOICE_EMITTER]: 1,
   [ViewState.INVOICE_SEARCH]: 1,
+  [ViewState.PDV]: 1, // NFC-e disponível para todos
+  [ViewState.CTE]: 1, // CT-e disponível para todos
+  [ViewState.NFSE]: 1, // NFS-e disponível para todos
   [ViewState.TASKS]: 1,
   [ViewState.WHATSAPP]: 1,
   [ViewState.USERS]: 2, // Priority 2 - Restricted for basic plan
+  [ViewState.CERTIFICATES]: 1,
   [ViewState.SETTINGS]: 1,
+  [ViewState.CLIENT_DETAIL]: 1, // Dashboard do Cliente - todos têm acesso
   [ViewState.COMING_SOON]: 2, // Priority 2
 };
 
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  // Sidebar aberta por padrão em desktop (>= 1024px), fechada em mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
   const [isDarkMode, setIsDarkMode] = useState(false);
 
 
@@ -97,6 +110,15 @@ const AppContent: React.FC = () => {
       case ViewState.INVOICE_EMITTER:
         return <InvoiceEmitter />;
 
+      case ViewState.PDV:
+        return <PDV />;
+
+      case ViewState.CTE:
+        return <CTe />;
+
+      case ViewState.NFSE:
+        return <NFSe />;
+
       case ViewState.TASKS:
         return <Tasks />;
 
@@ -107,8 +129,20 @@ const AppContent: React.FC = () => {
         return (
           <Clients
             onNavigateToBuscador={(empresaId) => {
-              // Navegar para tela de busca de notas
-              setCurrentView(ViewState.INVOICE_SEARCH);
+              // Navegar para o detalhe do cliente
+              setSelectedClientId(empresaId);
+              setCurrentView(ViewState.CLIENT_DETAIL);
+            }}
+          />
+        );
+
+      case ViewState.CLIENT_DETAIL:
+        return (
+          <ClientDashboard
+            empresaId={selectedClientId || ''}
+            onBack={() => {
+              setSelectedClientId(null);
+              setCurrentView(ViewState.USERS);
             }}
           />
         );

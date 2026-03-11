@@ -318,3 +318,89 @@ export const obterHistoricoConsultas = async (
     throw error;
   }
 };
+
+// ============================================
+// ===== GOOGLE DRIVE - LEITURA DIRETA =====
+// ============================================
+
+export interface NotaDrive {
+  chave_acesso: string | null;
+  numero: string;
+  serie: string | null;
+  tipo: string;
+  data_emissao: string | null;
+  valor_total: number;
+  cnpj_emitente: string | null;
+  nome_emitente: string | null;
+  cnpj_destinatario: string | null;
+  nome_destinatario: string | null;
+  situacao: string | null;
+  arquivo_nome: string;
+  drive_file_id: string;
+}
+
+export interface NotasDriveResponse {
+  success: boolean;
+  total: number;
+  notas: NotaDrive[];
+  pasta_id: string | null;
+  pasta_nome: string | null;
+  message?: string;
+}
+
+export interface SincronizacaoDriveResponse {
+  success: boolean;
+  message: string;
+  config_id: string;
+  arquivos_encontrados: number;
+  notas_importadas: number;
+  notas_duplicadas: number;
+  erros: number;
+}
+
+/**
+ * Busca notas diretamente do Google Drive (sem salvar no banco)
+ */
+export const buscarNotasDrive = async (
+  empresaId: string,
+  limite: number = 100
+): Promise<NotaDrive[]> => {
+  try {
+    const response = await api.get<NotasDriveResponse>(
+      `/notas/drive/${empresaId}`,
+      { params: { limite } }
+    );
+
+    if (response.data.success) {
+      return response.data.notas;
+    }
+
+    return [];
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao buscar notas do Drive';
+      throw new Error(message);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Força sincronização do Drive (importa XMLs para o banco)
+ */
+export const sincronizarDrive = async (
+  empresaId: string
+): Promise<SincronizacaoDriveResponse> => {
+  try {
+    const response = await api.post<SincronizacaoDriveResponse>(
+      `/notas/drive/${empresaId}/sincronizar`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao sincronizar Drive';
+      throw new Error(message);
+    }
+    throw error;
+  }
+};

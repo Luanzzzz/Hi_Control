@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import InputMask from 'react-input-mask';
-import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle, Mail } from 'lucide-react';
 import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
 import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
 import { formatDate } from '../utils/dateUtils';
+import { ConfiguracaoEmail } from './ConfiguracaoEmail';
+import { ConfiguracaoDrive } from './ConfiguracaoDrive';
 
 // ===== Badge de Certificado Simples (inline) =====
 interface SimpleCertBadgeProps {
@@ -78,9 +80,9 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
      * Salva o empresaId no localStorage e dispara evento para navegação
      * Compatível com arquitetura ViewState do App.tsx
      */
-    const irParaBuscadorNotas = (empresaId: string, empresaNome?: string) => {
-        // Salvar no localStorage para o BuscadorNotas/InvoiceSearch ler
-        localStorage.setItem('buscador_notas_empresa_selecionada', JSON.stringify({
+    const irParaDetalheCliente = (empresaId: string, empresaNome?: string) => {
+        // Salvar no localStorage para o detalhe ler se necessário
+        localStorage.setItem('cliente_detalhe_selecionado', JSON.stringify({
             id: empresaId,
             nome: empresaNome || ''
         }));
@@ -88,11 +90,6 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
         // Se callback foi passado pelo App.tsx, usar para navegar
         if (onNavigateToBuscador) {
             onNavigateToBuscador(empresaId);
-        } else {
-            // Fallback: disparar evento customizado que App.tsx pode escutar
-            window.dispatchEvent(new CustomEvent('navigate:buscador-notas', {
-                detail: { empresaId }
-            }));
         }
     };
 
@@ -132,6 +129,8 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
             setValue('email', client.email);
             setValue('telefone', client.telefone);
             setValue('regime_tributario', client.regime_tributario);
+            setValue('csc_id', client.csc_id);
+            setValue('csc_token', client.csc_token);
         } else {
             setEditingClient(null);
             reset();
@@ -227,12 +226,21 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
         try {
             let empresaId: string;
 
+            // Garantir que CSC seja enviado corretamente (csc_id como number, csc_token como string)
+            const payload: EmpresaCreate = {
+                ...data,
+                csc_id: data.csc_id !== undefined && data.csc_id !== null && String(data.csc_id).trim() !== ''
+                    ? Number(data.csc_id)
+                    : undefined,
+                csc_token: data.csc_token && String(data.csc_token).trim() ? String(data.csc_token).trim() : undefined,
+            };
+
             if (editingClient) {
-                await empresaService.atualizar(editingClient.id, data);
+                await empresaService.atualizar(editingClient.id, payload);
                 empresaId = editingClient.id;
                 setFormMessage({ type: 'success', text: 'Dados do cliente atualizados com sucesso!' });
             } else {
-                const result = await empresaService.criar(data);
+                const result = await empresaService.criar(payload);
                 empresaId = result.id;
 
                 if (result._action === 'updated') {
@@ -365,7 +373,7 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                             <div
                                 key={client.id}
                                 className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 flex flex-col hover:shadow-lg hover:border-primary-500/50 transition-all cursor-pointer group"
-                                onClick={() => irParaBuscadorNotas(client.id)}
+                                onClick={() => irParaDetalheCliente(client.id, client.razao_social)}
                             >
                                 {/* Header do Card */}
                                 <div className="flex justify-between items-start mb-4">
@@ -419,17 +427,17 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                     )}
                                 </div>
 
-                                {/* Botão de Buscar Notas */}
+                                {/* Botão de Detalhes */}
                                 <div
                                     className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <button
-                                        onClick={() => irParaBuscadorNotas(client.id)}
+                                        onClick={() => irParaDetalheCliente(client.id, client.razao_social)}
                                         className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-medium"
                                     >
                                         <FileSearch size={16} />
-                                        Buscar Notas Fiscais
+                                        Ver Dashboard do Cliente
                                     </button>
                                 </div>
                             </div>
@@ -604,6 +612,80 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Seção CSC - Código de Segurança do Contribuinte para NFC-e */}
+                            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700">
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Shield size={20} className="text-blue-600 dark:text-blue-400" />
+                                        CSC - Código de Segurança do Contribuinte
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        Necessário para emissão de NFC-e (Cupom Fiscal Eletrônico). Obtenha esses dados no portal da SEFAZ.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            ID do CSC
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="999999"
+                                            {...register('csc_id')}
+                                            placeholder="Ex: 1"
+                                            className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            Identificador do CSC (número de 1 a 999999)
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Token CSC
+                                        </label>
+                                        <input
+                                            type="text"
+                                            {...register('csc_token')}
+                                            placeholder="Ex: A1B2C3D4E5F6..."
+                                            className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            Token alfanumérico fornecido pela SEFAZ
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                                    <div className="text-sm text-blue-800 dark:text-blue-300">
+                                        <p className="font-medium mb-1">Importante sobre o CSC:</p>
+                                        <ul className="list-disc list-inside space-y-0.5 text-xs">
+                                            <li>O CSC é necessário apenas para emissão de NFC-e (Cupom Fiscal)</li>
+                                            <li>Você pode configurar até 2 CSCs ativos simultâneos na SEFAZ</li>
+                                            <li>Nunca compartilhe o token CSC com terceiros</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Seção Importação Automática - Email e Drive (apenas ao editar cliente) */}
+                            {editingClient && (
+                                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700 space-y-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Mail size={20} className="text-blue-600 dark:text-blue-400" />
+                                        Importação Automática de Notas
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Configure o email IMAP ou Google Drive deste cliente para importar XMLs fiscais automaticamente.
+                                    </p>
+                                    <ConfiguracaoEmail empresaId={editingClient.id} />
+                                    <ConfiguracaoDrive empresaId={editingClient.id} />
+                                </div>
+                            )}
 
                             <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-slate-700">
                                 <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>

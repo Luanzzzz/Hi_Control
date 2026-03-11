@@ -4,10 +4,15 @@ export enum ViewState {
   INVOICES = 'INVOICES',
   INVOICE_EMITTER = 'INVOICE_EMITTER',
   INVOICE_SEARCH = 'INVOICE_SEARCH',
+  PDV = 'PDV', // NFC-e - Cupom Fiscal Eletrônico
+  CTE = 'CTE', // CT-e - Conhecimento de Transporte
+  NFSE = 'NFSE', // NFS-e - Nota Fiscal de Serviço
   TASKS = 'TASKS',
   WHATSAPP = 'WHATSAPP',
   USERS = 'USERS',
+  CERTIFICATES = 'CERTIFICATES',
   SETTINGS = 'SETTINGS',
+  CLIENT_DETAIL = 'CLIENT_DETAIL', // Dashboard Específico do Cliente
   COMING_SOON = 'COMING_SOON'
 }
 
@@ -36,6 +41,7 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  avatar?: string;
   plano: UserPlan;
   created_at: string;
   availableModules?: string[]; // Módulos disponíveis para o plano do usuário
@@ -63,6 +69,8 @@ export interface MenuItem {
   label: string;
   icon: any; // LucideIcon type
   priority: ModulePriority;
+  color?: string; // classe Tailwind para o ícone (ex: text-slate-500)
+  isNew?: boolean;
   subModules?: SubModule[];
 }
 
@@ -72,9 +80,14 @@ export interface ModuleAccess {
   [ViewState.INVOICES]: ModulePriority;
   [ViewState.INVOICE_EMITTER]: ModulePriority;
   [ViewState.INVOICE_SEARCH]: ModulePriority;
+  [ViewState.PDV]: ModulePriority;
+  [ViewState.CTE]: ModulePriority;
+  [ViewState.NFSE]: ModulePriority;
   [ViewState.TASKS]: ModulePriority;
   [ViewState.WHATSAPP]: ModulePriority;
   [ViewState.USERS]: ModulePriority;
+  [ViewState.CERTIFICATES]: ModulePriority;
   [ViewState.SETTINGS]: ModulePriority;
+  [ViewState.CLIENT_DETAIL]: ModulePriority;
   [ViewState.COMING_SOON]: ModulePriority;
 }
