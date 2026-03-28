@@ -1,4 +1,22 @@
+/* Light mode — padrão (sem classe dark) */
 :root {
+  --hc-bg: #F8F7FF;
+  --hc-surface: #FFFFFF;
+  --hc-card: #F3F0FF;
+  --hc-border: #DDD6FE;
+  --hc-purple: #7C3AED;
+  --hc-purple-light: #6D28D9;
+  --hc-purple-dim: #EDE9FE;
+  --hc-green: #059669;
+  --hc-red: #DC2626;
+  --hc-amber: #D97706;
+  --hc-text: #1E1B4B;
+  --hc-muted: #6B7280;
+  --hc-accent: #7C3AED;
+}
+
+/* Dark mode — ativado quando html.dark */
+html.dark {
   --hc-bg: #0D0B1A;
   --hc-surface: #161328;
   --hc-card: #1E1A35;
