@@ -45,6 +45,8 @@ export interface User {
   plano: UserPlan;
   created_at: string;
   availableModules?: string[]; // Módulos disponíveis para o plano do usuário
+  isAdmin?: boolean; // Sinalizador de administrador
+  role?: string; // Role/papel do usuário
 }
 
 export interface AuthState {

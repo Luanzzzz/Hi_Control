@@ -94,7 +94,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Backend: "basico", "profissional", "enterprise"
             // Frontend: UserPlan.BASICO ou UserPlan.PREMIUM
             let userPlan: UserPlan = UserPlan.BASICO;
-            if (userData.plano_nome) {
+
+            // Primeiro verifica se é admin ou tem role especial
+            if (userData.is_admin === true || userData.role === 'admin') {
+                userPlan = UserPlan.PREMIUM;
+            }
+            // Depois verifica o nome do plano
+            else if (userData.plano_nome) {
                 const planoNormalizado = userData.plano_nome.toLowerCase();
                 if (planoNormalizado.includes('profissional') ||
                     planoNormalizado.includes('premium') ||
@@ -111,6 +117,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 plano: userPlan,
                 created_at: userData.created_at || new Date().toISOString(),
                 availableModules: userData.modulos_disponiveis || [],
+                isAdmin: userData.is_admin || false,
+                role: userData.role,
             };
 
             // 6. Salvar usuário no localStorage e state
