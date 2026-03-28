@@ -1,0 +1,15 @@
+:root {
+  --hc-bg: #0D0B1A;
+  --hc-surface: #161328;
+  --hc-card: #1E1A35;
+  --hc-border: #2D2850;
+  --hc-purple: #7C3AED;
+  --hc-purple-light: #A78BFA;
+  --hc-purple-dim: #2D1B6B;
+  --hc-green: #10B981;
+  --hc-red: #EF4444;
+  --hc-amber: #F59E0B;
+  --hc-text: #F1F0FF;
+  --hc-muted: #8B85B0;
+  --hc-accent: #C4B5FD;
+}

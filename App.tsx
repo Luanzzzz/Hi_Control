@@ -99,7 +99,7 @@ const AppContent: React.FC = () => {
 
     switch (currentView) {
       case ViewState.DASHBOARD:
-        return <Dashboard />;
+        return <Dashboard setView={setCurrentView} />;
 
       case ViewState.INVOICES:
         return <Invoices />;

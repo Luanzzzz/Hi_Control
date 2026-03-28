@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Users, AlertCircle, TrendingUp, BarChart, PieChart, LineChart, Loader2 } from 'lucide-react';
+import { BarChart, PieChart, LineChart, TrendingUp, Loader2, RefreshCw, Plus } from 'lucide-react';
 import {
   BarChart as ReBarChart,
   Bar,
@@ -15,9 +15,19 @@ import {
   Pie,
   Cell,
   AreaChart as ReAreaChart,
-  Area
+  Area,
 } from 'recharts';
 import { botService, type MetricasBot, type BotStatus } from '../src/services/botService';
+import { ViewState } from '../types';
+import { KPICard } from '../src/components/dashboard/KPICard';
+import { ComplianceCard } from '../src/components/dashboard/ComplianceCard';
+import { RecentNotasCard } from '../src/components/dashboard/RecentNotasCard';
+import { TasksQuickCard } from '../src/components/dashboard/TasksQuickCard';
+import { ClientesFiscalTable } from '../src/components/dashboard/ClientesFiscalTable';
+
+interface DashboardProps {
+  setView: (view: ViewState) => void;
+}
 
 interface DashboardMetrics {
   totalNotas: number;
@@ -27,9 +37,11 @@ interface DashboardMetrics {
   ultimaSincronizacao: string | null;
 }
 
-export const Dashboard = () => {
+export const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'pie'>('bar');
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalNotas: 0,
     clientesAtivos: 0,
@@ -38,57 +50,76 @@ export const Dashboard = () => {
     ultimaSincronizacao: null,
   });
 
+  const carregarMetricas = async () => {
+    try {
+      setLoading(true);
+      const [metricas, status] = await Promise.all([
+        botService.obterMetricas().catch((): MetricasBot | null => null),
+        botService.obterStatus().catch((): BotStatus | null => null),
+      ]);
+
+      if (status) setBotStatus(status);
+
+      const notasPorTipo = metricas?.notas_por_tipo
+        ? Object.entries(metricas.notas_por_tipo).map(([name, value]) => ({
+            name,
+            value: value as number,
+          }))
+        : [
+            { name: 'NF-e', value: 0 },
+            { name: 'NFS-e', value: 0 },
+            { name: 'CT-e', value: 0 },
+          ];
+
+      setMetrics({
+        totalNotas: metricas?.total_notas ?? 0,
+        clientesAtivos: metricas?.empresas_sincronizadas ?? 0,
+        pendencias:
+          (status?.empresas_sem_certificado ?? 0) + (status?.empresas_cert_expirado ?? 0),
+        notasPorTipo,
+        ultimaSincronizacao: status?.ultima_sincronizacao ?? null,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar metricas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const carregarMetricas = async () => {
-      try {
-        setLoading(true);
-        const [metricas, status] = await Promise.all([
-          botService.obterMetricas().catch(() => null),
-          botService.obterStatus().catch(() => null),
-        ]);
-
-        const notasPorTipo = metricas?.notas_por_tipo
-          ? Object.entries(metricas.notas_por_tipo).map(([name, value]) => ({
-              name,
-              value: value as number,
-            }))
-          : [
-              { name: 'NF-e', value: 0 },
-              { name: 'NFS-e', value: 0 },
-              { name: 'CT-e', value: 0 },
-            ];
-
-        setMetrics({
-          totalNotas: metricas?.total_notas || 0,
-          clientesAtivos: metricas?.empresas_sincronizadas || 0,
-          pendencias: (status?.empresas_sem_certificado || 0) + (status?.empresas_cert_expirado || 0),
-          notasPorTipo,
-          ultimaSincronizacao: status?.ultima_sincronizacao || null,
-        });
-      } catch (error) {
-        console.error('Erro ao carregar metricas:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     carregarMetricas();
   }, []);
 
-  // Dados para graficos baseados nas metricas reais
-  const monthlyData = metrics.notasPorTipo.length > 0
-    ? metrics.notasPorTipo.map((item) => ({
-        name: item.name,
-        notas: item.value,
-        impostos: Math.round(item.value * 150), // Estimativa
-      }))
-    : [{ name: 'Sem dados', notas: 0, impostos: 0 }];
+  const handleSincronizar = async () => {
+    try {
+      setSyncing(true);
+      await botService.obterStatus();
+      await carregarMetricas();
+    } catch (error) {
+      console.error('Erro ao sincronizar:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
-  const pieData = metrics.notasPorTipo.length > 0
-    ? metrics.notasPorTipo
-    : [{ name: 'Sem dados', value: 0 }];
+  // Dados para gráficos baseados nas métricas reais
+  const monthlyData =
+    metrics.notasPorTipo.length > 0
+      ? metrics.notasPorTipo.map((item) => ({
+          name: item.name,
+          notas: item.value,
+          impostos: Math.round(item.value * 150),
+        }))
+      : [{ name: 'Sem dados', notas: 0, impostos: 0 }];
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+  const pieData =
+    metrics.notasPorTipo.length > 0
+      ? metrics.notasPorTipo
+      : [{ name: 'Sem dados', value: 0 }];
+
+  const CHART_COLOR = '#7C3AED';
+  const CHART_COLOR_2 = '#A78BFA';
+  const COLORS = [CHART_COLOR, CHART_COLOR_2, '#10B981', '#F59E0B', '#EF4444'];
 
   const renderChart = () => {
     switch (chartType) {
@@ -96,12 +127,15 @@ export const Dashboard = () => {
         return (
           <ResponsiveContainer width="100%" height={300}>
             <ReBarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="notas" name="Volume de Notas" fill="#8884d8" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--hc-border)" />
+              <XAxis dataKey="name" tick={{ fill: 'var(--hc-muted)', fontSize: 12 }} />
+              <YAxis tick={{ fill: 'var(--hc-muted)', fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{ background: 'var(--hc-card)', border: '1px solid var(--hc-border)', borderRadius: 8 }}
+                labelStyle={{ color: 'var(--hc-text)' }}
+              />
+              <Legend wrapperStyle={{ color: 'var(--hc-muted)', fontSize: 12 }} />
+              <Bar dataKey="notas" name="Volume de Notas" fill={CHART_COLOR} radius={[4, 4, 0, 0]} />
             </ReBarChart>
           </ResponsiveContainer>
         );
@@ -109,12 +143,22 @@ export const Dashboard = () => {
         return (
           <ResponsiveContainer width="100%" height={300}>
             <ReLineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="impostos" name="Impostos Recuperados (R$)" stroke="#82ca9d" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--hc-border)" />
+              <XAxis dataKey="name" tick={{ fill: 'var(--hc-muted)', fontSize: 12 }} />
+              <YAxis tick={{ fill: 'var(--hc-muted)', fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{ background: 'var(--hc-card)', border: '1px solid var(--hc-border)', borderRadius: 8 }}
+                labelStyle={{ color: 'var(--hc-text)' }}
+              />
+              <Legend wrapperStyle={{ color: 'var(--hc-muted)', fontSize: 12 }} />
+              <Line
+                type="monotone"
+                dataKey="impostos"
+                name="Impostos Recuperados (R$)"
+                stroke={CHART_COLOR_2}
+                strokeWidth={2}
+                dot={{ fill: CHART_COLOR_2, r: 4 }}
+              />
             </ReLineChart>
           </ResponsiveContainer>
         );
@@ -122,18 +166,22 @@ export const Dashboard = () => {
         return (
           <ResponsiveContainer width="100%" height={300}>
             <ReAreaChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--hc-border)" />
+              <XAxis dataKey="name" tick={{ fill: 'var(--hc-muted)', fontSize: 12 }} />
+              <YAxis tick={{ fill: 'var(--hc-muted)', fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{ background: 'var(--hc-card)', border: '1px solid var(--hc-border)', borderRadius: 8 }}
+                labelStyle={{ color: 'var(--hc-text)' }}
+              />
+              <Legend wrapperStyle={{ color: 'var(--hc-muted)', fontSize: 12 }} />
               <Area
                 type="monotone"
                 dataKey="notas"
                 name="Volume de Notas"
-                stroke="#8884d8"
-                fill="#8884d8"
-                fillOpacity={0.6}
+                stroke={CHART_COLOR}
+                fill={CHART_COLOR}
+                fillOpacity={0.2}
+                strokeWidth={2}
               />
             </ReAreaChart>
           </ResponsiveContainer>
@@ -148,15 +196,17 @@ export const Dashboard = () => {
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
+                outerRadius={100}
                 dataKey="value"
+                isAnimationActive={false}
               >
-                {pieData.map((entry, index) => (
+                {pieData.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip
+                contentStyle={{ background: 'var(--hc-card)', border: '1px solid var(--hc-border)', borderRadius: 8 }}
+              />
             </RePieChart>
           </ResponsiveContainer>
         );
@@ -165,176 +215,158 @@ export const Dashboard = () => {
     }
   };
 
+  // Sparkline simulada a partir das métricas reais
+  const spark = metrics.notasPorTipo.map((n) => n.value);
+
   return (
-    <div className="space-y-6 p-6">
-      {/* Stats Grid */}
+    <div className="p-6 bg-hc-bg min-h-full font-body">
+
+      {/* Seção 1 — TopBar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-[22px] font-semibold font-display text-hc-text">Dashboard</h1>
+          <p className="text-[12px] text-hc-muted mt-0.5">
+            {metrics.ultimaSincronizacao
+              ? `Última sync: ${new Date(metrics.ultimaSincronizacao).toLocaleString('pt-BR', {
+                  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                })}`
+              : 'Nunca sincronizado'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSincronizar}
+            disabled={syncing || loading}
+            aria-label="Sincronizar SEFAZ"
+            className="flex items-center gap-2 px-3 py-2 text-[12px] font-medium text-hc-accent border border-hc-border rounded-lg hover:bg-hc-card transition-colors disabled:opacity-50"
+          >
+            {syncing ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
+            Sincronizar SEFAZ
+          </button>
+          <button
+            onClick={() => setView(ViewState.INVOICE_EMITTER)}
+            aria-label="Nova NF-e"
+            className="flex items-center gap-2 px-3 py-2 text-[12px] font-medium text-white bg-hc-purple hover:bg-hc-purple/90 rounded-lg transition-colors"
+          >
+            <Plus size={14} />
+            Nova NF-e
+          </button>
+        </div>
+      </div>
+
+      {/* Seção 2 — KPI Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 size={32} className="animate-spin text-primary-600" />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={32} className="animate-spin text-hc-purple" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total de Notas</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {metrics.totalNotas.toLocaleString('pt-BR')}
-                </h3>
-              </div>
-              <div className="p-2 bg-green-100 text-green-600 rounded-lg">
-                <DollarSign size={20} />
-              </div>
-            </div>
-            <span className="text-xs text-gray-500 flex items-center mt-2">
-              Notas importadas do Drive
-            </span>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Empresas Sincronizadas</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {metrics.clientesAtivos}
-                </h3>
-              </div>
-              <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                <Users size={20} />
-              </div>
-            </div>
-            <span className="text-xs text-blue-600 mt-2 block">Com Drive configurado</span>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pendências</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {metrics.pendencias}
-                </h3>
-              </div>
-              <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
-                <AlertCircle size={20} />
-              </div>
-            </div>
-            <span className="text-xs text-orange-600 mt-2 block">
-              {metrics.pendencias > 0 ? 'Certificados pendentes' : 'Tudo em ordem'}
-            </span>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Última Sincronização</p>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-2">
-                  {metrics.ultimaSincronizacao
-                    ? new Date(metrics.ultimaSincronizacao).toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : 'Nunca'}
-                </h3>
-              </div>
-              <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
-                <TrendingUp size={20} />
-              </div>
-            </div>
-            <span className="text-xs text-gray-500 mt-2 block">Bot automático</span>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          <KPICard
+            label="Receita do Mês"
+            value={(metrics.totalNotas * 150).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            delta={metrics.totalNotas > 0 ? `${metrics.totalNotas} notas` : undefined}
+            deltaType="up"
+            accentColor="green"
+            sparkData={spark}
+          />
+          <KPICard
+            label="NF-e Emitidas"
+            value={metrics.totalNotas.toLocaleString('pt-BR')}
+            accentColor="purple"
+            sparkData={spark}
+          />
+          <KPICard
+            label="Clientes Ativos"
+            value={metrics.clientesAtivos}
+            delta="Com Drive configurado"
+            deltaType="neutral"
+            accentColor="amber"
+          />
+          <KPICard
+            label="Pendências"
+            value={metrics.pendencias}
+            delta={metrics.pendencias > 0 ? 'Requer ação' : 'Tudo em ordem'}
+            deltaType={metrics.pendencias > 0 ? 'down' : 'up'}
+            accentColor="red"
+          />
         </div>
       )}
 
-      {/* Chart Section */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Análise de Desempenho</h3>
-          <div className="flex bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
-            <button
-              onClick={() => setChartType('bar')}
-              className={`p-2 rounded-md transition-all ${chartType === 'bar' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Volume de Notas"
-            >
-              <BarChart size={20} />
-            </button>
-            <button
-              onClick={() => setChartType('line')}
-              className={`p-2 rounded-md transition-all ${chartType === 'line' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Evolução de Impostos"
-            >
-              <LineChart size={20} />
-            </button>
-            <button
-              onClick={() => setChartType('area')}
-              className={`p-2 rounded-md transition-all ${chartType === 'area' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Área de Notas"
-            >
-              <TrendingUp size={20} />
-            </button>
-            <button
-              onClick={() => setChartType('pie')}
-              className={`p-2 rounded-md transition-all ${chartType === 'pie' ? 'bg-white dark:bg-slate-600 shadow text-primary-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-              title="Status das Notas"
-            >
-              <PieChart size={20} />
-            </button>
+      {/* Seção 3 — Mid Grid */}
+      {!loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_300px] gap-3 mb-5">
+          <ComplianceCard status={botStatus} pendencias={metrics.pendencias} />
+          <RecentNotasCard />
+          <TasksQuickCard setView={setView} />
+        </div>
+      )}
+
+      {/* Seção 4 — Bottom Grid */}
+      {!loading && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          {/* Tabela de clientes fiscais */}
+          <ClientesFiscalTable setView={setView} />
+
+          {/* Chart existente — visual atualizado */}
+          <div className="bg-hc-card border border-hc-border rounded-xl p-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
+              <h3 className="text-sm font-semibold font-display text-hc-text">Análise de Desempenho</h3>
+              <div className="flex bg-hc-surface border border-hc-border p-1 rounded-lg gap-0.5">
+                <button
+                  onClick={() => setChartType('bar')}
+                  aria-label="Gráfico de barras"
+                  className={`p-2 rounded-md transition-all ${
+                    chartType === 'bar'
+                      ? 'bg-hc-purple-dim text-hc-purple-light shadow'
+                      : 'text-hc-muted hover:text-hc-accent'
+                  }`}
+                >
+                  <BarChart size={16} />
+                </button>
+                <button
+                  onClick={() => setChartType('line')}
+                  aria-label="Gráfico de linhas"
+                  className={`p-2 rounded-md transition-all ${
+                    chartType === 'line'
+                      ? 'bg-hc-purple-dim text-hc-purple-light shadow'
+                      : 'text-hc-muted hover:text-hc-accent'
+                  }`}
+                >
+                  <LineChart size={16} />
+                </button>
+                <button
+                  onClick={() => setChartType('area')}
+                  aria-label="Gráfico de área"
+                  className={`p-2 rounded-md transition-all ${
+                    chartType === 'area'
+                      ? 'bg-hc-purple-dim text-hc-purple-light shadow'
+                      : 'text-hc-muted hover:text-hc-accent'
+                  }`}
+                >
+                  <TrendingUp size={16} />
+                </button>
+                <button
+                  onClick={() => setChartType('pie')}
+                  aria-label="Gráfico de pizza"
+                  className={`p-2 rounded-md transition-all ${
+                    chartType === 'pie'
+                      ? 'bg-hc-purple-dim text-hc-purple-light shadow'
+                      : 'text-hc-muted hover:text-hc-accent'
+                  }`}
+                >
+                  <PieChart size={16} />
+                </button>
+              </div>
+            </div>
+
+            {renderChart()}
           </div>
         </div>
-
-        {renderChart()}
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
-        <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Status do Sistema</h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-6">
-            {metrics.ultimaSincronizacao && (
-              <div className="flex gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-green-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Bot Sincronizado</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Última execução: {new Date(metrics.ultimaSincronizacao).toLocaleString('pt-BR')}
-                  </p>
-                </div>
-              </div>
-            )}
-            {metrics.totalNotas > 0 && (
-              <div className="flex gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-blue-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Notas Importadas</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {metrics.totalNotas} notas no sistema
-                  </p>
-                </div>
-              </div>
-            )}
-            {metrics.pendencias > 0 && (
-              <div className="flex gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-orange-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Atenção Necessária</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {metrics.pendencias} empresas com certificado pendente
-                  </p>
-                </div>
-              </div>
-            )}
-            {!metrics.ultimaSincronizacao && metrics.totalNotas === 0 && (
-              <div className="text-center text-gray-500 py-4">
-                <p>Nenhuma atividade registrada</p>
-                <p className="text-sm mt-1">Configure o Google Drive para começar</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -12,7 +12,6 @@ import {
   PieChart,
   LogOut,
   ChevronDown,
-  ChevronRight,
   Lock,
   Search,
   FileEdit,
@@ -20,7 +19,7 @@ import {
   ShoppingCart,
   Truck,
   Briefcase,
-  Menu
+  Menu,
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -37,13 +36,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   // Lógica de sanfona: apenas um módulo expandido por vez
   const [expandedModule, setExpandedModule] = useState<ViewState | null>(ViewState.INVOICES);
 
-  // Definição dos módulos principais (Design Original)
   const menuItems: MenuItem[] = [
     {
       id: ViewState.DASHBOARD,
       label: 'Dashboard',
       icon: LayoutDashboard,
-      priority: 1
+      priority: 1,
     },
     {
       id: ViewState.INVOICES,
@@ -51,58 +49,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       icon: FileText,
       priority: 1,
       subModules: [
-        {
-          id: ViewState.INVOICE_EMITTER,
-          label: 'NF-e (Modelo 55)',
-          priority: 1
-        },
-        {
-          id: ViewState.PDV,
-          label: 'NFC-e (Cupom Fiscal)',
-          priority: 1
-        },
-        {
-          id: ViewState.CTE,
-          label: 'CT-e (Transporte)',
-          priority: 1
-        },
-        {
-          id: ViewState.NFSE,
-          label: 'NFS-e (Serviços)',
-          priority: 1
-        },
-        {
-          id: ViewState.INVOICE_SEARCH,
-          label: 'Consultar Notas',
-          priority: 1,
-          isPriority: true
-        }
-      ]
+        { id: ViewState.INVOICE_EMITTER, label: 'NF-e (Modelo 55)', priority: 1 },
+        { id: ViewState.PDV, label: 'NFC-e (Cupom Fiscal)', priority: 1 },
+        { id: ViewState.CTE, label: 'CT-e (Transporte)', priority: 1 },
+        { id: ViewState.NFSE, label: 'NFS-e (Serviços)', priority: 1 },
+        { id: ViewState.INVOICE_SEARCH, label: 'Consultar Notas', priority: 1, isPriority: true },
+      ],
     },
-    {
-      id: ViewState.TASKS,
-      label: 'Tarefas',
-      icon: CheckSquare,
-      priority: 1
-    },
-    {
-      id: ViewState.WHATSAPP,
-      label: 'WhatsApp',
-      icon: MessageCircle,
-      priority: 1
-    },
-    {
-      id: ViewState.USERS,
-      label: 'Clientes',
-      icon: Users,
-      priority: 1
-    },
-    {
-      id: ViewState.SETTINGS,
-      label: 'Configurações',
-      icon: Settings,
-      priority: 1
-    }
+    { id: ViewState.TASKS, label: 'Tarefas', icon: CheckSquare, priority: 1 },
+    { id: ViewState.WHATSAPP, label: 'WhatsApp', icon: MessageCircle, priority: 1 },
+    { id: ViewState.USERS, label: 'Clientes', icon: Users, priority: 1 },
+    { id: ViewState.SETTINGS, label: 'Configurações', icon: Settings, priority: 1 },
   ];
 
   const extraModules: MenuItem[] = [
@@ -110,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     { id: ViewState.COMING_SOON, label: 'Faturamento', icon: CreditCard, priority: 2 },
     { id: ViewState.COMING_SOON, label: 'Serviços', icon: Wrench, priority: 2 },
     { id: ViewState.COMING_SOON, label: 'Financeiro', icon: PieChart, priority: 2 },
-    { id: ViewState.COMING_SOON, label: 'Agenda Médica', icon: Calendar, priority: 2 }
+    { id: ViewState.COMING_SOON, label: 'Agenda Médica', icon: Calendar, priority: 2 },
   ];
 
   const hasModuleAccess = (priority: number): boolean => {
@@ -120,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   };
 
   const toggleAccordion = (moduleId: ViewState) => {
-    setExpandedModule(prev => (prev === moduleId ? null : moduleId));
+    setExpandedModule((prev) => (prev === moduleId ? null : moduleId));
   };
 
   const getSubModuleIcon = (subModule: SubModule) => {
@@ -132,17 +89,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     return FileText;
   };
 
+  // Iniciais do nome do usuário para o avatar
+  const getUserInitials = (): string => {
+    if (!user?.name) return '?';
+    return user.name
+      .split(' ')
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
+  };
+
   const renderMenuItem = (item: MenuItem) => {
     const hasAccess = hasModuleAccess(item.priority);
     const isExpanded = expandedModule === item.id;
     const hasSubModules = item.subModules && item.subModules.length > 0;
-
-    const isActive = currentView === item.id ||
-      (item.subModules?.some(sub => sub.id === currentView));
+    const isActive =
+      currentView === item.id || item.subModules?.some((sub) => sub.id === currentView);
 
     const handleClick = () => {
       if (!hasAccess) return;
-
       if (hasSubModules) {
         toggleAccordion(item.id);
       } else {
@@ -152,22 +118,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     };
 
     return (
-      <div key={item.id}>
+      <div key={`${item.id}-${item.label}`}>
         <button
           onClick={handleClick}
           disabled={!hasAccess}
-          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
-            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-            : hasAccess
-              ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-              : 'text-gray-400 dark:text-gray-600 opacity-60 cursor-not-allowed'
-            }`}
+          aria-label={item.label}
+          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            isActive
+              ? 'bg-hc-purple-dim text-hc-purple-light font-medium'
+              : hasAccess
+              ? 'text-hc-muted hover:bg-hc-card hover:text-hc-accent'
+              : 'text-hc-muted opacity-40 cursor-not-allowed'
+          }`}
         >
           <div className="flex items-center gap-3">
             <item.icon size={18} />
             {item.label}
           </div>
-
           <div className="flex items-center gap-1">
             {!hasAccess && <Lock size={14} />}
             {hasSubModules && hasAccess && (
@@ -179,10 +146,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           </div>
         </button>
 
-        {/* Submódulos com efeito de sanfona */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded && hasSubModules && hasAccess ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
-          }`}>
-          <div className="ml-4 space-y-1 border-l-2 border-gray-200 dark:border-slate-700 pl-2">
+        {/* Submódulos — sanfona */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isExpanded && hasSubModules && hasAccess ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="ml-4 space-y-1 border-l border-hc-border pl-2">
             {(item.subModules ?? []).map((subModule) => (
               <button
                 key={subModule.id}
@@ -191,10 +161,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
                   if (window.innerWidth < 1024) toggleSidebar();
                 }}
                 disabled={!hasModuleAccess(subModule.priority)}
-                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${currentView === subModule.id
-                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                  : 'text-gray-500 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700/30'
-                  }`}
+                aria-label={subModule.label}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  currentView === subModule.id
+                    ? 'bg-hc-purple-dim text-hc-purple-light'
+                    : 'text-hc-muted hover:bg-hc-card hover:text-hc-accent'
+                }`}
               >
                 <div className="flex items-center gap-2">
                   {React.createElement(getSubModuleIcon(subModule), { size: 14 })}
@@ -220,13 +192,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
     return (
       <button
-        key={`${item.label}-${item.id}`}
+        key={`${item.label}-extra`}
         onClick={handleClick}
         disabled={!hasAccess}
-        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${hasAccess
-          ? 'text-gray-500 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-          : 'text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed'
-          }`}
+        aria-label={item.label}
+        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+          hasAccess
+            ? 'text-hc-muted hover:bg-hc-card hover:text-hc-accent'
+            : 'text-hc-muted opacity-30 cursor-not-allowed'
+        }`}
       >
         <div className="flex items-center gap-3">
           <item.icon size={18} />
@@ -239,71 +213,94 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
   return (
     <>
+      {/* Overlay mobile */}
       <div
-        className={`fixed inset-0 bg-black/50 z-20 lg:hidden ${isOpen ? 'block' : 'hidden'}`}
+        className={`fixed inset-0 bg-black/60 z-20 lg:hidden ${isOpen ? 'block' : 'hidden'}`}
         onClick={toggleSidebar}
+        aria-hidden="true"
       />
 
-      <aside className={`fixed lg:relative inset-y-0 left-0 z-30
-        transform transition-all duration-300 ease-in-out
-        border-r border-gray-200 dark:border-slate-700
-        bg-white dark:bg-slate-800
-        flex flex-col h-full
-        ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-0 lg:overflow-hidden'}
-      `}>
-
-        {/* Logo Original + Botão de Recolher */}
-        <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-slate-700">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">Hi</span>
+      <aside
+        className={`fixed lg:relative inset-y-0 left-0 z-30
+          transform transition-all duration-300 ease-in-out
+          border-r border-hc-border bg-hc-surface
+          flex flex-col h-full
+          ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 lg:translate-x-0 lg:w-0 lg:overflow-hidden'}
+        `}
+        aria-label="Menu lateral"
+      >
+        {/* Logo + botão recolher */}
+        <div className="p-5 flex items-center justify-between border-b border-hc-border">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-8 h-8 rounded-lg bg-hc-purple flex items-center justify-center shrink-0"
+              aria-hidden="true"
+            >
+              <span className="text-white font-bold text-sm font-display">Hi</span>
             </div>
-            <span className="text-xl font-bold text-primary-700 dark:text-primary-400">Control</span>
+            <div>
+              <p className="text-sm font-semibold font-display text-hc-text leading-none">Hi-Control</p>
+              <p className="text-[10px] text-hc-muted mt-0.5">Gestão Contábil</p>
+            </div>
           </div>
-
-          {/* Botão de Recolher Sidebar (3 pontos) */}
           <button
             onClick={toggleSidebar}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            title="Recolher menu"
+            className="p-1.5 rounded-lg hover:bg-hc-card transition-colors text-hc-muted hover:text-hc-accent"
+            aria-label="Recolher menu"
           >
-            <Menu size={20} className="text-gray-600 dark:text-gray-400" />
+            <Menu size={18} />
           </button>
         </div>
 
-        {/* Plano do Usuário Original */}
+        {/* Plano do usuário */}
         {user && (
-          <div className="px-6 py-3 bg-primary-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Plano Atual</p>
-            <p className={`text-sm font-bold ${user.plano === UserPlan.PREMIUM
-              ? 'text-primary-700 dark:text-primary-400'
-              : 'text-gray-700 dark:text-gray-300'
-              }`}>
+          <div className="px-5 py-2.5 bg-hc-purple-dim/30 border-b border-hc-border">
+            <p className="text-[10px] text-hc-muted">Plano Atual</p>
+            <p
+              className={`text-xs font-semibold ${
+                user.plano === UserPlan.PREMIUM ? 'text-hc-purple-light' : 'text-hc-muted'
+              }`}
+            >
               {user.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico'}
             </p>
           </div>
         )}
 
         {/* Navegação */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          <div className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1" aria-label="Módulos do sistema">
+          <p className="px-3 mb-2 text-[10px] font-semibold text-hc-muted uppercase tracking-wider">
             Módulos
-          </div>
-          {(menuItems ?? []).map(renderMenuItem)}
+          </p>
+          {menuItems.map(renderMenuItem)}
 
-          <div className="px-3 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <p className="px-3 mt-6 mb-2 text-[10px] font-semibold text-hc-muted uppercase tracking-wider">
             Módulos Extras
-          </div>
-          {(extraModules ?? []).map(renderExtraModule)}
+          </p>
+          {extraModules.map(renderExtraModule)}
         </nav>
 
-        {/* Rodapé - Sair Original */}
-        <div className="p-4 border-t border-gray-200 dark:border-slate-700">
+        {/* Footer com avatar do usuário */}
+        <div className="p-4 border-t border-hc-border">
+          {user && (
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-8 h-8 rounded-full bg-hc-purple-dim border border-hc-border flex items-center justify-center shrink-0"
+                aria-hidden="true"
+              >
+                <span className="text-[11px] font-semibold text-hc-purple-light">{getUserInitials()}</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium text-hc-text truncate">{user.name ?? user.email}</p>
+                <p className="text-[10px] text-hc-muted truncate">{user.email}</p>
+              </div>
+            </div>
+          )}
           <a
             href="https://site-hi-control.vercel.app"
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-colors"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-hc-red hover:bg-red-500/10 rounded-lg w-full transition-colors"
+            aria-label="Sair do sistema"
           >
-            <LogOut size={18} />
+            <LogOut size={16} />
             Sair do Sistema
           </a>
         </div>
