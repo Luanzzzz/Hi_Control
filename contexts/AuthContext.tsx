@@ -95,14 +95,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Frontend: UserPlan.BASICO ou UserPlan.PREMIUM
             let userPlan: UserPlan = UserPlan.BASICO;
 
-            // Primeiro verifica se é admin ou tem role especial
+            // Verifica plano e flags de admin
             if (userData.is_admin === true || userData.role === 'admin') {
                 userPlan = UserPlan.PREMIUM;
-            }
-            // Depois verifica o nome do plano
-            else if (userData.plano_nome) {
+            } else if (userData.plano_nome) {
                 const planoNormalizado = userData.plano_nome.toLowerCase();
-                if (planoNormalizado.includes('profissional') ||
+                if (planoNormalizado.includes('admin') ||
+                    planoNormalizado.includes('profissional') ||
                     planoNormalizado.includes('premium') ||
                     planoNormalizado.includes('enterprise')) {
                     userPlan = UserPlan.PREMIUM;
