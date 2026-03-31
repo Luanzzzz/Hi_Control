@@ -21,7 +21,7 @@ import {
   Briefcase,
   Menu,
 } from 'lucide-react';
-import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
+import { ViewState, MenuItem, SubModule, MODULE_VIEWS, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
@@ -75,10 +75,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     { id: ViewState.COMING_SOON, label: 'Agenda Médica', icon: Calendar, priority: 2 },
   ];
 
-  const hasModuleAccess = (priority: number): boolean => {
+  const hasModuleAccess = (view: ViewState): boolean => {
     if (!user) return false;
-    if (user.plano === UserPlan.PREMIUM) return true;
-    return priority === 1;
+    if (user.isAdmin === true) return true;
+    if (view === ViewState.SETTINGS || view === ViewState.COMING_SOON) return true;
+
+    const modules = user.availableModules ?? [];
+    return Object.entries(MODULE_VIEWS).some(
+      ([mod, views]) => modules.includes(mod) && views.includes(view)
+    );
   };
 
   const toggleAccordion = (moduleId: ViewState) => {
@@ -106,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   };
 
   const renderMenuItem = (item: MenuItem) => {
-    const hasAccess = hasModuleAccess(item.priority);
+    const hasAccess = hasModuleAccess(item.id);
     const isExpanded = expandedModule === item.id;
     const hasSubModules = item.subModules && item.subModules.length > 0;
     const isActive =
@@ -165,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
                   setView(subModule.id);
                   if (window.innerWidth < 1024) toggleSidebar();
                 }}
-                disabled={!hasModuleAccess(subModule.priority)}
+                disabled={!hasModuleAccess(subModule.id)}
                 aria-label={subModule.label}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                   currentView === subModule.id
@@ -186,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   };
 
   const renderExtraModule = (item: MenuItem) => {
-    const hasAccess = hasModuleAccess(item.priority);
+    const hasAccess = hasModuleAccess(item.id);
 
     const handleClick = () => {
       if (hasAccess) {
