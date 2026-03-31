@@ -58,6 +58,10 @@ const AppContent: React.FC = () => {
     if (view === ViewState.SETTINGS || view === ViewState.COMING_SOON) return true;
 
     const modules = user.availableModules ?? [];
+    // Se não há módulos configurados no DB (lista vazia), liberar acesso a tudo.
+    // Isso garante que o sistema funcione mesmo sem assinatura cadastrada no Supabase.
+    if (modules.length === 0) return true;
+
     return Object.entries(MODULE_VIEWS).some(
       ([mod, views]) => modules.includes(mod) && views.includes(view)
     );

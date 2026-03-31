@@ -65,7 +65,7 @@ export const InvoiceEmitter: React.FC = () => {
 
   // Carregar empresas disponíveis
   useEffect(() => {
-    api.get<Empresa[]>('/api/v1/empresas')
+    api.get<Empresa[]>('/empresas')
       .then((res) => {
         setEmpresas(res.data);
         if (res.data.length > 0) setEmpresaId(res.data[0].id);
