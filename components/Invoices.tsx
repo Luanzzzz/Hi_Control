@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, Download, MoreVertical, RefreshCw, Loader2 } from 'lucide-react';
-import { buscarNotasDrive, sincronizarDrive, formatarMoeda, formatarData, type NotaDrive } from '../src/services/notaFiscalService';
+import { formatarMoeda, formatarData } from '../src/services/notaFiscalService';
+import { buscarNotasDrive, sincronizarDrive, type NotaDrive } from '../src/services/driveService';
 
 interface InvoicesProps {
   empresaId?: string;

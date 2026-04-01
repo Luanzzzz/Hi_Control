@@ -1,4 +1,13 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * FLUXO OFICIAL DE BUSCA FISCAL
+ * Rota: ViewState.INVOICE_SEARCH
+ * Endpoint de busca: POST /nfe/empresas/{id}/notas/buscar
+ * Endpoint de certificado: GET /certificados/empresas/{id}/certificado/status
+ *   → via certificadoService.obterStatus() (src/services/certificadoService.ts)
+ * Google Drive: apoio documental — acessado via Configurações, não aqui.
+ * Bot de sincronização: monitorado no Dashboard, não aqui.
+ */
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Filter,
@@ -12,19 +21,27 @@ import {
   Hash,
   Loader2,
   AlertCircle,
-  Users,
-  ShieldCheck,
-  ShieldOff,
-  ShieldAlert,
-  AlertTriangle
 } from 'lucide-react';
 import { buscarNotasEmpresa, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
 import { downloadDANFCE, downloadDACTE, downloadPDF } from '../src/services/fiscalService';
 import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
 import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 import { empresaService, Empresa } from '../services/empresaService';
-import { BotStatus } from '../src/components/BotStatus';
-import { BotMetricas } from '../src/components/BotMetricas';
+import { certificadoService } from '../src/services/certificadoService';
+// ClienteSelector canônico — BotStatus e BotMetricas removidos (pertencem ao Dashboard)
+import { ClienteSelector, FonteDadosIndicador } from '../src/components/BuscadorNotas';
+import type { CertificadoStatus as CertificadoStatusBadge } from '../src/components/BuscadorNotas/CertificadoBadge';
+
+// Mapeamento: CertificadoStatus do certificadoService → CertificadoStatus do CertificadoBadge
+const mapCertStatus = (status: string): CertificadoStatusBadge => {
+  const map: Record<string, CertificadoStatusBadge> = {
+    valido: 'ativo',
+    expirando_em_breve: 'expirando',
+    expirado: 'vencido',
+    ausente: 'ausente',
+  };
+  return map[status] ?? 'erro';
+};
 
 // ===== Funções Auxiliares =====
 
@@ -54,187 +71,32 @@ const getSituacaoNormalizada = (situacao: string): SituacaoNota => {
   return 'autorizada' as SituacaoNota; // Fallback seguro
 };
 
-// ===== Componente ClienteSelector Inline =====
-interface ClienteSelectorProps {
-  empresaSelecionada: Empresa | null;
-  onSelecionar: (empresa: Empresa) => void;
-  loading?: boolean;
-}
-
-const ClienteSelector: React.FC<ClienteSelectorProps> = ({
-  empresaSelecionada,
-  onSelecionar,
-  loading
-}) => {
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [busca, setBusca] = useState('');
-  const [aberto, setAberto] = useState(false);
-  const [carregando, setCarregando] = useState(false);
-
-  // Carregar empresas ao abrir dropdown
-  useEffect(() => {
-    if (aberto && empresas.length === 0) {
-      carregarEmpresas();
-    }
-  }, [aberto]);
-
-  const carregarEmpresas = async () => {
-    setCarregando(true);
-    try {
-      const lista = await empresaService.listar();
-      setEmpresas(lista);
-    } catch (error) {
-      console.error('Erro ao carregar empresas:', error);
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  // Filtrar empresas pela busca
-  const empresasFiltradas = empresas.filter(emp =>
-    emp.razao_social.toLowerCase().includes(busca.toLowerCase()) ||
-    emp.cnpj.includes(busca.replace(/\D/g, ''))
-  );
-
-  // Badge de certificado simples
-  const CertBadge: React.FC<{ validade?: string | null }> = ({ validade }) => {
-    if (!validade) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400 rounded-full text-xs">
-          <ShieldAlert size={12} />
-          Sem Cert.
-        </span>
-      );
-    }
-    const dias = Math.ceil((new Date(validade).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (dias <= 0) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-xs">
-          <ShieldOff size={12} />
-          Vencido
-        </span>
-      );
-    }
-    if (dias <= 30) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full text-xs">
-          <AlertTriangle size={12} />
-          {dias}d
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs">
-        <ShieldCheck size={12} />
-        Ativo
-      </span>
-    );
-  };
-
-  return (
-    <div className="relative">
-      {/* Campo de seleção */}
-      <div
-        className={`bg-gray-50 dark:bg-slate-900 border rounded-lg p-3 cursor-pointer transition-all ${aberto
-            ? 'border-primary-500 ring-2 ring-primary-500/20'
-            : 'border-gray-200 dark:border-slate-700 hover:border-primary-400'
-          }`}
-        onClick={() => setAberto(!aberto)}
-      >
-        {loading ? (
-          <div className="flex items-center gap-2 text-gray-400">
-            <Loader2 size={18} className="animate-spin" />
-            <span>Carregando...</span>
-          </div>
-        ) : empresaSelecionada ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Building2 size={20} className="text-primary-500" />
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white text-sm">
-                  {empresaSelecionada.razao_social}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  CNPJ: {empresaSelecionada.cnpj}
-                </p>
-              </div>
-            </div>
-            <CertBadge validade={empresaSelecionada.certificado_validade} />
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-            <Users size={18} />
-            <span>Selecione uma empresa para buscar notas...</span>
-          </div>
-        )}
-      </div>
-
-      {/* Dropdown */}
-      {aberto && (
-        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl max-h-80 overflow-hidden">
-          {/* Input de busca */}
-          <div className="p-3 border-b border-gray-200 dark:border-slate-700">
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por Razão Social ou CNPJ..."
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          </div>
-
-          {/* Lista de empresas */}
-          <div className="max-h-56 overflow-y-auto">
-            {carregando ? (
-              <div className="p-6 text-center text-gray-400">
-                <Loader2 size={24} className="mx-auto mb-2 animate-spin" />
-                Carregando empresas...
-              </div>
-            ) : empresasFiltradas.length === 0 ? (
-              <div className="p-6 text-center text-gray-400">
-                Nenhuma empresa encontrada
-              </div>
-            ) : (
-              empresasFiltradas.map((empresa) => (
-                <div
-                  key={empresa.id}
-                  className="p-3 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-slate-700 last:border-0"
-                  onClick={() => {
-                    onSelecionar(empresa);
-                    setAberto(false);
-                    setBusca('');
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">
-                        {empresa.razao_social}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        CNPJ: {empresa.cnpj}
-                      </p>
-                    </div>
-                    <CertBadge validade={empresa.certificado_validade} />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+// ClienteSelector inline removido — usando canônico de src/components/BuscadorNotas/
 
 export const InvoiceSearch: React.FC = () => {
   // Estado da empresa selecionada
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(null);
   const [loadingEmpresa, setLoadingEmpresa] = useState(false);
+
+  // Status de certificado — via certificadoService (endpoint oficial)
+  const [statusCertificado, setStatusCertificado] = useState<
+    { status: CertificadoStatusBadge; dias_para_vencer?: number } | null
+  >(null);
+
+  useEffect(() => {
+    if (!empresaSelecionada) {
+      setStatusCertificado(null);
+      return;
+    }
+    certificadoService.obterStatus(empresaSelecionada.id).then((res) => {
+      setStatusCertificado({
+        status: mapCertStatus(res.status),
+        dias_para_vencer: res.dias_restantes ?? undefined,
+      });
+    }).catch(() => {
+      setStatusCertificado({ status: 'erro' });
+    });
+  }, [empresaSelecionada?.id]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<TipoNotaFiscal | 'TODAS'>('TODAS');
@@ -245,9 +107,41 @@ export const InvoiceSearch: React.FC = () => {
 
   // Estados da API
   const [invoices, setInvoices] = useState<NotaFiscal[]>([]);
+  const [fonteResultado, setFonteResultado] = useState<'cache' | 'sefaz' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
+
+  // Filtro client-side aplicado sobre os resultados da busca
+  const invoicesFiltrados = useMemo(() => {
+    let lista = invoices;
+
+    if (selectedType !== 'TODAS') {
+      lista = lista.filter((n) => getTipoBase(n.tipo_nf) === selectedType);
+    }
+    if (selectedStatus !== 'todas') {
+      lista = lista.filter(
+        (n) => getSituacaoNormalizada(n.situacao) === selectedStatus
+      );
+    }
+    if (dateFrom) {
+      lista = lista.filter((n) => n.data_emissao >= dateFrom);
+    }
+    if (dateTo) {
+      lista = lista.filter((n) => n.data_emissao <= dateTo + 'T23:59:59');
+    }
+    if (searchTerm.trim()) {
+      const termo = searchTerm.trim().toLowerCase();
+      lista = lista.filter(
+        (n) =>
+          n.numero_nf?.toLowerCase().includes(termo) ||
+          n.chave_acesso?.toLowerCase().includes(termo) ||
+          n.cnpj_emitente?.includes(termo.replace(/\D/g, '')) ||
+          n.nome_emitente?.toLowerCase().includes(termo)
+      );
+    }
+    return lista;
+  }, [invoices, selectedType, selectedStatus, dateFrom, dateTo, searchTerm]);
 
   // Estados de paginação NSU
   const [ultimoNSU, setUltimoNSU] = useState<number>(0);
@@ -317,6 +211,7 @@ export const InvoiceSearch: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setInvoices([]);  // Limpar resultados anteriores
+    setFonteResultado(null);
     setUltimoNSU(0);  // Resetar paginação
     setMaxNSU(0);
     setTemMaisNotas(false);
@@ -361,6 +256,7 @@ export const InvoiceSearch: React.FC = () => {
       }
 
       setInvoices(resultado.notas || []);
+      setFonteResultado(resultado.fonte ?? null);
       setUltimoNSU(resultado.ultimo_nsu);
       setMaxNSU(resultado.max_nsu);
       setTemMaisNotas(resultado.tem_mais_notas);
@@ -535,9 +431,6 @@ export const InvoiceSearch: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {/* Status do Bot */}
-          <BotStatus />
-          
           {/* Botão Buscar */}
           <button
             onClick={handleSearch}
@@ -554,18 +447,16 @@ export const InvoiceSearch: React.FC = () => {
         </div>
       </div>
 
-      {/* Métricas do Bot (Opcional) */}
-      <BotMetricas />
-
-      {/* SELETOR DE CLIENTE - NOVO! */}
+      {/* SELETOR DE CLIENTE */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          👤 Selecione a Empresa
+          Selecione a Empresa
         </label>
         <ClienteSelector
-          empresaSelecionada={empresaSelecionada}
-          onSelecionar={setEmpresaSelecionada}
-          loading={loadingEmpresa}
+          empresaId={empresaSelecionada?.id ?? null}
+          onSelect={(empresa) => setEmpresaSelecionada(empresa as Empresa)}
+          statusCertificado={statusCertificado}
+          disabled={loadingEmpresa}
         />
       </div>
 
@@ -608,14 +499,10 @@ export const InvoiceSearch: React.FC = () => {
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
               >
                 <option value="TODAS">Todos os Tipos</option>
-                <option value="NFe">NF-e (Modelo 55 - Nota Fiscal Eletrônica)</option>
-                <option value="NFCe">NFC-e (Modelo 65 - Cupom Fiscal Eletrônico)</option>
-                <option value="CTe">CT-e (Modelo 57 - Conhecimento de Transporte)</option>
-                <option value="NFSe">NFS-e (Nota Fiscal de Serviço Eletrônica)</option>
-                <option value="NFe">NF-e</option>
-                <option value="NFCe">NFC-e</option>
-                <option value="NFSe">NFS-e</option>
-                <option value="CTe">CT-e</option>
+                <option value="NFe">NF-e (Modelo 55)</option>
+                <option value="NFCe">NFC-e (Modelo 65)</option>
+                <option value="CTe">CT-e (Modelo 57)</option>
+                <option value="NFSe">NFS-e (Serviço)</option>
               </select>
             </div>
 
@@ -710,8 +597,10 @@ export const InvoiceSearch: React.FC = () => {
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 dark:text-white">
-            Resultados ({invoices.length})
+            Resultados ({invoicesFiltrados.length}
+            {invoicesFiltrados.length !== invoices.length ? ` de ${invoices.length}` : ''})
           </h2>
+          <FonteDadosIndicador fonte={fonteResultado} />
         </div>
 
         {/* Desktop Table View */}
@@ -738,7 +627,7 @@ export const InvoiceSearch: React.FC = () => {
                     </p>
                   </td>
                 </tr>
-              ) : invoices.length === 0 ? (
+              ) : invoicesFiltrados.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <FileText size={48} className="mx-auto text-gray-400 mb-3" />
@@ -748,7 +637,7 @@ export const InvoiceSearch: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                invoices.map((invoice) => (
+                invoicesFiltrados.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[getTipoBase(invoice.tipo_nf)]}`}>
@@ -838,7 +727,7 @@ export const InvoiceSearch: React.FC = () => {
                 Buscando notas fiscais...
               </p>
             </div>
-          ) : invoices.length === 0 ? (
+          ) : invoicesFiltrados.length === 0 ? (
             <div className="p-12 text-center">
               <FileText size={48} className="mx-auto text-gray-400 mb-3" />
               <p className="text-gray-500 dark:text-gray-400">
@@ -847,7 +736,7 @@ export const InvoiceSearch: React.FC = () => {
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-slate-700">
-              {invoices.map((invoice) => (
+              {invoicesFiltrados.map((invoice) => (
                 <div key={invoice.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50">
                   {/* Header: Número e Tipo */}
                   <div className="flex items-start justify-between mb-3">
@@ -944,7 +833,7 @@ export const InvoiceSearch: React.FC = () => {
         </div>
 
         {/* Botão Carregar Mais */}
-        {invoices.length > 0 && temMaisNotas && (
+        {invoices.length > 0 && temMaisNotas && !searchTerm && selectedType === 'TODAS' && selectedStatus === 'todas' && (
           <div className="mt-6 flex justify-center">
             <button
               onClick={handleCarregarMais}
@@ -962,7 +851,7 @@ export const InvoiceSearch: React.FC = () => {
                   <span>Carregar Mais Notas</span>
                   {maxNSU > 0 && (
                     <span className="text-sm opacity-75">
-                      ({invoices.length} de ~{maxNSU})
+                      ({invoicesFiltrados.length} de ~{maxNSU})
                     </span>
                   )}
                 </>

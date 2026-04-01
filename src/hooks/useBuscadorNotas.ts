@@ -193,6 +193,9 @@ export function useBuscadorNotas(options: UseBuscadorNotasOptions = {}) {
         setState(prev => ({ ...prev, certificadoLoading: true, error: null }));
 
         try {
+            // @legado — usa GET /nfe/empresas/{id}/certificado/status
+            // No fluxo oficial (InvoiceSearch.tsx) use certificadoService.obterStatus()
+            // que aponta para GET /certificados/empresas/{id}/certificado/status
             const response = await api.get(`/nfe/empresas/${id}/certificado/status`);
 
             setState(prev => ({

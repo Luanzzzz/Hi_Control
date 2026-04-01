@@ -208,7 +208,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
     setErrorNotas(null);
     try {
       // Importa o serviço de notas drive
-      const { buscarNotasDrive } = await import('../src/services/notaFiscalService');
+      const { buscarNotasDrive } = await import('../src/services/driveService');
       const notas = await buscarNotasDrive(empresaId);
       // Converte NotaDrive para NotaFiscal
       const notasConvertidas: NotaFiscal[] = (notas || []).map((nota) => ({

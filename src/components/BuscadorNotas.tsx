@@ -1,7 +1,14 @@
 /**
+ * @deprecated Entrypoint não roteado. O buscador oficial é:
+ * Hi_Control/components/InvoiceSearch.tsx (ViewState.INVOICE_SEARCH)
+ *
+ * Os sub-componentes em BuscadorNotas/ são canônicos e reutilizáveis.
+ * Este arquivo não deve receber novas funcionalidades.
+ *
+ * ---
  * Componente de Busca de Notas Fiscais
  * Integrado com API backend FastAPI
- * 
+ *
  * ATUALIZADO: Sprint NFe Integration
  * - Seleção de empresa (cliente)
  * - Status de certificado
