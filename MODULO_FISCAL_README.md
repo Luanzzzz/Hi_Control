@@ -6,33 +6,76 @@ Módulo fiscal completo para emissão de **NFC-e** (Cupom Fiscal Eletrônico), *
 
 ---
 
-## 📦 Estrutura Implementada
+## 📦 Estrutura Atual (v2.1)
+
+### Fluxo Oficial de Busca Fiscal
+
+```
+ViewState.INVOICE_SEARCH → components/InvoiceSearch.tsx   ← ENTRYPOINT OFICIAL
+  ↓
+  src/components/BuscadorNotas/ClienteSelector.tsx          ← seletor canônico
+  src/services/certificadoService.ts                        ← GET /certificados/empresas/{id}/certificado/status
+  src/services/notaFiscalService.ts → buscarNotasEmpresa()  ← POST /nfe/empresas/{id}/notas/buscar
+  src/components/BuscadorNotas/FonteDadosIndicador.tsx      ← exibe cache | sefaz
+```
+
+### Arquivos por Responsabilidade
 
 ```
 src/
 ├── types/
-│   └── fiscal.ts                      # Tipos TypeScript completos
+│   ├── fiscal.ts              # Tipos de emissão (NFC-e, CT-e, NFS-e)
+│   └── notaFiscal.ts          # Tipos de busca e NF-e
 ├── services/
-│   └── fiscalService.ts               # Serviços de API
+│   ├── fiscalService.ts       # Emissão: NFC-e, CT-e, NFS-e, suporte
+│   ├── notaFiscalService.ts   # Busca SEFAZ/cache — fluxo oficial
+│   ├── driveService.ts        # Google Drive — apoio documental (ingestão)
+│   ├── certificadoService.ts  # Certificado A1 — ENDPOINT OFICIAL de status
+│   └── api.ts                 # Cliente Axios centralizado
 ├── components/
-│   └── fiscal/
-│       ├── AutocompleteCFOP.tsx       # Busca de CFOP
-│       ├── AutocompleteNCM.tsx        # Busca de NCM
-│       ├── SeletorProdutos.tsx        # Seleção de produtos
-│       └── BannerContingencia.tsx     # Alerta de contingência
+│   ├── fiscal/
+│   │   ├── AutocompleteCFOP.tsx
+│   │   ├── AutocompleteNCM.tsx
+│   │   ├── SeletorProdutos.tsx
+│   │   └── BannerContingencia.tsx
+│   ├── BuscadorNotas/         # Sub-componentes CANÔNICOS (reutilizáveis)
+│   │   ├── ClienteSelector.tsx
+│   │   ├── CertificadoBadge.tsx
+│   │   ├── AlertaCertificado.tsx
+│   │   ├── FonteDadosIndicador.tsx
+│   │   └── index.tsx
+│   └── BuscadorNotas.tsx      # @deprecated — não roteado; usar InvoiceSearch.tsx
 └── hooks/
-    └── useValidacaoFiscal.ts          # Hook de validação
+    ├── useBuscadorNotas.ts    # @legado — usa endpoint /nfe/empresas/{id}/certificado/status
+    └── useValidacaoFiscal.ts
 
-components/
-├── PDV.tsx                            # Emissão de NFC-e
-├── CTe.tsx                            # Emissão de CT-e
-├── NFSe.tsx                           # Emissão de NFS-e
-├── InvoiceSearch.tsx                  # Dashboard (atualizado)
-└── Clients.tsx                        # Cadastro (CSC adicionado)
+components/                    # Páginas roteadas via ViewState
+├── InvoiceSearch.tsx          # FLUXO OFICIAL DE BUSCA
+├── PDV.tsx                    # Emissão NFC-e
+├── CTe.tsx                    # Emissão CT-e
+├── NFSe.tsx                   # Emissão NFS-e
+├── InvoiceEmitter.tsx         # Emissão NF-e (Modelo 55)
+├── Invoices.tsx               # Visualização Drive (apoio)
+├── ClientDashboard.tsx        # Dashboard por empresa
+└── Clients.tsx                # Listagem de empresas
 
 services/
-└── empresaService.ts                  # Tipos de empresa (CSC)
+└── empresaService.ts          # CRUD de empresas
 ```
+
+### Decisão de Certificado
+
+| Endpoint | Serviço | Contexto |
+|----------|---------|----------|
+| `GET /certificados/empresas/{id}/certificado/status` | `certificadoService.obterStatus()` | **Oficial** — InvoiceSearch, ClientDashboard |
+| `GET /nfe/empresas/{id}/certificado/status` | `useBuscadorNotas.validarCertificado()` | Legado — só em BuscadorNotas.tsx (@deprecated) |
+
+### Google Drive (Apoio Documental)
+
+Drive não é o fluxo principal de busca fiscal. Acesso via:
+`ViewState.SETTINGS → Configuracoes.tsx → ConfiguracaoDrive.tsx`
+
+Funções: `buscarNotasDrive()`, `sincronizarDrive()` em `src/services/driveService.ts`
 
 ---
 

@@ -1,5 +1,36 @@
 # 📝 Changelog - Módulo Fiscal Hi-Control
 
+## [v2.1.0] - 2026-04-01
+
+### Reorganização Estrutural do Módulo Fiscal
+
+#### Clareza de Responsabilidades
+- `InvoiceSearch.tsx`: declarado como entrypoint oficial do fluxo de busca (`ViewState.INVOICE_SEARCH`)
+- `BuscadorNotas.tsx`: marcado como `@deprecated` — não está roteado; sub-componentes em `BuscadorNotas/` são preservados e canônicos
+- `notaFiscalService.ts` e `driveService.ts`: comentários delimitando fronteiras de responsabilidade
+
+#### Isolamento do Legado
+- `BotStatus` e `BotMetricas` removidos de `InvoiceSearch.tsx` (pertencem ao Dashboard)
+- `useBuscadorNotas.ts`: endpoint legado (`/nfe/empresas/{id}/certificado/status`) anotado com `@legado`
+
+#### Consolidação do Certificado
+- Endpoint oficial: `GET /certificados/empresas/{id}/certificado/status` via `certificadoService.obterStatus()`
+- `ClienteSelector` inline (~175 linhas) substituído pelo canônico em `src/components/BuscadorNotas/`
+- `statusCertificado` agora alimentado pelo `certificadoService`, com mapeamento explícito de status
+
+#### Extração do Drive
+- `NotaDrive`, `buscarNotasDrive()`, `sincronizarDrive()` movidos para `driveService.ts`
+- `Invoices.tsx` e `ClientDashboard.tsx`: imports atualizados para `driveService`
+- `notaFiscalService.ts` agora trata apenas busca SEFAZ/cache
+
+#### Bugfixes no Buscador
+- Filtros client-side implementados via `useMemo`: tipo, situação, período, texto livre
+- `FonteDadosIndicador` adicionado na tabela de resultados (exibe `Cache` ou `SEFAZ`)
+- Opções duplicadas no select de Tipo de Nota removidas
+- Botão "Carregar Mais" condicionado à ausência de filtros ativos
+
+---
+
 ## [v2.0.0] - 2026-02-09
 
 ### 🎉 Funcionalidades Novas
