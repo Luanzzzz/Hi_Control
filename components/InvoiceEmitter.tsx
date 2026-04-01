@@ -196,6 +196,12 @@ export const InvoiceEmitter: React.FC = () => {
       setDestinatarioNome('');
       setNumeroNf('');
       setCertificadoSenha('');
+      setDestinatarioLogradouro('');
+      setDestinatarioNumero('');
+      setDestinatarioBairro('');
+      setDestinatarioCep('');
+      setDestinatarioCidade('');
+      setDestinatarioUf('');
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } };
       setStatus('error');
