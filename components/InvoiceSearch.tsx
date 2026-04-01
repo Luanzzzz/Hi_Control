@@ -107,7 +107,7 @@ export const InvoiceSearch: React.FC = () => {
 
   // Estados da API
   const [invoices, setInvoices] = useState<NotaFiscal[]>([]);
-  const [fonteResultado, setFonteResultado] = useState<'cache' | 'sefaz' | null>(null);
+  const [fonteResultado, setFonteResultado] = useState<'cache' | 'sefaz' | 'banco_local' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
@@ -266,8 +266,13 @@ export const InvoiceSearch: React.FC = () => {
       }
 
       // Feedback de sucesso ao usuário
-      const icone = resultado.fonte === 'cache' ? '💾' : '🌐';
-      const origem = resultado.fonte === 'cache' ? 'cache local' : 'SEFAZ';
+      const origemMap: Record<string, string> = {
+        cache: 'cache local',
+        banco_local: 'banco local',
+        sefaz: 'SEFAZ',
+      };
+      const icone = resultado.fonte === 'cache' ? '💾' : resultado.fonte === 'banco_local' ? '🗄️' : '🌐';
+      const origem = origemMap[resultado.fonte] ?? resultado.fonte;
       console.log(`${icone} ${resultado.total_notas} notas encontradas (${origem})`);
     } catch (err: any) {
       const mensagemErro = err.message || 'Erro ao buscar notas fiscais. Tente novamente.';

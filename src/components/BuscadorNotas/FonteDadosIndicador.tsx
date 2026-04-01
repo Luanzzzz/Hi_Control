@@ -7,7 +7,7 @@ import React from 'react';
 import { Database, Cloud, Clock } from 'lucide-react';
 
 interface FonteDadosIndicadorProps {
-    fonte: 'cache' | 'sefaz' | null;
+    fonte: 'cache' | 'sefaz' | 'banco_local' | null;
     cachedAt?: string;
     className?: string;
 }
@@ -20,29 +20,38 @@ export function FonteDadosIndicador({
     if (!fonte) return null;
 
     const isCache = fonte === 'cache';
-    const Icon = isCache ? Database : Cloud;
+    const isBancoLocal = fonte === 'banco_local';
+    const Icon = isCache || isBancoLocal ? Database : Cloud;
 
     // Formatar tempo do cache
     const tempoCache = cachedAt ? formatarTempoRelativo(cachedAt) : null;
+
+    const colorClass = isCache
+        ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+        : isBancoLocal
+        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+
+    const titleText = isCache
+        ? `Dados do cache local${tempoCache ? ` (${tempoCache})` : ''}`
+        : isBancoLocal
+        ? 'Dados do banco de dados local'
+        : 'Dados consultados diretamente na SEFAZ';
+
+    const label = isCache ? 'Cache' : isBancoLocal ? 'Banco Local' : 'SEFAZ';
 
     return (
         <div
             className={`
         inline-flex items-center gap-2 px-3 py-1.5
-        ${isCache
-                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                }
+        ${colorClass}
         border rounded-full text-sm font-medium
         ${className}
       `}
-            title={isCache
-                ? `Dados do cache local${tempoCache ? ` (${tempoCache})` : ''}`
-                : 'Dados consultados diretamente na SEFAZ'
-            }
+            title={titleText}
         >
             <Icon size={16} />
-            <span>{isCache ? 'Cache' : 'SEFAZ'}</span>
+            <span>{label}</span>
 
             {isCache && tempoCache && (
                 <span className="flex items-center gap-1 text-xs opacity-75">

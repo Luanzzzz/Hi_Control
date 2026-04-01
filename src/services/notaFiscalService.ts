@@ -236,7 +236,7 @@ export interface BuscarNotasEmpresaRequest {
 
 export interface BuscarNotasEmpresaResponse {
   success: boolean;
-  fonte: 'cache' | 'sefaz';
+  fonte: 'cache' | 'sefaz' | 'banco_local';
   empresa_id: string;
   certificado_status: string;
   certificado_usado: string;

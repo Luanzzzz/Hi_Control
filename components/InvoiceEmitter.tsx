@@ -6,12 +6,13 @@ import {
   DollarSign,
   FileText,
   Send,
-  Save,
   Trash2,
   Plus,
   Loader2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  MapPin,
 } from 'lucide-react';
 import api from '../src/services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -48,11 +49,22 @@ export const InvoiceEmitter: React.FC = () => {
   const [status, setStatus] = useState<EmissaoStatus>('idle');
   const [statusMsg, setStatusMsg] = useState('');
 
+  // Identificação da nota
+  const [numeroNf, setNumeroNf] = useState('');
+  const [serie, setSerie] = useState('1');
+
+  // Certificado digital (nunca persiste)
+  const [certificadoSenha, setCertificadoSenha] = useState('');
+
   // Dados do destinatário
   const [destinatarioCnpj, setDestinatarioCnpj] = useState('');
   const [destinatarioNome, setDestinatarioNome] = useState('');
+  const [destinatarioLogradouro, setDestinatarioLogradouro] = useState('');
+  const [destinatarioNumero, setDestinatarioNumero] = useState('');
+  const [destinatarioBairro, setDestinatarioBairro] = useState('');
   const [destinatarioCep, setDestinatarioCep] = useState('');
   const [destinatarioCidade, setDestinatarioCidade] = useState('');
+  const [destinatarioUf, setDestinatarioUf] = useState('');
   const [naturezaOperacao, setNaturezaOperacao] = useState('Venda de mercadoria');
 
   // Novo item
@@ -110,6 +122,16 @@ export const InvoiceEmitter: React.FC = () => {
       setStatusMsg('Selecione uma empresa emitente.');
       return;
     }
+    if (!certificadoSenha) {
+      setStatus('error');
+      setStatusMsg('Informe a senha do certificado digital.');
+      return;
+    }
+    if (!numeroNf) {
+      setStatus('error');
+      setStatusMsg('Informe o número da nota fiscal.');
+      return;
+    }
     if (items.length === 0) {
       setStatus('error');
       setStatusMsg('Adicione pelo menos um produto/serviço.');
@@ -120,31 +142,50 @@ export const InvoiceEmitter: React.FC = () => {
     setStatusMsg('');
 
     try {
+      const cnpjCpfLimpo = destinatarioCnpj.replace(/\D/g, '');
+      const isCpf = cnpjCpfLimpo.length === 11;
+
       const payload = {
         empresa_id: empresaId,
+        certificado_senha: certificadoSenha,
+        numero_nf: numeroNf,
+        serie: serie,
+        modelo: '55',
+        tipo_operacao: '1', // Saída
+        data_emissao: new Date().toISOString(),
+        ambiente: '2', // homologação
         natureza_operacao: naturezaOperacao,
         destinatario: {
-          cnpj_cpf: destinatarioCnpj.replace(/\D/g, ''),
+          [isCpf ? 'cpf' : 'cnpj']: cnpjCpfLimpo,
           nome: destinatarioNome,
-          cep: destinatarioCep.replace(/\D/g, ''),
+          logradouro: destinatarioLogradouro,
+          numero: destinatarioNumero,
+          bairro: destinatarioBairro,
           municipio: destinatarioCidade,
+          uf: destinatarioUf.toUpperCase(),
+          cep: destinatarioCep.replace(/\D/g, ''),
         },
-        itens: items.map((item) => ({
-          codigo: item.codigo,
+        itens: items.map((item, idx) => ({
+          numero_item: idx + 1,
+          codigo_produto: item.codigo,
           descricao: item.descricao,
-          quantidade: item.quantidade,
-          valor_unitario: item.valorUnitario,
-          valor_total: item.valorTotal,
           ncm: '00000000',
           cfop: '5102',
-          unidade: 'UN',
-          icms_cst: '00',
-          icms_aliquota: 12,
-          pis_cst: '07',
-          cofins_cst: '07',
+          unidade_comercial: 'UN',
+          quantidade_comercial: item.quantidade,
+          valor_unitario_comercial: item.valorUnitario,
+          valor_total_bruto: item.valorTotal,
+          icms: {
+            origem: '0',
+            cst: '00',
+            base_calculo: item.valorTotal,
+            aliquota: 12,
+            valor: parseFloat((item.valorTotal * 0.12).toFixed(2)),
+          },
+          pis: { cst: '07', base_calculo: 0, aliquota: 0, valor: 0 },
+          cofins: { cst: '07', base_calculo: 0, aliquota: 0, valor: 0 },
         })),
-        valor_total: subtotal,
-        ambiente: 2, // homologação
+        transporte: { modalidade_frete: 9 },
       };
 
       await api.post('/nfe/autorizar', payload);
@@ -153,6 +194,8 @@ export const InvoiceEmitter: React.FC = () => {
       setItems([]);
       setDestinatarioCnpj('');
       setDestinatarioNome('');
+      setNumeroNf('');
+      setCertificadoSenha('');
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } };
       setStatus('error');
@@ -218,20 +261,66 @@ export const InvoiceEmitter: React.FC = () => {
               <Building2 size={16} className="text-hc-purple-light" />
               Empresa Emitente
             </h2>
-            <select
-              value={empresaId}
-              onChange={(e) => setEmpresaId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
-            >
-              {empresas.length === 0 && (
-                <option value="">Nenhuma empresa cadastrada</option>
-              )}
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.razao_social} — {e.cnpj}
-                </option>
-              ))}
-            </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <select
+                  value={empresaId}
+                  onChange={(e) => setEmpresaId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                >
+                  {empresas.length === 0 && (
+                    <option value="">Nenhuma empresa cadastrada</option>
+                  )}
+                  {empresas.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.razao_social} — {e.cnpj}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-hc-muted mb-1">Número da NF-e</label>
+                <input
+                  type="text"
+                  placeholder="Ex: 1"
+                  value={numeroNf}
+                  onChange={(e) => setNumeroNf(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-hc-muted mb-1">Série</label>
+                <input
+                  type="text"
+                  placeholder="1"
+                  value={serie}
+                  onChange={(e) => setSerie(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Certificado Digital */}
+          <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+            <h2 className="text-sm font-semibold font-display text-hc-text mb-4 flex items-center gap-2">
+              <Lock size={16} className="text-hc-purple-light" />
+              Certificado Digital
+            </h2>
+            <div>
+              <label className="block text-xs font-medium text-hc-muted mb-1">Senha do Certificado A1</label>
+              <input
+                type="password"
+                placeholder="Senha do certificado digital"
+                value={certificadoSenha}
+                onChange={(e) => setCertificadoSenha(e.target.value)}
+                className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                autoComplete="off"
+              />
+              <p className="text-xs text-hc-muted mt-1">
+                A senha não é armazenada e é usada apenas para assinar esta nota.
+              </p>
+            </div>
           </div>
 
           {/* Natureza da Operação */}
@@ -260,7 +349,7 @@ export const InvoiceEmitter: React.FC = () => {
                 <label className="block text-xs font-medium text-hc-muted mb-1">CNPJ/CPF</label>
                 <input
                   type="text"
-                  placeholder="00.000.000/0000-00"
+                  placeholder="00.000.000/0000-00 ou 000.000.000-00"
                   value={destinatarioCnpj}
                   onChange={(e) => setDestinatarioCnpj(e.target.value)}
                   className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
@@ -276,6 +365,46 @@ export const InvoiceEmitter: React.FC = () => {
                   className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Endereço do Destinatário */}
+          <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+            <h2 className="text-sm font-semibold font-display text-hc-text mb-4 flex items-center gap-2">
+              <MapPin size={16} className="text-hc-purple-light" />
+              Endereço do Destinatário
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-hc-muted mb-1">Logradouro</label>
+                <input
+                  type="text"
+                  placeholder="Rua, Avenida, etc."
+                  value={destinatarioLogradouro}
+                  onChange={(e) => setDestinatarioLogradouro(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-hc-muted mb-1">Número</label>
+                <input
+                  type="text"
+                  placeholder="123"
+                  value={destinatarioNumero}
+                  onChange={(e) => setDestinatarioNumero(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-hc-muted mb-1">Bairro</label>
+                <input
+                  type="text"
+                  placeholder="Bairro"
+                  value={destinatarioBairro}
+                  onChange={(e) => setDestinatarioBairro(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                />
+              </div>
               <div>
                 <label className="block text-xs font-medium text-hc-muted mb-1">CEP</label>
                 <input
@@ -287,12 +416,23 @@ export const InvoiceEmitter: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-hc-muted mb-1">Cidade/UF</label>
+                <label className="block text-xs font-medium text-hc-muted mb-1">Município</label>
                 <input
                   type="text"
-                  placeholder="São Paulo - SP"
+                  placeholder="São Paulo"
                   value={destinatarioCidade}
                   onChange={(e) => setDestinatarioCidade(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-hc-muted mb-1">UF</label>
+                <input
+                  type="text"
+                  placeholder="SP"
+                  maxLength={2}
+                  value={destinatarioUf}
+                  onChange={(e) => setDestinatarioUf(e.target.value.toUpperCase())}
                   className="w-full px-4 py-2.5 bg-hc-surface border border-hc-border rounded-lg text-hc-text text-sm focus:outline-none focus:ring-2 focus:ring-hc-purple/40"
                 />
               </div>
