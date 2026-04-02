@@ -36,14 +36,14 @@ export const KPICard: React.FC<KPICardProps> = ({
 
   return (
     <div
-      className="bg-hc-card border border-hc-border rounded-xl p-4 flex flex-col gap-2"
-      style={{ borderTop: `2px solid ${accentVar}` }}
+      className="bg-hc-card border border-hc-border rounded-xl p-4 flex flex-col gap-2 transition-shadow duration-200 hover:shadow-md"
+      style={{ borderTop: `2px solid ${accentVar}`, boxShadow: 'var(--hc-shadow)' }}
       aria-label={`KPI: ${label}`}
     >
-      <p className="text-[11px] text-hc-muted uppercase tracking-wide">{label}</p>
-      <p className="text-xl font-semibold font-display text-hc-text">{value}</p>
+      <p className="text-[11px] text-hc-muted uppercase tracking-widest font-medium">{label}</p>
+      <p className="text-2xl font-semibold font-display text-hc-text leading-none">{value}</p>
       {delta && (
-        <p className={`text-[11px] ${deltaColorMap[deltaType]}`}>{delta}</p>
+        <p className={`text-[11px] font-medium ${deltaColorMap[deltaType]}`}>{delta}</p>
       )}
       {sparkPoints.length > 0 && (
         <div className="mt-1" aria-hidden="true">

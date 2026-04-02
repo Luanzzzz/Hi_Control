@@ -1,57 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import InputMask from 'react-input-mask';
-import { Plus, Search, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, ShieldCheck, ShieldOff, ShieldAlert, AlertTriangle, Mail } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Building, MapPin, Shield, Upload, FileCheck, AlertCircle, FileSearch, Mail } from 'lucide-react';
 import { empresaService, Empresa, EmpresaCreate, CnpjCheckResponse } from '../services/empresaService';
 import { fileToBase64, validateFileSize, validateFileExtension } from '../utils/fileUtils';
 import { formatDate } from '../utils/dateUtils';
 import { ConfiguracaoEmail } from './ConfiguracaoEmail';
 import { ConfiguracaoDrive } from './ConfiguracaoDrive';
-
-// ===== Badge de Certificado Simples (inline) =====
-interface SimpleCertBadgeProps {
-    certificadoValidade?: string | null;
-}
-
-const SimpleCertBadge: React.FC<SimpleCertBadgeProps> = ({ certificadoValidade }) => {
-    if (!certificadoValidade) {
-        return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400 border border-gray-500/30 rounded-full text-xs font-medium">
-                <ShieldAlert size={14} />
-                <span>Sem Cert.</span>
-            </span>
-        );
-    }
-
-    const dataValidade = new Date(certificadoValidade);
-    const hoje = new Date();
-    const diasRestantes = Math.ceil((dataValidade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diasRestantes <= 0) {
-        return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full text-xs font-medium">
-                <ShieldOff size={14} />
-                <span>Vencido</span>
-            </span>
-        );
-    }
-
-    if (diasRestantes <= 30) {
-        return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full text-xs font-medium">
-                <AlertTriangle size={14} />
-                <span>{diasRestantes}d</span>
-            </span>
-        );
-    }
-
-    return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-xs font-medium">
-            <ShieldCheck size={14} />
-            <span>Ativo</span>
-        </span>
-    );
-};
+import { Button, PageHeader, SearchBar, CertBadge, InlineAlert } from '../src/components/ui';
 
 // Props interface para receber função de navegação do App.tsx
 interface ClientsProps {
@@ -340,105 +296,117 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
 
     return (
         <div className="p-6 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Gestão de Clientes</h2>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                >
-                    <Plus size={20} />
-                    Novo Cliente
-                </button>
-            </div>
+            <PageHeader
+                title="Gestão de Clientes"
+                subtitle={`${filteredClients.length} cliente${filteredClients.length !== 1 ? 's' : ''} cadastrado${filteredClients.length !== 1 ? 's' : ''}`}
+                actions={
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleOpenModal()}
+                        leftIcon={<Plus size={14} />}
+                    >
+                        Novo Cliente
+                    </Button>
+                }
+            />
 
             {/* Search */}
-            <div className="mb-6 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                    type="text"
-                    placeholder="Buscar por Razão Social ou CNPJ..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                />
-            </div>
+            <SearchBar
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Buscar por Razão Social ou CNPJ..."
+                className="mb-5"
+            />
 
             {/* List */}
             <div className="flex-1 overflow-y-auto">
                 {loading ? (
-                    <div className="text-center py-10 text-gray-500">Carregando...</div>
+                    <div className="flex items-center justify-center py-12">
+                        <div className="w-6 h-6 border-2 border-hc-purple border-t-transparent rounded-full animate-spin" />
+                    </div>
+                ) : filteredClients.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <Building size={32} className="text-hc-muted" />
+                        <p className="text-sm text-hc-muted">
+                            {searchTerm ? 'Nenhum cliente encontrado para essa busca.' : 'Nenhum cliente cadastrado ainda.'}
+                        </p>
+                        {!searchTerm && (
+                            <Button variant="primary" size="sm" onClick={() => handleOpenModal()} leftIcon={<Plus size={13} />}>
+                                Cadastrar primeiro cliente
+                            </Button>
+                        )}
+                    </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredClients.map(client => (
                             <div
                                 key={client.id}
-                                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 flex flex-col hover:shadow-lg hover:border-primary-500/50 transition-all cursor-pointer group"
+                                className="bg-hc-surface rounded-xl border border-hc-border p-5 flex flex-col hover:border-hc-purple/40 transition-all cursor-pointer group"
+                                style={{ boxShadow: 'var(--hc-shadow)' }}
                                 onClick={() => irParaDetalheCliente(client.id, client.razao_social)}
                             >
                                 {/* Header do Card */}
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-lg group-hover:bg-primary-200 dark:group-hover:bg-primary-800/40 transition-colors">
-                                            <Building size={24} />
+                                        <div className="p-2 bg-hc-purple-dim text-hc-purple-light rounded-lg transition-colors">
+                                            <Building size={20} />
                                         </div>
-                                        {/* Badge de Status do Certificado */}
-                                        <SimpleCertBadge
-                                            certificadoValidade={client.certificado_validade}
-                                        />
+                                        <CertBadge validade={client.certificado_validade} />
                                     </div>
 
-                                    {/* Ações - com stopPropagation */}
-                                    <div
-                                        className="flex gap-2"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <button
+                                    {/* Ações */}
+                                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => handleOpenModal(client)}
-                                            className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                             title="Editar cliente"
+                                            className="p-1.5 h-auto"
                                         >
-                                            <Edit2 size={18} />
-                                        </button>
-                                        <button
+                                            <Edit2 size={15} />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => handleDelete(client.id)}
-                                            className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                                             title="Excluir cliente"
+                                            className="p-1.5 h-auto hover:text-hc-red hover:bg-hc-red/10"
                                         >
-                                            <Trash2 size={18} />
-                                        </button>
+                                            <Trash2 size={15} />
+                                        </Button>
                                     </div>
                                 </div>
 
                                 {/* Informações da Empresa */}
-                                <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-1 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={client.razao_social}>
+                                <h3 className="font-semibold text-hc-text text-base mb-0.5 truncate group-hover:text-hc-purple transition-colors" title={client.razao_social}>
                                     {client.razao_social}
                                 </h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{client.nome_fantasia || '-'}</p>
+                                <p className="text-xs text-hc-muted mb-4">{client.nome_fantasia || '-'}</p>
 
-                                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mt-auto">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-mono bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded text-xs">CNPJ: {client.cnpj}</span>
-                                    </div>
+                                <div className="space-y-1.5 mt-auto">
+                                    <span className="font-mono bg-hc-card border border-hc-border px-2 py-0.5 rounded text-[11px] text-hc-muted">
+                                        {client.cnpj}
+                                    </span>
                                     {client.cidade && (
-                                        <div className="flex items-center gap-2 text-gray-500">
-                                            <MapPin size={14} />
+                                        <div className="flex items-center gap-1.5 text-xs text-hc-muted">
+                                            <MapPin size={12} />
                                             {client.cidade}/{client.estado}
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Botão de Detalhes */}
-                                <div
-                                    className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <button
+                                <div className="mt-4 pt-4 border-t border-hc-border" onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
                                         onClick={() => irParaDetalheCliente(client.id, client.razao_social)}
-                                        className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-medium"
+                                        leftIcon={<FileSearch size={13} />}
+                                        className="w-full justify-center"
                                     >
-                                        <FileSearch size={16} />
-                                        Ver Dashboard do Cliente
-                                    </button>
+                                        Ver Dashboard
+                                    </Button>
                                 </div>
                             </div>
                         ))}
@@ -448,33 +416,30 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-hc-surface rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-hc-border">
+                        <div className="flex justify-between items-center p-5 border-b border-hc-border sticky top-0 bg-hc-surface z-10">
+                            <h3 className="text-base font-semibold font-display text-hc-text">
                                 {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
                             </h3>
-                            <button onClick={handleCloseModal} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200">
-                                <X size={24} />
-                            </button>
+                            <Button variant="ghost" size="sm" onClick={handleCloseModal} className="p-1.5 h-auto">
+                                <X size={16} />
+                            </Button>
                         </div>
 
                         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
                             {/* Form-level message (success/error/warning) */}
                             {formMessage && (
-                                <div className={`p-4 rounded-lg text-sm flex items-start gap-3 ${formMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' :
-                                    formMessage.type === 'info' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800' :
-                                        formMessage.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800' :
-                                            'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
-                                    }`}>
-                                    <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-                                    <span>{formMessage.text}</span>
-                                </div>
+                                <InlineAlert
+                                    variant={formMessage.type === 'warning' ? 'warning' : formMessage.type === 'info' ? 'info' : formMessage.type === 'success' ? 'success' : 'error'}
+                                    message={formMessage.text}
+                                    onDismiss={() => setFormMessage(null)}
+                                />
                             )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="col-span-2 md:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    <label className="block text-sm font-medium text-hc-text mb-1">
                                         CNPJ *
                                         {checkingCnpj && <span className="ml-2 text-xs text-gray-400">Verificando...</span>}
                                     </label>
@@ -482,20 +447,20 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                         mask="99.999.999/9999-99"
                                         {...register('cnpj', { required: true })}
                                         onBlur={handleCnpjBlur}
-                                        className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                        className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none"
                                     />
                                 </div>
                                 <div className="col-span-2 md:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social *</label>
-                                    <input type="text" {...register('razao_social', { required: true })} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2" />
+                                    <label className="block text-sm font-medium text-hc-text mb-1">Razão Social *</label>
+                                    <input type="text" {...register('razao_social', { required: true })} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
                                 </div>
                                 <div className="col-span-2 md:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Fantasia</label>
-                                    <input type="text" {...register('nome_fantasia')} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2" />
+                                    <label className="block text-sm font-medium text-hc-text mb-1">Nome Fantasia</label>
+                                    <input type="text" {...register('nome_fantasia')} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
                                 </div>
                                 <div className="col-span-2 md:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Regime Tributário</label>
-                                    <select {...register('regime_tributario')} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2">
+                                    <label className="block text-sm font-medium text-hc-text mb-1">Regime Tributário</label>
+                                    <select {...register('regime_tributario')} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none">
                                         <option value="">Selecione...</option>
                                         <option value="simples_nacional">Simples Nacional</option>
                                         <option value="lucro_presumido">Lucro Presumido</option>
@@ -505,58 +470,60 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
 
                                 {/* Inscricoes */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inscrição Estadual</label>
-                                    <input type="text" {...register('inscricao_estadual')} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2" />
+                                    <label className="block text-sm font-medium text-hc-text mb-1">Inscrição Estadual</label>
+                                    <input type="text" {...register('inscricao_estadual')} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inscrição Municipal</label>
-                                    <input type="text" {...register('inscricao_municipal')} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2" />
+                                    <label className="block text-sm font-medium text-hc-text mb-1">Inscrição Municipal</label>
+                                    <input type="text" {...register('inscricao_municipal')} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
                                 </div>
 
                                 {/* Address */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
-                                    <InputMask mask="99999-999" {...register('cep')} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2" />
+                                    <label className="block text-sm font-medium text-hc-text mb-1">CEP</label>
+                                    <InputMask mask="99999-999" {...register('cep')} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
                                 </div>
                                 <div className="col-span-2 md:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
-                                    <input type="text" {...register('cidade')} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2" />
+                                    <label className="block text-sm font-medium text-hc-text mb-1">Cidade</label>
+                                    <input type="text" {...register('cidade')} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado (UF)</label>
-                                    <input type="text" maxLength={2} {...register('estado')} className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2 uppercase" />
+                                    <label className="block text-sm font-medium text-hc-text mb-1">Estado (UF)</label>
+                                    <input type="text" maxLength={2} {...register('estado')} className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none uppercase" />
                                 </div>
                             </div>
 
                             {/* Fiscal Data & Certificate Section */}
-                            <div className="col-span-2 border-t border-gray-200 dark:border-slate-700 pt-6 mt-6">
+                            <div className="col-span-2 border-t border-hc-border pt-5 mt-2">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <Shield className="text-primary-600" size={20} />
-                                    <h4 className="text-md font-semibold text-gray-900 dark:text-white">
+                                    <Shield className="text-hc-purple" size={18} />
+                                    <h4 className="text-sm font-semibold text-hc-text">
                                         Dados Fiscais e Certificado Digital
                                     </h4>
                                 </div>
 
                                 {certMessage && (
-                                    <div className={`mb-4 p-3 rounded-lg text-sm ${certMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'}`}>
-                                        {certMessage.text}
+                                    <div className="mb-4">
+                                        <InlineAlert
+                                            variant={certMessage.type === 'success' ? 'success' : 'error'}
+                                            message={certMessage.text}
+                                            onDismiss={() => setCertMessage(null)}
+                                        />
                                     </div>
                                 )}
 
                                 {/* Certificate Status Display (if editing existing client with certificate) */}
                                 {editingClient?.certificado_validade && (
-                                    <div className="mb-4 bg-gray-50 dark:bg-slate-900 p-3 rounded-lg">
+                                    <div className="mb-4 bg-hc-card border border-hc-border p-3 rounded-lg">
                                         <div className="flex items-start gap-2">
-                                            <FileCheck size={18} className="text-green-600 dark:text-green-400 mt-0.5" />
+                                            <FileCheck size={16} className="text-hc-success mt-0.5" />
                                             <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                                    Certificado Cadastrado
-                                                </p>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                <p className="text-sm font-medium text-hc-text mb-1">Certificado Cadastrado</p>
+                                                <p className="text-xs text-hc-muted">
                                                     Válido até: {formatDate(editingClient.certificado_validade)}
                                                 </p>
                                                 {editingClient.certificado_titular && (
-                                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                                    <p className="text-xs text-hc-muted mt-0.5">
                                                         Titular: {editingClient.certificado_titular}
                                                     </p>
                                                 )}
@@ -577,7 +544,7 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                             onChange={handleCertificateFileChange}
                                             className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-900/30 dark:file:text-primary-400"
                                         />
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <p className="mt-1 text-xs text-hc-muted">
                                             Certificado digital A1 para busca automática de notas fiscais. Máximo 10MB.
                                         </p>
                                     </div>
@@ -588,7 +555,7 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                         Melhor deixar visível para ele saber que precisa por. 
                                     */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        <label className="block text-sm font-medium text-hc-text mb-1">
                                             Senha do Certificado
                                         </label>
                                         <input
@@ -597,9 +564,9 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                             onChange={(e) => setCertPassword(e.target.value)}
                                             placeholder="Digite a senha do certificado"
                                             disabled={!certFile}
-                                            className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <p className="mt-1 text-xs text-hc-muted">
                                             {certFile ? "A senha será validada no momento do envio." : "Selecione um arquivo .pfx ou .p12 para habilitar o campo de senha."}
                                         </p>
                                     </div>
@@ -614,20 +581,20 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                             </div>
 
                             {/* Seção CSC - Código de Segurança do Contribuinte para NFC-e */}
-                            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700">
+                            <div className="mt-2 pt-5 border-t border-hc-border">
                                 <div className="mb-4">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                        <Shield size={20} className="text-blue-600 dark:text-blue-400" />
+                                    <h3 className="text-sm font-semibold text-hc-text flex items-center gap-2">
+                                        <Shield size={16} className="text-hc-info" />
                                         CSC - Código de Segurança do Contribuinte
                                     </h3>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    <p className="text-xs text-hc-muted mt-1">
                                         Necessário para emissão de NFC-e (Cupom Fiscal Eletrônico). Obtenha esses dados no portal da SEFAZ.
                                     </p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        <label className="block text-sm font-medium text-hc-text mb-1">
                                             ID do CSC
                                         </label>
                                         <input
@@ -636,34 +603,34 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                             max="999999"
                                             {...register('csc_id')}
                                             placeholder="Ex: 1"
-                                            className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                            className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none"
                                         />
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <p className="mt-1 text-xs text-hc-muted">
                                             Identificador do CSC (número de 1 a 999999)
                                         </p>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        <label className="block text-sm font-medium text-hc-text mb-1">
                                             Token CSC
                                         </label>
                                         <input
                                             type="text"
                                             {...register('csc_token')}
                                             placeholder="Ex: A1B2C3D4E5F6..."
-                                            className="w-full rounded-lg border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white p-2"
+                                            className="w-full rounded-lg border-gray-300 bg-hc-surface border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none"
                                         />
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        <p className="mt-1 text-xs text-hc-muted">
                                             Token alfanumérico fornecido pela SEFAZ
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                                    <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                                    <div className="text-sm text-blue-800 dark:text-blue-300">
+                                <div className="mt-3 flex items-start gap-2 p-3 bg-hc-info/8 border border-hc-info/20 rounded-lg">
+                                    <AlertCircle size={15} className="text-hc-info flex-shrink-0 mt-0.5" />
+                                    <div className="text-xs text-hc-text">
                                         <p className="font-medium mb-1">Importante sobre o CSC:</p>
-                                        <ul className="list-disc list-inside space-y-0.5 text-xs">
+                                        <ul className="list-disc list-inside space-y-0.5 text-hc-muted">
                                             <li>O CSC é necessário apenas para emissão de NFC-e (Cupom Fiscal)</li>
                                             <li>Você pode configurar até 2 CSCs ativos simultâneos na SEFAZ</li>
                                             <li>Nunca compartilhe o token CSC com terceiros</li>
@@ -674,12 +641,12 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
 
                             {/* Seção Importação Automática - Email e Drive (apenas ao editar cliente) */}
                             {editingClient && (
-                                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700 space-y-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                        <Mail size={20} className="text-blue-600 dark:text-blue-400" />
+                                <div className="mt-2 pt-5 border-t border-hc-border space-y-6">
+                                    <h3 className="text-sm font-semibold text-hc-text flex items-center gap-2">
+                                        <Mail size={16} className="text-hc-info" />
                                         Importação Automática de Notas
                                     </h3>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    <p className="text-xs text-hc-muted -mt-4">
                                         Configure o email IMAP ou Google Drive deste cliente para importar XMLs fiscais automaticamente.
                                     </p>
                                     <ConfiguracaoEmail empresaId={editingClient.id} />
@@ -687,9 +654,9 @@ export const Clients: React.FC<ClientsProps> = ({ onNavigateToBuscador }) => {
                                 </div>
                             )}
 
-                            <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-slate-700">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
-                                <button type="submit" className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg">Salvar</button>
+                            <div className="flex justify-end gap-3 pt-5 border-t border-hc-border">
+                                <Button type="button" variant="ghost" size="md" onClick={handleCloseModal}>Cancelar</Button>
+                                <Button type="submit" variant="primary" size="md">Salvar</Button>
                             </div>
                         </form>
                     </div>

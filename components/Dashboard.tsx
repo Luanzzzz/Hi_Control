@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, PieChart, LineChart, TrendingUp, Loader2, RefreshCw, Plus } from 'lucide-react';
+import { Button, PageHeader } from '../src/components/ui';
 import {
   BarChart as ReBarChart,
   Bar,
@@ -222,41 +223,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
     <div className="p-6 bg-hc-bg min-h-full font-body">
 
       {/* Seção 1 — TopBar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-[22px] font-semibold font-display text-hc-text">Dashboard</h1>
-          <p className="text-[12px] text-hc-muted mt-0.5">
-            {metrics.ultimaSincronizacao
-              ? `Última sync: ${new Date(metrics.ultimaSincronizacao).toLocaleString('pt-BR', {
-                  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-                })}`
-              : 'Nunca sincronizado'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSincronizar}
-            disabled={syncing || loading}
-            aria-label="Sincronizar SEFAZ"
-            className="flex items-center gap-2 px-3 py-2 text-[12px] font-medium text-hc-accent border border-hc-border rounded-lg hover:bg-hc-card transition-colors disabled:opacity-50"
-          >
-            {syncing ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <RefreshCw size={14} />
-            )}
-            Sincronizar SEFAZ
-          </button>
-          <button
-            onClick={() => setView(ViewState.INVOICE_EMITTER)}
-            aria-label="Nova NF-e"
-            className="flex items-center gap-2 px-3 py-2 text-[12px] font-medium text-white bg-hc-purple hover:bg-hc-purple/90 rounded-lg transition-colors"
-          >
-            <Plus size={14} />
-            Nova NF-e
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle={
+          metrics.ultimaSincronizacao
+            ? `Última sync: ${new Date(metrics.ultimaSincronizacao).toLocaleString('pt-BR', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+              })}`
+            : 'Nunca sincronizado'
+        }
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSincronizar}
+              disabled={syncing || loading}
+              loading={syncing}
+              leftIcon={<RefreshCw size={13} />}
+              aria-label="Sincronizar SEFAZ"
+            >
+              Sincronizar SEFAZ
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setView(ViewState.INVOICE_EMITTER)}
+              leftIcon={<Plus size={13} />}
+              aria-label="Nova NF-e"
+            >
+              Nova NF-e
+            </Button>
+          </>
+        }
+      />
 
       {/* Seção 2 — KPI Grid */}
       {loading ? (

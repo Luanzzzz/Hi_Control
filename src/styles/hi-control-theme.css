@@ -13,6 +13,14 @@
   --hc-text: #1E1B4B;
   --hc-muted: #6B7280;
   --hc-accent: #7C3AED;
+  --hc-surface-input: #FFFFFF;
+  --hc-hover: rgba(124, 58, 237, 0.06);
+  --hc-success: #059669;
+  --hc-info: #2563EB;
+  --hc-focus-ring: rgba(124, 58, 237, 0.35);
+  --hc-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --hc-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --hc-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* Dark mode — ativado quando html.dark */
@@ -30,4 +38,12 @@ html.dark {
   --hc-text: #F1F0FF;
   --hc-muted: #8B85B0;
   --hc-accent: #C4B5FD;
+  --hc-surface-input: #1A1730;
+  --hc-hover: rgba(167, 139, 250, 0.08);
+  --hc-success: #10B981;
+  --hc-info: #3B82F6;
+  --hc-focus-ring: rgba(167, 139, 250, 0.4);
+  --hc-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --hc-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.25), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+  --hc-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
 }
