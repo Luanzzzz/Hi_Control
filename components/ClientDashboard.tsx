@@ -49,6 +49,7 @@ import { downloadDANFCE, downloadDACTE, downloadPDF } from '../src/services/fisc
 import type { NotaFiscal, TipoNotaFiscal } from '../src/types/notaFiscal';
 import { CORES_TIPO_NF } from '../src/types/notaFiscal';
 import { fileToBase64 } from '../utils/fileUtils';
+import { Button, SearchBar, InlineAlert, LoadingState, EmptyState } from '../src/components/ui';
 
 // Helper component
 const CalculatorIcon = ({ size }: { size: number }) => (
@@ -289,20 +290,21 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
   };
 
   if (loadingEmpresa) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <Loader2 className="animate-spin text-primary-500" size={40} />
-      </div>
-    );
+    return <LoadingState size="lg" message="Carregando empresa..." className="min-h-[400px]" />;
   }
 
   if (!empresa) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-red-500">Empresa não encontrada</p>
-        <button onClick={onBack} className="mt-4 text-primary-600 hover:underline flex items-center gap-2 mx-auto">
-          <ArrowLeft size={16} /> Voltar para lista
-        </button>
+      <div className="p-6">
+        <EmptyState
+          title="Empresa não encontrada"
+          description="Verifique se a empresa ainda existe no sistema."
+          action={
+            <Button variant="ghost" size="sm" onClick={onBack} leftIcon={<ArrowLeft size={14} />}>
+              Voltar para lista
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -339,25 +341,25 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
           </div>
           <button
             onClick={() => setShowCertModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm font-semibold border border-white/10"
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-xs font-semibold border border-white/10"
           >
-            <Shield size={16} />
-            Configurar Certificado
+            <Shield size={15} />
+            Certificado
           </button>
         </div>
       </div>
 
-      {/* 2. Histórico de Movimentação (Inspirado na Imagem 1) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <TrendingUp size={20} className="text-primary-500" />
+      {/* 2. Histórico de Movimentação */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-hc-surface rounded-xl p-5 border border-hc-border" style={{ boxShadow: 'var(--hc-shadow)' }}>
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-sm font-semibold text-hc-text flex items-center gap-2">
+              <TrendingUp size={16} className="text-hc-purple" />
               Histórico de Movimentação
             </h3>
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-              <button className="px-3 py-1 text-xs font-bold bg-white dark:bg-slate-700 shadow-sm rounded-md text-primary-600">Valor (R$)</button>
-              <button className="px-3 py-1 text-xs font-bold text-slate-500">Quantidade</button>
+            <div className="flex bg-hc-card border border-hc-border p-0.5 rounded-lg gap-0.5">
+              <button className="px-3 py-1 text-xs font-medium bg-hc-surface rounded-md text-hc-purple border border-hc-border" style={{ boxShadow: 'var(--hc-shadow-sm)' }}>Valor (R$)</button>
+              <button className="px-3 py-1 text-xs font-medium text-hc-muted hover:text-hc-text transition-colors">Qtd.</button>
             </div>
           </div>
           <div className="h-[300px] w-full">
@@ -377,25 +379,25 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
           </div>
         </div>
 
-        {/* Resumo RBA (Lado do gráfico na Imagem 1) */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+        {/* Resumo acumulado */}
+        <div className="bg-hc-surface rounded-xl p-5 border border-hc-border flex flex-col justify-between" style={{ boxShadow: 'var(--hc-shadow)' }}>
           <div>
-            <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-6 flex items-center gap-2">
-              <FileText size={16} />
+            <h3 className="text-[11px] font-semibold text-hc-muted uppercase tracking-wider mb-5 flex items-center gap-2">
+              <FileText size={13} />
               Total Acumulado 2026
             </h3>
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" /> Prestados
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-hc-muted flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-hc-info" /> Prestados
                   </span>
-                  <span className="font-bold text-slate-800 dark:text-white">{estatisticas.qtdPrestados} notas</span>
+                  <span className="font-medium text-hc-text">{estatisticas.qtdPrestados} notas</span>
                 </div>
-                <div className="text-2xl font-black text-blue-600">{formatCurrency(estatisticas.totalPrestados)}</div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                <div className="text-xl font-bold text-hc-info">{formatCurrency(estatisticas.totalPrestados)}</div>
+                <div className="w-full bg-hc-card h-1.5 rounded-full mt-2 overflow-hidden">
                   <div
-                    className="bg-blue-500 h-full"
+                    className="bg-hc-info h-full rounded-full"
                     style={{
                       width: `${estatisticas.totalPrestados + estatisticas.totalTomados > 0
                         ? (estatisticas.totalPrestados / (estatisticas.totalPrestados + estatisticas.totalTomados) * 100)
@@ -405,16 +407,16 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" /> Tomados
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-hc-muted flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-hc-amber" /> Tomados
                   </span>
-                  <span className="font-bold text-slate-800 dark:text-white">{estatisticas.qtdTomados} notas</span>
+                  <span className="font-medium text-hc-text">{estatisticas.qtdTomados} notas</span>
                 </div>
-                <div className="text-2xl font-black text-amber-600">{formatCurrency(estatisticas.totalTomados)}</div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                <div className="text-xl font-bold text-hc-amber">{formatCurrency(estatisticas.totalTomados)}</div>
+                <div className="w-full bg-hc-card h-1.5 rounded-full mt-2 overflow-hidden">
                   <div
-                    className="bg-amber-500 h-full"
+                    className="bg-hc-amber h-full rounded-full"
                     style={{
                       width: `${estatisticas.totalPrestados + estatisticas.totalTomados > 0
                         ? (estatisticas.totalTomados / (estatisticas.totalPrestados + estatisticas.totalTomados) * 100)
@@ -425,15 +427,15 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
               </div>
             </div>
           </div>
-          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-            <span className="text-sm font-bold text-slate-500 uppercase">Diferença (P - T)</span>
-            <span className="text-lg font-black text-emerald-500">{formatCurrency(estatisticas.totalPrestados - estatisticas.totalTomados)}</span>
+          <div className="mt-6 pt-4 border-t border-hc-border flex justify-between items-center">
+            <span className="text-xs font-medium text-hc-muted uppercase tracking-wide">Diferença</span>
+            <span className="text-base font-bold text-hc-success">{formatCurrency(estatisticas.totalPrestados - estatisticas.totalTomados)}</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Resumo do Período (Cards horizontais Imagem 1) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* 3. Resumo do Período */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           {
             label: 'Prestados',
@@ -484,125 +486,128 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
             bg: 'bg-slate-50'
           },
         ].map((item, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+          <div key={i} className="bg-hc-surface p-4 rounded-xl border border-hc-border" style={{ boxShadow: 'var(--hc-shadow-sm)' }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{item.label}</span>
-              <div className={`p-1.5 rounded-lg ${item.bg} dark:bg-slate-800 ${item.color}`}>
-                <item.icon size={14} />
+              <span className="text-[10px] font-semibold text-hc-muted uppercase tracking-wider">{item.label}</span>
+              <div className={`p-1.5 rounded-lg bg-hc-card ${item.color}`}>
+                <item.icon size={13} />
               </div>
             </div>
-            <div className="text-sm md:text-base font-black text-slate-800 dark:text-white">{item.value}</div>
-            <div className="text-[10px] text-slate-400 mt-1">{item.sub}</div>
+            <div className="text-sm font-bold text-hc-text">{item.value}</div>
+            <div className="text-[10px] text-hc-muted mt-0.5">{item.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* 4. Tabela de Notas Fiscais (Inspirado na Imagem 2) */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Notas Fiscais</h3>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Buscar nota, CNPJ, emissor..."
-                  className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <button
+      {/* 4. Tabela de Notas Fiscais */}
+      <div className="bg-hc-surface rounded-xl border border-hc-border overflow-hidden" style={{ boxShadow: 'var(--hc-shadow)' }}>
+        <div className="p-4 md:p-5 border-b border-hc-border">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-hc-text">Notas Fiscais</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <SearchBar
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Buscar nota, CNPJ, emissor..."
+                className="flex-1 md:w-56"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={handleSearchNotas}
                 disabled={loadingNotas}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                loading={loadingNotas}
+                leftIcon={<RefreshCw size={13} />}
               >
-                {loadingNotas ? <Loader2 className="animate-spin" size={14} /> : <RefreshCw size={14} />}
                 Sincronizar SEFAZ
-              </button>
+              </Button>
             </div>
           </div>
 
-          {/* Filtros Estilo Imagem 2 */}
-          <div className="flex flex-wrap items-center gap-4 mt-6">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Tipo:</span>
-              <select className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none cursor-pointer">
-                <option>Todos</option>
-                <option>Prestados</option>
-                <option>Tomados</option>
-              </select>
-            </div>
-            <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Status:</span>
-              <select className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none cursor-pointer">
-                <option>Ativa</option>
-                <option>Cancelada</option>
-              </select>
-            </div>
-            <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800" />
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Retenção:</span>
-              <select className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none cursor-pointer">
-                <option>Todas</option>
-                <option>Com Retenção</option>
-                <option>Sem Retenção</option>
-              </select>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-800 transition-all">
-                <Download size={14} /> EXPORTAR
-              </button>
+          {/* Filtros */}
+          <div className="flex flex-wrap items-center gap-4 mt-4">
+            {[
+              { label: 'Tipo', options: ['Todos', 'Prestados', 'Tomados'] },
+              { label: 'Status', options: ['Ativa', 'Cancelada'] },
+              { label: 'Retenção', options: ['Todas', 'Com Retenção', 'Sem Retenção'] },
+            ].map((filter, i, arr) => (
+              <React.Fragment key={filter.label}>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-hc-muted uppercase tracking-wide">{filter.label}:</span>
+                  <select className="bg-transparent text-xs font-medium text-hc-text outline-none cursor-pointer border-none">
+                    {filter.options.map(o => <option key={o}>{o}</option>)}
+                  </select>
+                </div>
+                {i < arr.length - 1 && <div className="h-3.5 w-px bg-hc-border" />}
+              </React.Fragment>
+            ))}
+            <div className="ml-auto">
+              <Button variant="ghost" size="sm" leftIcon={<Download size={12} />} className="text-[11px]">
+                Exportar
+              </Button>
             </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-400 font-bold uppercase tracking-wider">
+            <thead className="bg-hc-card/60 text-hc-muted font-semibold uppercase tracking-wide">
               <tr>
-                <th className="px-6 py-4">Emissão</th>
-                <th className="px-6 py-4">Competência</th>
-                <th className="px-6 py-4">Tipo</th>
-                <th className="px-6 py-4">Número</th>
-                <th className="px-6 py-4">Contraparte</th>
-                <th className="px-6 py-4">Município</th>
-                <th className="px-6 py-4 text-right">Valor</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-center">Ações</th>
+                <th className="px-5 py-3">Emissão</th>
+                <th className="px-5 py-3">Competência</th>
+                <th className="px-5 py-3">Tipo</th>
+                <th className="px-5 py-3">Número</th>
+                <th className="px-5 py-3">Contraparte</th>
+                <th className="px-5 py-3">Município</th>
+                <th className="px-5 py-3 text-right">Valor</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-center">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-hc-border">
               {loadingNotas ? (
-                <tr><td colSpan={9} className="px-6 py-12 text-center"><Loader2 className="animate-spin mx-auto text-primary-500" size={32} /></td></tr>
+                <tr>
+                  <td colSpan={9}>
+                    <LoadingState size="md" message="Buscando notas fiscais..." className="py-10" />
+                  </td>
+                </tr>
               ) : invoices.length === 0 ? (
-                <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-400 font-medium">Nenhuma nota encontrada para o período.</td></tr>
+                <tr>
+                  <td colSpan={9}>
+                    <EmptyState
+                      title="Nenhuma nota encontrada"
+                      description="Sincronize com o SEFAZ ou verifique os filtros aplicados."
+                    />
+                  </td>
+                </tr>
               ) : (
                 invoices.map((nota) => (
-                  <tr key={nota.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{new Date(nota.data_emissao).toLocaleDateString('pt-BR')}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{new Date(nota.data_emissao).toLocaleDateString('pt-BR')}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${nota.tipo_nf === 'NFe' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                  <tr key={nota.id} className="hover:bg-hc-hover transition-colors group">
+                    <td className="px-5 py-3.5 text-hc-muted">{new Date(nota.data_emissao).toLocaleDateString('pt-BR')}</td>
+                    <td className="px-5 py-3.5 text-hc-muted">{new Date(nota.data_emissao).toLocaleDateString('pt-BR')}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${nota.tipo_nf === 'NFe' ? 'bg-hc-info/15 text-hc-info' : 'bg-hc-amber/15 text-hc-amber'}`}>
                         {nota.tipo_nf === 'NFe' ? 'Prest.' : 'Tom.'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200">{nota.numero_nf}</td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">{nota.nome_emitente}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{nota.cnpj_emitente}</div>
+                    <td className="px-5 py-3.5 font-medium text-hc-text">{nota.numero_nf}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="font-medium text-hc-text truncate max-w-[180px]">{nota.nome_emitente}</div>
+                      <div className="text-[10px] text-hc-muted font-mono mt-0.5">{nota.cnpj_emitente}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Ribeirão das Neves</td>
-                    <td className="px-6 py-4 text-right font-black text-slate-800 dark:text-white">{formatCurrency(nota.valor_total)}</td>
-                    <td className="px-6 py-4">
-                      <span className="bg-emerald-500/10 text-emerald-500 text-[9px] px-2 py-0.5 rounded font-black uppercase">Ativa</span>
+                    <td className="px-5 py-3.5 text-hc-muted">—</td>
+                    <td className="px-5 py-3.5 text-right font-semibold text-hc-text">{formatCurrency(nota.valor_total)}</td>
+                    <td className="px-5 py-3.5">
+                      <span className="bg-hc-success/15 text-hc-success text-[9px] px-2 py-0.5 rounded font-bold uppercase">Ativa</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded shadow-sm border border-slate-200 dark:border-slate-600 text-slate-500"><Eye size={14} /></button>
-                        <button className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded shadow-sm border border-slate-200 dark:border-slate-600 text-slate-500"><Download size={14} /></button>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 hover:bg-hc-card rounded border border-hc-border text-hc-muted hover:text-hc-text transition-colors" aria-label="Visualizar">
+                          <Eye size={13} />
+                        </button>
+                        <button className="p-1.5 hover:bg-hc-card rounded border border-hc-border text-hc-muted hover:text-hc-text transition-colors" aria-label="Download">
+                          <Download size={13} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -613,39 +618,43 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
         </div>
       </div>
 
-      {/* Modal de Certificado (Inspirado na lógica anterior mas com design novo) */}
+      {/* Modal de Certificado */}
       {showCertModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
-              <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <ShieldCheck className="text-primary-500" />
-                CERTIFICADO DIGITAL A1
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-hc-surface rounded-xl w-full max-w-md overflow-hidden border border-hc-border" style={{ boxShadow: 'var(--hc-shadow-md)' }}>
+            <div className="px-5 py-4 border-b border-hc-border flex justify-between items-center bg-hc-card/40">
+              <h3 className="text-sm font-semibold text-hc-text flex items-center gap-2">
+                <ShieldCheck size={16} className="text-hc-purple" />
+                Certificado Digital A1
               </h3>
-              <button onClick={() => setShowCertModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><XCircle size={20} /></button>
+              <Button variant="ghost" size="sm" onClick={() => setShowCertModal(false)} className="p-1.5 h-auto">
+                <XCircle size={16} />
+              </Button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-5 space-y-4">
               {certStatus ? (
-                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
-                  <div className="p-2 bg-emerald-500 text-white rounded-full shadow-lg shadow-emerald-500/20"><CheckCircle size={24} /></div>
+                <div className="flex items-center gap-3 p-3 bg-hc-success/10 border border-hc-success/25 rounded-lg">
+                  <div className="p-1.5 bg-hc-success text-white rounded-full shrink-0"><CheckCircle size={16} /></div>
                   <div>
-                    <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Certificado Ativo</p>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Vence em {new Date(certStatus.validade!).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-xs font-semibold text-hc-success uppercase tracking-wide">Certificado Ativo</p>
+                    <p className="text-xs text-hc-text mt-0.5">Vence em {new Date(certStatus.validade!).toLocaleDateString('pt-BR')}</p>
                   </div>
                 </div>
               ) : (
-                <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-800 flex items-center gap-4">
-                  <div className="p-2 bg-amber-500 text-white rounded-full shadow-lg shadow-amber-500/20"><ShieldAlert size={24} /></div>
+                <div className="flex items-center gap-3 p-3 bg-hc-amber/10 border border-hc-amber/25 rounded-lg">
+                  <div className="p-1.5 bg-hc-amber text-white rounded-full shrink-0"><ShieldAlert size={16} /></div>
                   <div>
-                    <p className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Ação Necessária</p>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Nenhum certificado cadastrado.</p>
+                    <p className="text-xs font-semibold text-hc-amber uppercase tracking-wide">Ação Necessária</p>
+                    <p className="text-xs text-hc-text mt-0.5">Nenhum certificado cadastrado.</p>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Arquivo (.pfx / .p12)</label>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-hc-muted uppercase tracking-widest block mb-2">
+                    Arquivo (.pfx / .p12)
+                  </label>
                   <div className="relative group">
                     <input
                       type="file"
@@ -653,37 +662,43 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                       onChange={(e) => setCertFile(e.target.files?.[0] || null)}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    <div className="w-full p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center gap-2 group-hover:border-primary-500 transition-colors bg-slate-50 dark:bg-slate-950">
-                      <Upload size={24} className="text-slate-400 group-hover:text-primary-500" />
-                      <span className="text-xs font-bold text-slate-500">{certFile ? certFile.name : 'Clique ou arraste o arquivo'}</span>
+                    <div className="w-full p-4 border-2 border-dashed border-hc-border rounded-lg flex flex-col items-center justify-center gap-2 group-hover:border-hc-purple transition-colors bg-hc-card/30">
+                      <Upload size={20} className="text-hc-muted group-hover:text-hc-purple transition-colors" />
+                      <span className="text-xs text-hc-muted">{certFile ? certFile.name : 'Clique ou arraste o arquivo'}</span>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha do Certificado</label>
+                <div>
+                  <label className="text-[10px] font-semibold text-hc-muted uppercase tracking-widest block mb-2">
+                    Senha do Certificado
+                  </label>
                   <input
                     type="password"
                     placeholder="••••••••"
-                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                    className="w-full px-3 py-2 h-9 rounded-lg border border-hc-border bg-hc-surface text-hc-text text-sm focus:border-hc-purple outline-none transition-colors"
                     value={certPassword}
                     onChange={(e) => setCertPassword(e.target.value)}
                   />
                 </div>
 
                 {uploadResult && (
-                  <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${uploadResult.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                    {uploadResult.type === 'success' ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
-                    {uploadResult.message}
-                  </div>
+                  <InlineAlert
+                    variant={uploadResult.type === 'success' ? 'success' : 'error'}
+                    message={uploadResult.message}
+                    onDismiss={() => setUploadResult(null)}
+                  />
                 )}
 
-                <button
+                <Button
+                  variant="primary"
+                  size="md"
                   onClick={handleUploadCertificado}
-                  disabled={!certFile || !certPassword || uploadingCert}
-                  className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary-500/20 transition-all disabled:opacity-50 active:scale-[0.98]"
+                  disabled={!certFile || !certPassword}
+                  loading={uploadingCert}
+                  className="w-full justify-center"
                 >
-                  {uploadingCert ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Ativar Robô de Busca'}
-                </button>
+                  Ativar Robô de Busca
+                </Button>
               </div>
             </div>
           </div>

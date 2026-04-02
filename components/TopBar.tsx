@@ -28,7 +28,6 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
     setLoadingAi(true);
     setAiResponse('');
 
-    // Call Gemini Service
     const response = await generateAIResponse(aiPrompt, "O usuário está navegando no dashboard principal do Hi Control.");
 
     setAiResponse(response);
@@ -41,49 +40,50 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
   };
 
   return (
-    <header className="h-16 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
-      <div className="flex items-center gap-4">
-        {/* Botão único de toggle do sidebar (mobile) */}
+    <header className="h-14 bg-hc-surface border-b border-hc-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10" style={{ boxShadow: 'var(--hc-shadow-sm)' }}>
+      <div className="flex items-center gap-3">
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300"
+          className="p-2 rounded-lg hover:bg-hc-hover text-hc-muted hover:text-hc-text transition-colors"
+          aria-label="Toggle menu"
         >
-          <Menu size={24} />
+          <Menu size={20} />
         </button>
 
-        <div className="hidden md:flex items-center bg-gray-100 dark:bg-slate-700/50 rounded-lg px-3 py-2 w-64 lg:w-96">
-          <Search size={18} className="text-gray-400 mr-2" />
+        <div className="hidden md:flex items-center bg-hc-card border border-hc-border rounded-lg px-3 py-1.5 w-64 lg:w-80 gap-2">
+          <Search size={15} className="text-hc-muted shrink-0" />
           <input
             type="text"
-            placeholder="Buscar notas, clientes ou tarefas..."
-            className="bg-transparent border-none focus:outline-none text-sm w-full text-gray-700 dark:text-gray-200 placeholder-gray-400"
+            placeholder="Buscar notas, clientes..."
+            className="bg-transparent border-none focus:outline-none text-sm w-full text-hc-text placeholder:text-hc-muted"
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* AI Assistant Trigger */}
+      <div className="flex items-center gap-1">
+        {/* AI Assistant */}
         <div className="relative">
           <button
             onClick={() => setIsAiOpen(!isAiOpen)}
-            className={`p-2 rounded-full transition-colors ${isAiOpen ? 'bg-primary-100 text-primary-600' : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-primary-500'}`}
+            className={`p-2 rounded-lg transition-colors ${isAiOpen ? 'bg-hc-purple-dim text-hc-purple-light' : 'hover:bg-hc-hover text-hc-muted hover:text-hc-text'}`}
             title="Hi Intelligence AI"
+            aria-label="Hi Intelligence"
           >
-            <Sparkles size={20} />
+            <Sparkles size={18} />
           </button>
 
           {isAiOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 p-4 z-50">
-              <h3 className="text-sm font-bold text-primary-600 mb-2 flex items-center gap-2">
-                <Sparkles size={14} /> Hi Intelligence
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-hc-surface rounded-xl border border-hc-border p-4 z-50" style={{ boxShadow: 'var(--hc-shadow-md)' }}>
+              <h3 className="text-xs font-semibold text-hc-purple mb-2 flex items-center gap-1.5">
+                <Sparkles size={13} /> Hi Intelligence
               </h3>
-              <div className="h-48 overflow-y-auto mb-3 bg-gray-50 dark:bg-slate-900 rounded p-3 text-sm">
+              <div className="h-44 overflow-y-auto mb-3 bg-hc-card rounded-lg p-3 text-sm">
                 {loadingAi ? (
-                  <span className="text-gray-400 animate-pulse">Pensando...</span>
+                  <span className="text-hc-muted animate-pulse text-xs">Pensando...</span>
                 ) : aiResponse ? (
-                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">{aiResponse}</p>
+                  <p className="text-hc-text text-xs whitespace-pre-line">{aiResponse}</p>
                 ) : (
-                  <p className="text-gray-400 text-center mt-10">Como posso ajudar sua contabilidade hoje?</p>
+                  <p className="text-hc-muted text-xs text-center mt-8">Como posso ajudar sua contabilidade hoje?</p>
                 )}
               </div>
               <form onSubmit={handleAiSubmit} className="flex gap-2">
@@ -92,78 +92,82 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   placeholder="Pergunte à IA..."
-                  className="flex-1 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white"
+                  className="flex-1 text-xs rounded-lg border border-hc-border bg-hc-surface px-3 py-2 focus:border-hc-purple outline-none text-hc-text placeholder:text-hc-muted transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={loadingAi}
-                  className="bg-primary-600 hover:bg-primary-700 text-white p-2 rounded-lg disabled:opacity-50"
+                  className="bg-hc-purple hover:bg-hc-purple/90 text-white p-2 rounded-lg disabled:opacity-50 transition-colors"
                 >
-                  <Sparkles size={16} />
+                  <Sparkles size={14} />
                 </button>
               </form>
             </div>
           )}
         </div>
 
+        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300"
+          className="p-2 rounded-lg hover:bg-hc-hover text-hc-muted hover:text-hc-text transition-colors"
+          aria-label={isDarkMode ? 'Modo claro' : 'Modo escuro'}
         >
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300">
-          <Bell size={20} />
-          <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
+        {/* Notifications */}
+        <button
+          className="relative p-2 rounded-lg hover:bg-hc-hover text-hc-muted hover:text-hc-text transition-colors"
+          aria-label="Notificações"
+        >
+          <Bell size={18} />
+          <span className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-hc-red rounded-full border border-hc-surface" />
         </button>
 
-        {/* User Profile Dropdown */}
-        <div className="relative">
+        {/* User Profile */}
+        <div className="relative ml-1">
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="h-8 w-8 rounded-full bg-gradient-to-tr from-primary-500 to-purple-400 flex items-center justify-center text-white font-semibold text-sm cursor-pointer ring-2 ring-white dark:ring-slate-800 shadow-md hover:ring-primary-300 transition-all"
+            className="h-7 w-7 rounded-full bg-gradient-to-tr from-hc-purple to-primary-400 flex items-center justify-center text-white font-semibold text-xs cursor-pointer ring-2 ring-hc-surface hover:ring-hc-purple/50 transition-all"
+            aria-label="Perfil do usuário"
           >
             {user?.name ? user.name.charAt(0).toUpperCase() : 'HC'}
           </button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden z-50">
-              <div className="p-4 bg-gradient-to-br from-primary-600 to-purple-500">
+            <div className="absolute right-0 mt-2 w-60 bg-hc-surface rounded-xl border border-hc-border overflow-hidden z-50" style={{ boxShadow: 'var(--hc-shadow-md)' }}>
+              <div className="p-4 bg-gradient-to-br from-hc-purple to-primary-700">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-lg border-2 border-white/30">
-                    {user?.name ? user.name.charAt(0).toUpperCase() : <User size={20} />}
+                  <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-base border border-white/30">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : <User size={18} />}
                   </div>
                   <div>
-                    <p className="text-white font-medium">{user?.name || 'Usuário'}</p>
-                    <p className="text-primary-100 text-xs">{user?.email}</p>
+                    <p className="text-white text-sm font-medium leading-tight">{user?.name || 'Usuário'}</p>
+                    <p className="text-white/70 text-xs">{user?.email}</p>
                   </div>
                 </div>
-                <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                  {user?.plano === UserPlan.PREMIUM && <Crown size={14} className="text-yellow-300" />}
-                  <span className="text-white text-xs font-medium">
+                <div className="mt-3 inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
+                  {user?.plano === UserPlan.PREMIUM && <Crown size={12} className="text-yellow-300" />}
+                  <span className="text-white text-[11px] font-medium">
                     Plano {user?.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico'}
                   </span>
                 </div>
               </div>
 
-              <div className="p-2 space-y-1">
+              <div className="p-1.5 space-y-0.5">
                 <button
-                  onClick={() => {
-                    setIsConfigModalOpen(true);
-                    setIsProfileOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  onClick={() => { setIsConfigModalOpen(true); setIsProfileOpen(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-hc-text hover:bg-hc-hover rounded-lg transition-colors text-sm"
                 >
-                  <Settings size={18} />
-                  <span className="text-sm font-medium">Configurações da Contabilidade</span>
+                  <Settings size={16} className="text-hc-muted" />
+                  Configurações
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-hc-text hover:bg-hc-red/10 hover:text-hc-red rounded-lg transition-colors text-sm"
                 >
-                  <LogOut size={18} />
-                  <span className="text-sm font-medium">Sair</span>
+                  <LogOut size={16} className="text-hc-muted" />
+                  Sair
                 </button>
               </div>
             </div>
@@ -171,7 +175,6 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
         </div>
       </div>
 
-      {/* Perfil Contador Modal */}
       <PerfilContadorModal
         isOpen={isConfigModalOpen}
         onClose={() => setIsConfigModalOpen(false)}
