@@ -297,11 +297,11 @@ export const InvoiceSearch: React.FC = () => {
     try {
       const cnpjLimpo = empresaSelecionada.cnpj.replace(/\D/g, '');
 
-      // Buscar próxima página a partir do último NSU
+      // Buscar próxima página a partir do último NSU (sem +1: ultimo_nsu já é o próximo offset)
       const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
         cnpj: cnpjLimpo,
-        nsu_inicial: ultimoNSU + 1,  // Próximo NSU
-        max_notas: limitePorPagina  // Usar limite configurado
+        nsu_inicial: ultimoNSU,
+        max_notas: limitePorPagina
       });
 
       console.log(`✅ Página adicional carregada: +${resultado.notas.length} notas`);
