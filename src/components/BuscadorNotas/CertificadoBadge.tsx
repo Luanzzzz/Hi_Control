@@ -20,37 +20,37 @@ interface CertificadoBadgeProps {
 const STATUS_CONFIG = {
     ativo: {
         icon: ShieldCheck,
-        bgColor: 'bg-green-500/20',
-        textColor: 'text-green-400',
-        borderColor: 'border-green-500/30',
+        bgColor: 'bg-hc-green/15',
+        textColor: 'text-hc-green',
+        borderColor: 'border-hc-green/30',
         label: 'Ativo',
     },
     expirando: {
         icon: AlertTriangle,
-        bgColor: 'bg-yellow-500/20',
-        textColor: 'text-yellow-400',
-        borderColor: 'border-yellow-500/30',
+        bgColor: 'bg-hc-amber/15',
+        textColor: 'text-hc-amber',
+        borderColor: 'border-hc-amber/30',
         label: 'Expirando',
     },
     vencido: {
         icon: ShieldOff,
-        bgColor: 'bg-red-500/20',
-        textColor: 'text-red-400',
-        borderColor: 'border-red-500/30',
+        bgColor: 'bg-hc-red/15',
+        textColor: 'text-hc-red',
+        borderColor: 'border-hc-red/30',
         label: 'Vencido',
     },
     ausente: {
         icon: ShieldAlert,
-        bgColor: 'bg-gray-500/20',
-        textColor: 'text-gray-400',
-        borderColor: 'border-gray-500/30',
+        bgColor: 'bg-hc-muted/15',
+        textColor: 'text-hc-muted',
+        borderColor: 'border-hc-border',
         label: 'Ausente',
     },
     erro: {
         icon: Shield,
-        bgColor: 'bg-red-500/20',
-        textColor: 'text-red-400',
-        borderColor: 'border-red-500/30',
+        bgColor: 'bg-hc-red/15',
+        textColor: 'text-hc-red',
+        borderColor: 'border-hc-red/30',
         label: 'Erro',
     },
 };
@@ -108,7 +108,7 @@ export function CertificadoBadge({
                 <span
                     className={`
             inline-flex items-center gap-1 px-2 py-0.5
-            bg-blue-500/20 text-blue-400 border border-blue-500/30
+            bg-hc-info/15 text-hc-info border border-hc-info/30
             rounded-full text-xs font-medium
           `}
                     title="Usando certificado do contador como fallback"
@@ -185,7 +185,7 @@ export function CertificadoBadgeAsync({
             <span
                 className={`
                     inline-flex items-center ${sizeConfig.gap} ${sizeConfig.padding}
-                    bg-gray-500/20 text-gray-400 border border-gray-500/30
+                    bg-hc-card text-hc-muted border border-hc-border
                     rounded-full font-medium ${sizeConfig.fontSize}
                 `}
             >
@@ -201,7 +201,7 @@ export function CertificadoBadgeAsync({
             <span
                 className={`
                     inline-flex items-center ${sizeConfig.gap} ${sizeConfig.padding}
-                    bg-gray-500/20 text-gray-500 border border-gray-500/30
+                    bg-hc-card text-hc-muted border border-hc-border
                     rounded-full font-medium ${sizeConfig.fontSize}
                 `}
             >

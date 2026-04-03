@@ -9,19 +9,17 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Search,
   Filter,
   Calendar,
   FileText,
   Download,
   Eye,
   RefreshCw,
-  Star,
   Building2,
   Hash,
   Loader2,
-  AlertCircle,
 } from 'lucide-react';
+import { Button, PageHeader, SearchBar, InlineAlert, LoadingState, EmptyState } from '../src/components/ui';
 import { buscarNotasEmpresa, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
 import { downloadDANFCE, downloadDACTE, downloadPDF } from '../src/services/fiscalService';
 import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
@@ -418,43 +416,34 @@ export const InvoiceSearch: React.FC = () => {
     setError(null);
   };
 
+  const errorVariant = error?.startsWith('ℹ️') ? 'info' : error?.startsWith('⚠️') ? 'warning' : 'error';
+  const errorMessage = error?.replace(/^[ℹ️⚠️\s]+/, '');
+
+  const filterSelectClass = "w-full px-3 py-2 bg-hc-surface border border-hc-border rounded-lg focus:outline-none focus:border-hc-purple text-hc-text text-sm transition-colors";
+  const filterLabelClass = "block text-xs font-medium text-hc-muted mb-1.5";
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-            <Search className="text-primary-600 dark:text-primary-400" size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              Buscador de Notas Fiscais
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Consulte e gerencie suas notas fiscais eletrônicas
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Botão Buscar */}
-          <button
+      <PageHeader
+        title="Buscador de Notas Fiscais"
+        subtitle="Consulte e gerencie suas notas fiscais eletrônicas"
+        actions={
+          <Button
+            variant="primary"
+            leftIcon={<RefreshCw size={15} />}
+            loading={isLoading}
             onClick={handleSearch}
             disabled={isLoading}
-            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
-            {isLoading ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <RefreshCw size={16} />
-            )}
             {isLoading ? 'Buscando...' : 'Buscar'}
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      />
 
-      {/* SELETOR DE CLIENTE */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      {/* Seletor de empresa */}
+      <div className="bg-hc-surface rounded-xl border border-hc-border p-4" style={{ boxShadow: 'var(--hc-shadow)' }}>
+        <label className="block text-xs font-medium text-hc-muted mb-2">
           Selecione a Empresa
         </label>
         <ClienteSelector
@@ -466,42 +455,35 @@ export const InvoiceSearch: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 space-y-4">
-        {/* Search Bar */}
+      <div className="bg-hc-surface rounded-xl border border-hc-border p-4 space-y-4" style={{ boxShadow: 'var(--hc-shadow)' }}>
         <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar por número, chave de acesso, CNPJ ou nome do emissor..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
-            />
-          </div>
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Buscar por número, chave de acesso, CNPJ ou nome do emissor..."
+            className="flex-1"
+          />
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 ${showFilters
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-              }`}
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+              showFilters
+                ? 'bg-hc-purple text-white'
+                : 'bg-hc-card border border-hc-border text-hc-text hover:bg-hc-hover'
+            }`}
           >
-            <Filter size={18} />
+            <Filter size={16} />
             Filtros
           </button>
         </div>
 
-        {/* Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t border-hc-border">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Tipo de Nota
-              </label>
+              <label className={filterLabelClass}>Tipo de Nota</label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value as TipoNotaFiscal | 'TODAS')}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                className={filterSelectClass}
               >
                 <option value="TODAS">Todos os Tipos</option>
                 <option value="NFe">NF-e (Modelo 55)</option>
@@ -512,13 +494,11 @@ export const InvoiceSearch: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Status
-              </label>
+              <label className={filterLabelClass}>Status</label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as SituacaoNota | 'todas')}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                className={filterSelectClass}
               >
                 <option value="todas">Todas</option>
                 <option value="autorizada">Autorizada</option>
@@ -529,43 +509,37 @@ export const InvoiceSearch: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Data Inicial
-              </label>
+              <label className={filterLabelClass}>Data Inicial</label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-hc-muted pointer-events-none" size={14} />
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                  className={`${filterSelectClass} pl-9`}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Data Final
-              </label>
+              <label className={filterLabelClass}>Data Final</label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-hc-muted pointer-events-none" size={14} />
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                  className={`${filterSelectClass} pl-9`}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Notas por Página
-              </label>
+              <label className={filterLabelClass}>Notas por Página</label>
               <select
                 value={limitePorPagina}
                 onChange={(e) => setLimitePorPagina(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                className={filterSelectClass}
               >
                 <option value={10}>10 notas</option>
                 <option value={25}>25 notas</option>
@@ -578,7 +552,7 @@ export const InvoiceSearch: React.FC = () => {
             <div className="md:col-span-5 flex justify-end">
               <button
                 onClick={clearFilters}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="text-sm text-hc-muted hover:text-hc-text transition-colors"
               >
                 Limpar Filtros
               </button>
@@ -587,21 +561,15 @@ export const InvoiceSearch: React.FC = () => {
         )}
       </div>
 
-      {/* Error Message */}
+      {/* Alerta de erro/info/aviso */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" size={20} />
-          <div>
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">Erro</p>
-            <p className="text-sm text-red-700 dark:text-red-400 mt-1">{error}</p>
-          </div>
-        </div>
+        <InlineAlert variant={errorVariant} message={errorMessage ?? error} onDismiss={() => setError(null)} />
       )}
 
-      {/* Results */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 dark:text-white">
+      {/* Resultados */}
+      <div className="bg-hc-surface rounded-xl border border-hc-border overflow-hidden" style={{ boxShadow: 'var(--hc-shadow)' }}>
+        <div className="px-5 py-3.5 border-b border-hc-border flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-hc-text">
             Resultados ({invoicesFiltrados.length}
             {invoicesFiltrados.length !== invoices.length ? ` de ${invoices.length}` : ''})
           </h2>
@@ -611,107 +579,101 @@ export const InvoiceSearch: React.FC = () => {
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-500 dark:text-gray-400">
+            <thead className="bg-hc-card text-hc-muted">
               <tr>
-                <th className="px-6 py-4 font-medium">Tipo</th>
-                <th className="px-6 py-4 font-medium">Número/Série</th>
-                <th className="px-6 py-4 font-medium">Emissor</th>
-                <th className="px-6 py-4 font-medium">Valor</th>
-                <th className="px-6 py-4 font-medium">Emissão</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Ações</th>
+                <th className="px-5 py-3 font-medium text-xs tracking-wide">Tipo</th>
+                <th className="px-5 py-3 font-medium text-xs tracking-wide">Número/Série</th>
+                <th className="px-5 py-3 font-medium text-xs tracking-wide">Emissor</th>
+                <th className="px-5 py-3 font-medium text-xs tracking-wide">Valor</th>
+                <th className="px-5 py-3 font-medium text-xs tracking-wide">Emissão</th>
+                <th className="px-5 py-3 font-medium text-xs tracking-wide">Status</th>
+                <th className="px-5 py-3 font-medium text-xs tracking-wide">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-hc-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
-                    <Loader2 size={48} className="mx-auto text-primary-500 mb-3 animate-spin" />
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Buscando notas fiscais...
-                    </p>
+                  <td colSpan={7} className="py-12">
+                    <LoadingState message="Buscando notas fiscais..." />
                   </td>
                 </tr>
               ) : invoicesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
-                    <FileText size={48} className="mx-auto text-gray-400 mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Nenhuma nota fiscal encontrada
-                    </p>
+                  <td colSpan={7}>
+                    <EmptyState
+                      icon={<FileText size={32} />}
+                      title="Nenhuma nota fiscal encontrada"
+                      description="Selecione uma empresa e clique em Buscar para consultar."
+                    />
                   </td>
                 </tr>
               ) : (
                 invoicesFiltrados.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                    <td className="px-6 py-4">
+                  <tr key={invoice.id} className="hover:bg-hc-hover transition-colors">
+                    <td className="px-5 py-3.5">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_TIPO_NF[getTipoBase(invoice.tipo_nf)]}`}>
                         {invoice.tipo_nf}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
-                      <div className="flex items-center gap-2">
-                        <Hash size={14} className="text-gray-400" />
+                    <td className="px-5 py-3.5 text-hc-text font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <Hash size={13} className="text-hc-muted" />
                         {invoice.numero_nf}/{invoice.serie}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                          <Building2 size={14} className="text-gray-400" />
-                          {invoice.nome_emitente || 'N/A'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          CNPJ: {invoice.cnpj_emitente}
-                        </p>
-                      </div>
+                    <td className="px-5 py-3.5">
+                      <p className="text-hc-text font-medium flex items-center gap-1.5">
+                        <Building2 size={13} className="text-hc-muted shrink-0" />
+                        {invoice.nome_emitente || 'N/A'}
+                      </p>
+                      <p className="text-xs text-hc-muted mt-0.5 pl-5">
+                        {invoice.cnpj_emitente}
+                      </p>
                     </td>
-                    <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
+                    <td className="px-5 py-3.5 text-hc-text font-medium">
                       {formatCurrency(invoice.valor_total)}
                     </td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
+                    <td className="px-5 py-3.5 text-hc-muted text-xs">
                       {formatDate(invoice.data_emissao)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[getSituacaoNormalizada(invoice.situacao)]}`}>
                         {invoice.situacao.charAt(0).toUpperCase() + invoice.situacao.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-1">
                         <button
-                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors"
+                          className="p-1.5 hover:bg-hc-hover rounded-lg transition-colors"
                           title="Visualizar"
                           onClick={() => handleVisualizarNota(invoice)}
                         >
-                          <Eye size={18} className="text-gray-600 dark:text-gray-400" />
+                          <Eye size={16} className="text-hc-muted" />
                         </button>
-                        {/* Botão Download PDF (NFC-e, CT-e) */}
                         {(invoice.tipo_nf === 'NFCe' || invoice.tipo_nf === 'CTe') && (
                           <button
-                            className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 hover:bg-hc-info/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             title={`Download ${invoice.tipo_nf === 'NFCe' ? 'DANFCE' : 'DACTE'}`}
                             onClick={() => handleDownloadPdf(invoice)}
                             disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
                           >
                             {downloadingXml === invoice.chave_acesso ? (
-                              <Loader2 size={18} className="text-blue-600 dark:text-blue-400 animate-spin" />
+                              <Loader2 size={16} className="text-hc-info animate-spin" />
                             ) : (
-                              <FileText size={18} className="text-blue-600 dark:text-blue-400" />
+                              <FileText size={16} className="text-hc-info" />
                             )}
                           </button>
                         )}
-                        {/* Botão Download XML */}
                         <button
-                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-1.5 hover:bg-hc-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Download XML"
                           onClick={() => invoice.chave_acesso && handleDownloadXml(invoice.chave_acesso)}
                           disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
                         >
                           {downloadingXml === invoice.chave_acesso ? (
-                            <Loader2 size={18} className="text-gray-600 dark:text-gray-400 animate-spin" />
+                            <Loader2 size={16} className="text-hc-muted animate-spin" />
                           ) : (
-                            <Download size={18} className="text-gray-600 dark:text-gray-400" />
+                            <Download size={16} className="text-hc-muted" />
                           )}
                         </button>
                       </div>
@@ -726,28 +688,21 @@ export const InvoiceSearch: React.FC = () => {
         {/* Mobile Card View */}
         <div className="block md:hidden">
           {isLoading ? (
-            <div className="p-12 text-center">
-              <Loader2 size={48} className="mx-auto text-primary-500 mb-3 animate-spin" />
-              <p className="text-gray-500 dark:text-gray-400">
-                Buscando notas fiscais...
-              </p>
-            </div>
+            <LoadingState message="Buscando notas fiscais..." className="py-12" />
           ) : invoicesFiltrados.length === 0 ? (
-            <div className="p-12 text-center">
-              <FileText size={48} className="mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">
-                Nenhuma nota fiscal encontrada
-              </p>
-            </div>
+            <EmptyState
+              icon={<FileText size={32} />}
+              title="Nenhuma nota fiscal encontrada"
+              description="Selecione uma empresa e clique em Buscar para consultar."
+            />
           ) : (
-            <div className="divide-y divide-gray-200 dark:divide-slate-700">
+            <div className="divide-y divide-hc-border">
               {invoicesFiltrados.map((invoice) => (
-                <div key={invoice.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                  {/* Header: Número e Tipo */}
+                <div key={invoice.id} className="p-4 hover:bg-hc-hover transition-colors">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Hash size={16} className="text-gray-400" />
-                      <span className="font-semibold text-gray-900 dark:text-white">
+                      <Hash size={14} className="text-hc-muted" />
+                      <span className="font-semibold text-hc-text text-sm">
                         {invoice.numero_nf}/{invoice.serie}
                       </span>
                     </div>
@@ -756,77 +711,70 @@ export const InvoiceSearch: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Emissor */}
-                  <div className="mb-3">
-                    <div className="flex items-start gap-2">
-                      <Building2 size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {invoice.nome_emitente || 'N/A'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          CNPJ: {invoice.cnpj_emitente}
-                        </p>
-                      </div>
+                  <div className="mb-3 flex items-start gap-2">
+                    <Building2 size={14} className="text-hc-muted mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-hc-text">
+                        {invoice.nome_emitente || 'N/A'}
+                      </p>
+                      <p className="text-xs text-hc-muted">
+                        {invoice.cnpj_emitente}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Valor e Data */}
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Valor</p>
-                      <p className="text-lg font-bold text-primary-600 dark:text-primary-400">
+                      <p className="text-xs text-hc-muted mb-0.5">Valor</p>
+                      <p className="text-base font-bold text-hc-purple">
                         {formatCurrency(invoice.valor_total)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Emissão</p>
-                      <p className="text-sm text-gray-900 dark:text-white">
+                      <p className="text-xs text-hc-muted mb-0.5">Emissão</p>
+                      <p className="text-sm text-hc-text">
                         {formatDate(invoice.data_emissao)}
                       </p>
                     </div>
                   </div>
 
-                  {/* Status */}
                   <div className="mb-3">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CORES_SITUACAO[getSituacaoNormalizada(invoice.situacao)]}`}>
                       {invoice.situacao.charAt(0).toUpperCase() + invoice.situacao.slice(1)}
                     </span>
                   </div>
 
-                  {/* Ações */}
-                  <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-slate-700">
+                  <div className="flex gap-2 pt-3 border-t border-hc-border">
                     <button
-                      className="flex-1 py-2 px-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      className="flex-1 py-2 px-3 bg-hc-card border border-hc-border hover:bg-hc-hover rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-hc-text"
                       onClick={() => handleVisualizarNota(invoice)}
                     >
-                      <Eye size={16} />
+                      <Eye size={15} />
                       Visualizar
                     </button>
-                    {/* Botão PDF para NFC-e e CT-e */}
                     {(invoice.tipo_nf === 'NFCe' || invoice.tipo_nf === 'CTe') && (
                       <button
-                        className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-white"
+                        className="flex-1 py-2 px-3 bg-hc-info/15 hover:bg-hc-info/25 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-hc-info"
                         onClick={() => handleDownloadPdf(invoice)}
                         disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
                       >
                         {downloadingXml === invoice.chave_acesso ? (
-                          <Loader2 size={16} className="animate-spin" />
+                          <Loader2 size={15} className="animate-spin" />
                         ) : (
-                          <FileText size={16} />
+                          <FileText size={15} />
                         )}
                         {invoice.tipo_nf === 'NFCe' ? 'DANFCE' : 'DACTE'}
                       </button>
                     )}
                     <button
-                      className="flex-1 py-2 px-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-white"
+                      className="flex-1 py-2 px-3 bg-hc-purple/15 hover:bg-hc-purple/25 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-hc-purple"
                       onClick={() => invoice.chave_acesso && handleDownloadXml(invoice.chave_acesso)}
                       disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
                     >
                       {downloadingXml === invoice.chave_acesso ? (
-                        <Loader2 size={16} className="animate-spin" />
+                        <Loader2 size={15} className="animate-spin" />
                       ) : (
-                        <Download size={16} />
+                        <Download size={15} />
                       )}
                       XML
                     </button>
@@ -837,136 +785,115 @@ export const InvoiceSearch: React.FC = () => {
           )}
         </div>
 
-        {/* Botão Carregar Mais */}
+        {/* Carregar mais */}
         {invoices.length > 0 && temMaisNotas && !searchTerm && selectedType === 'TODAS' && selectedStatus === 'todas' && (
-          <div className="mt-6 flex justify-center">
-            <button
+          <div className="p-4 border-t border-hc-border flex justify-center">
+            <Button
+              variant="secondary"
+              leftIcon={<Download size={15} />}
+              loading={carregandoMais}
               onClick={handleCarregarMais}
               disabled={carregandoMais}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
-              {carregandoMais ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  <span>Carregando...</span>
-                </>
-              ) : (
-                <>
-                  <Download size={20} />
-                  <span>Carregar Mais Notas</span>
-                  {maxNSU > 0 && (
-                    <span className="text-sm opacity-75">
-                      ({invoicesFiltrados.length} de ~{maxNSU})
-                    </span>
-                  )}
-                </>
+              Carregar Mais Notas
+              {maxNSU > 0 && !carregandoMais && (
+                <span className="text-hc-muted ml-1.5 text-xs">({invoicesFiltrados.length} de ~{maxNSU})</span>
               )}
-            </button>
+            </Button>
           </div>
         )}
 
-        {/* Info de fim da lista */}
         {invoices.length > 0 && !temMaisNotas && (
-          <div className="mt-6 text-center text-gray-500 dark:text-gray-400 text-sm">
-            ✅ Todas as {invoices.length} notas foram carregadas
-          </div>
+          <p className="p-4 text-center text-hc-muted text-xs border-t border-hc-border">
+            Todas as {invoices.length} notas foram carregadas
+          </p>
         )}
       </div>
 
       {/* Modal de Visualização */}
       {mostrarModal && notaSelecionada && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleFecharModal}>
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleFecharModal}>
+          <div className="bg-hc-surface rounded-xl border border-hc-border max-w-3xl w-full max-h-[90vh] overflow-y-auto" style={{ boxShadow: 'var(--hc-shadow-md)' }} onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center rounded-t-lg">
+            <div className="bg-gradient-to-r from-hc-purple to-primary-700 text-white px-6 py-4 flex justify-between items-center rounded-t-xl">
               <div>
-                <h3 className="text-xl font-bold">Detalhes da Nota Fiscal</h3>
-                <p className="text-sm opacity-90">NFe Nº {notaSelecionada.numero_nf} - Série {notaSelecionada.serie}</p>
+                <h3 className="text-base font-semibold">Detalhes da Nota Fiscal</h3>
+                <p className="text-xs opacity-80 mt-0.5">NFe Nº {notaSelecionada.numero_nf} — Série {notaSelecionada.serie}</p>
               </div>
               <button
                 onClick={handleFecharModal}
-                className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+                aria-label="Fechar"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
             {/* Conteúdo */}
-            <div className="p-6 space-y-6">
-              {/* Informações Básicas */}
+            <div className="p-6 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border-l-4 border-blue-500 pl-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Tipo</p>
-                  <p className="font-semibold text-gray-800 dark:text-white">{notaSelecionada.tipo_nf}</p>
+                <div className="border-l-2 border-hc-purple pl-4">
+                  <p className="text-xs text-hc-muted">Tipo</p>
+                  <p className="font-semibold text-hc-text mt-0.5">{notaSelecionada.tipo_nf}</p>
                 </div>
-                <div className="border-l-4 border-green-500 pl-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Data de Emissão</p>
-                  <p className="font-semibold text-gray-800 dark:text-white">
-                    {formatDate(notaSelecionada.data_emissao)}
-                  </p>
+                <div className="border-l-2 border-hc-green pl-4">
+                  <p className="text-xs text-hc-muted">Data de Emissão</p>
+                  <p className="font-semibold text-hc-text mt-0.5">{formatDate(notaSelecionada.data_emissao)}</p>
                 </div>
-                <div className="border-l-4 border-purple-500 pl-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Valor Total</p>
-                  <p className="font-semibold text-gray-800 dark:text-white text-lg">
-                    {formatCurrency(notaSelecionada.valor_total)}
-                  </p>
+                <div className="border-l-2 border-hc-accent pl-4">
+                  <p className="text-xs text-hc-muted">Valor Total</p>
+                  <p className="font-semibold text-hc-text text-lg mt-0.5">{formatCurrency(notaSelecionada.valor_total)}</p>
                 </div>
-                <div className="border-l-4 border-yellow-500 pl-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Situação</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${CORES_SITUACAO[getSituacaoNormalizada(notaSelecionada.situacao)]}`}>
+                <div className="border-l-2 border-hc-amber pl-4">
+                  <p className="text-xs text-hc-muted mb-1">Situação</p>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${CORES_SITUACAO[getSituacaoNormalizada(notaSelecionada.situacao)]}`}>
                     {notaSelecionada.situacao.charAt(0).toUpperCase() + notaSelecionada.situacao.slice(1)}
                   </span>
                 </div>
               </div>
 
-              {/* Emitente */}
-              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
-                  <Building2 size={20} className="text-blue-600" />
+              <div className="bg-hc-card rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-hc-text mb-2 flex items-center gap-2">
+                  <Building2 size={16} className="text-hc-purple" />
                   Emitente
                 </h4>
-                <p className="font-medium text-gray-800 dark:text-white">{notaSelecionada.nome_emitente}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">CNPJ: {notaSelecionada.cnpj_emitente}</p>
+                <p className="font-medium text-hc-text text-sm">{notaSelecionada.nome_emitente}</p>
+                <p className="text-xs text-hc-muted mt-0.5">CNPJ: {notaSelecionada.cnpj_emitente}</p>
               </div>
 
-              {/* Chave de Acesso */}
-              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
-                  <FileText size={20} className="text-blue-600" />
+              <div className="bg-hc-card rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-hc-text mb-2 flex items-center gap-2">
+                  <FileText size={16} className="text-hc-purple" />
                   Chave de Acesso
                 </h4>
-                <p className="font-mono text-sm text-gray-700 dark:text-gray-300 break-all bg-white dark:bg-slate-800 p-2 rounded border border-gray-200 dark:border-slate-600">
+                <p className="font-mono text-xs text-hc-text break-all bg-hc-surface p-2 rounded border border-hc-border">
                   {notaSelecionada.chave_acesso}
                 </p>
               </div>
 
-              {/* NSU (se disponível) */}
               {notaSelecionada.nsu && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Hash size={16} />
+                <div className="flex items-center gap-2 text-xs text-hc-muted">
+                  <Hash size={13} />
                   NSU: {notaSelecionada.nsu}
                 </div>
               )}
             </div>
 
-            {/* Footer com ações */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 px-6 py-4 flex justify-end gap-3 rounded-b-lg border-t border-gray-200 dark:border-slate-600">
-              <button
-                onClick={handleFecharModal}
-                className="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors"
-              >
+            {/* Footer */}
+            <div className="bg-hc-card px-6 py-4 flex justify-end gap-3 rounded-b-xl border-t border-hc-border">
+              <Button variant="secondary" onClick={handleFecharModal}>
                 Fechar
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                leftIcon={<Download size={15} />}
                 onClick={() => notaSelecionada.chave_acesso && handleDownloadXml(notaSelecionada.chave_acesso)}
                 disabled={!notaSelecionada.chave_acesso}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
-                <Download size={20} />
                 Baixar XML
-              </button>
+              </Button>
             </div>
           </div>
         </div>

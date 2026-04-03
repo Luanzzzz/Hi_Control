@@ -20,24 +20,24 @@ interface AlertaCertificadoProps {
 const ALERTA_CONFIG = {
     error: {
         icon: ShieldOff,
-        bgColor: 'bg-red-500/10',
-        borderColor: 'border-red-500/30',
-        textColor: 'text-red-400',
-        titleColor: 'text-red-300',
+        bgColor: 'bg-hc-red/10',
+        borderColor: 'border-hc-red/30',
+        textColor: 'text-hc-red',
+        titleColor: 'text-hc-red',
     },
     warning: {
         icon: AlertTriangle,
-        bgColor: 'bg-yellow-500/10',
-        borderColor: 'border-yellow-500/30',
-        textColor: 'text-yellow-400',
-        titleColor: 'text-yellow-300',
+        bgColor: 'bg-hc-amber/10',
+        borderColor: 'border-hc-amber/30',
+        textColor: 'text-hc-amber',
+        titleColor: 'text-hc-amber',
     },
     info: {
         icon: Shield,
-        bgColor: 'bg-blue-500/10',
-        borderColor: 'border-blue-500/30',
-        textColor: 'text-blue-400',
-        titleColor: 'text-blue-300',
+        bgColor: 'bg-hc-info/10',
+        borderColor: 'border-hc-info/30',
+        textColor: 'text-hc-info',
+        titleColor: 'text-hc-info',
     },
 };
 
@@ -82,7 +82,7 @@ export function AlertaCertificado({
                                     onClick={onCadastrar}
                                     className={`
                     inline-flex items-center gap-1.5 px-3 py-1.5
-                    bg-white/10 hover:bg-white/20
+                    bg-hc-card border border-hc-border hover:bg-hc-hover
                     ${config.textColor} text-sm font-medium
                     rounded-md transition-colors
                   `}
@@ -100,7 +100,7 @@ export function AlertaCertificado({
                         onClick={onClose}
                         className={`
               flex-shrink-0 p-1 rounded-md
-              hover:bg-white/10 ${config.textColor}
+              hover:bg-hc-hover ${config.textColor}
               transition-colors
             `}
                         aria-label="Fechar alerta"

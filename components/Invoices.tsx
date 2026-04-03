@@ -1,31 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import { FileText, Download, MoreVertical, RefreshCw, Loader2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { FileText, Download, RefreshCw, FolderOpen } from 'lucide-react';
 import { formatarMoeda, formatarData } from '../src/services/notaFiscalService';
 import { buscarNotasDrive, sincronizarDrive, type NotaDrive } from '../src/services/driveService';
+import { Button, PageHeader, LoadingState, EmptyState, InlineAlert } from '../src/components/ui';
 
 interface InvoicesProps {
   empresaId?: string;
 }
+
+const getStatusClass = (situacao: string | null): string => {
+  if (!situacao) return 'bg-hc-card text-hc-muted border border-hc-border';
+  const s = situacao.toLowerCase();
+  if (s.includes('autoriz') || s === 'pago') return 'bg-hc-success/15 text-hc-success border border-hc-success/25';
+  if (s.includes('pendent') || s.includes('aguard')) return 'bg-hc-amber/15 text-hc-amber border border-hc-amber/25';
+  if (s.includes('cancel') || s.includes('deneg') || s === 'atrasado') return 'bg-hc-red/15 text-hc-red border border-hc-red/25';
+  return 'bg-hc-card text-hc-muted border border-hc-border';
+};
 
 export const Invoices = ({ empresaId }: InvoicesProps) => {
   const [notas, setNotas] = useState<NotaDrive[]>([]);
   const [loading, setLoading] = useState(true);
   const [sincronizando, setSincronizando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const carregarNotas = async () => {
     if (!empresaId) {
       setLoading(false);
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
       const dados = await buscarNotasDrive(empresaId);
       setNotas(dados);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar notas');
+      setError(err instanceof Error ? err.message : 'Erro ao carregar documentos');
     } finally {
       setLoading(false);
     }
@@ -33,12 +43,10 @@ export const Invoices = ({ empresaId }: InvoicesProps) => {
 
   const handleSincronizar = async () => {
     if (!empresaId) return;
-
     try {
       setSincronizando(true);
       await sincronizarDrive(empresaId);
-      // Recarregar notas apos sincronizacao
-      setTimeout(carregarNotas, 2000);
+      syncTimeoutRef.current = setTimeout(carregarNotas, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao sincronizar');
     } finally {
@@ -48,124 +56,114 @@ export const Invoices = ({ empresaId }: InvoicesProps) => {
 
   useEffect(() => {
     carregarNotas();
+    return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
   }, [empresaId]);
 
-  const getStatusColor = (situacao: string | null) => {
-    if (!situacao) return 'bg-gray-100 text-gray-700';
-    const s = situacao.toLowerCase();
-    if (s.includes('autoriz') || s === 'pago') {
-      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-    }
-    if (s.includes('pendent') || s.includes('aguard')) {
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-    }
-    if (s.includes('cancel') || s.includes('deneg') || s === 'atrasado') {
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-    }
-    return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
-  };
-
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-      <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
-        <div>
-          <h2 className="font-semibold text-gray-900 dark:text-white">Notas Fiscais</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {notas.length} notas encontradas no Google Drive
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSincronizar}
-            disabled={sincronizando || !empresaId}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50 flex items-center gap-2"
-          >
-            {sincronizando ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <RefreshCw size={16} />
-            )}
-            Sincronizar
-          </button>
-          <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
-            Nova Nota
-          </button>
-        </div>
-      </div>
+    <div className="p-6 space-y-5">
+      <PageHeader
+        title="Arquivo de Documentos"
+        subtitle="Documentos fiscais importados via Google Drive"
+        actions={
+          <div className="flex items-center gap-2">
+            {/* Source badge — diferencia visualmente do buscador SEFAZ */}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-hc-info/10 text-hc-info border border-hc-info/25 rounded-full text-xs font-medium">
+              <FolderOpen size={12} />
+              Google Drive
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<RefreshCw size={13} />}
+              loading={sincronizando}
+              disabled={sincronizando || !empresaId}
+              onClick={handleSincronizar}
+            >
+              Sincronizar
+            </Button>
+          </div>
+        }
+      />
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
-          {error}
-        </div>
+        <InlineAlert variant="error" message={error} onDismiss={() => setError(null)} />
       )}
 
-      {loading ? (
-        <div className="p-12 text-center">
-          <Loader2 size={32} className="animate-spin mx-auto text-primary-600" />
-          <p className="text-gray-500 mt-2">Carregando notas...</p>
+      <div className="bg-hc-surface rounded-xl border border-hc-border overflow-hidden" style={{ boxShadow: 'var(--hc-shadow)' }}>
+        <div className="px-5 py-3.5 border-b border-hc-border flex items-center justify-between">
+          <span className="text-sm font-semibold text-hc-text">
+            Documentos{notas.length > 0 ? ` (${notas.length})` : ''}
+          </span>
+          <span className="text-xs text-hc-muted">
+            Fonte: pasta do Google Drive do cliente
+          </span>
         </div>
-      ) : notas.length === 0 ? (
-        <div className="p-12 text-center text-gray-500">
-          <FileText size={48} className="mx-auto mb-4 opacity-50" />
-          <p>Nenhuma nota encontrada</p>
-          <p className="text-sm mt-2">
-            {empresaId
-              ? 'Configure o Google Drive para importar suas notas'
-              : 'Selecione uma empresa para ver as notas'}
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-500 dark:text-gray-400">
-              <tr>
-                <th className="px-6 py-4 font-medium">Número</th>
-                <th className="px-6 py-4 font-medium">Tipo</th>
-                <th className="px-6 py-4 font-medium">Emitente</th>
-                <th className="px-6 py-4 font-medium">Valor</th>
-                <th className="px-6 py-4 font-medium">Emissão</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-              {notas.map((nota) => (
-                <tr key={nota.drive_file_id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                  <td className="px-6 py-4 text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                    <FileText size={16} className="text-gray-400" />
-                    {nota.numero || 'S/N'}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{nota.tipo}</td>
-                  <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                    {nota.nome_emitente || nota.cnpj_emitente || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
-                    {formatarMoeda(nota.valor_total)}
-                  </td>
-                  <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
-                    {nota.data_emissao ? formatarData(nota.data_emissao) : '-'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(nota.situacao)}`}>
-                      {nota.situacao || 'Pendente'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <button className="hover:text-primary-600" title="Baixar XML">
-                        <Download size={18} />
-                      </button>
-                      <button className="hover:text-gray-600">
-                        <MoreVertical size={18} />
-                      </button>
-                    </div>
-                  </td>
+
+        {loading ? (
+          <LoadingState message="Carregando documentos..." className="py-12" />
+        ) : notas.length === 0 ? (
+          <EmptyState
+            icon={<FileText size={32} />}
+            title="Nenhum documento encontrado"
+            description={
+              empresaId
+                ? 'Configure o Google Drive do cliente para importar documentos fiscais.'
+                : 'Selecione uma empresa para visualizar os documentos.'
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-hc-card text-hc-muted">
+                <tr>
+                  <th className="px-5 py-3 font-medium text-xs tracking-wide">Número</th>
+                  <th className="px-5 py-3 font-medium text-xs tracking-wide">Tipo</th>
+                  <th className="px-5 py-3 font-medium text-xs tracking-wide">Emitente</th>
+                  <th className="px-5 py-3 font-medium text-xs tracking-wide">Valor</th>
+                  <th className="px-5 py-3 font-medium text-xs tracking-wide">Emissão</th>
+                  <th className="px-5 py-3 font-medium text-xs tracking-wide">Status</th>
+                  <th className="px-5 py-3 font-medium text-xs tracking-wide">XML</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-hc-border">
+                {notas.map((nota) => (
+                  <tr key={nota.drive_file_id} className="hover:bg-hc-hover transition-colors">
+                    <td className="px-5 py-3.5 text-hc-text font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <FileText size={13} className="text-hc-muted shrink-0" />
+                        {nota.numero || 'S/N'}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-hc-muted text-xs">{nota.tipo}</td>
+                    <td className="px-5 py-3.5 text-hc-text text-sm">
+                      {nota.nome_emitente || nota.cnpj_emitente || '—'}
+                    </td>
+                    <td className="px-5 py-3.5 text-hc-text font-medium">
+                      {formatarMoeda(nota.valor_total)}
+                    </td>
+                    <td className="px-5 py-3.5 text-hc-muted text-xs">
+                      {nota.data_emissao ? formatarData(nota.data_emissao) : '—'}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusClass(nota.situacao)}`}>
+                        {nota.situacao || 'Pendente'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button
+                        className="p-1.5 hover:bg-hc-hover rounded-lg transition-colors"
+                        title="Baixar XML"
+                      >
+                        <Download size={15} className="text-hc-muted" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -92,28 +92,28 @@ export function ClienteSelector({
                 className={`
           w-full flex items-center justify-between gap-3
           px-4 py-3 rounded-lg
-          bg-gray-800/50 border border-gray-700
+          bg-hc-surface border border-hc-border
           text-left transition-all
           ${disabled
                         ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:border-purple-500/50 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
+                        : 'hover:border-hc-purple/50 focus:border-hc-purple focus:ring-2 focus:ring-hc-purple/20'
                     }
         `}
             >
                 <div className="flex items-center gap-3 min-w-0">
-                    <Building2 className="flex-shrink-0 text-gray-400" size={20} />
+                    <Building2 className="flex-shrink-0 text-hc-muted" size={20} />
 
                     {empresaSelecionada ? (
                         <div className="min-w-0">
-                            <p className="text-white font-medium truncate">
+                            <p className="text-hc-text font-medium truncate">
                                 {empresaSelecionada.nome_fantasia || empresaSelecionada.razao_social}
                             </p>
-                            <p className="text-gray-400 text-sm truncate">
+                            <p className="text-hc-muted text-sm truncate">
                                 {formatarCNPJ(empresaSelecionada.cnpj)}
                             </p>
                         </div>
                     ) : (
-                        <span className="text-gray-400">
+                        <span className="text-hc-muted">
                             Selecione uma empresa...
                         </span>
                     )}
@@ -130,7 +130,7 @@ export function ClienteSelector({
                     )}
                     <ChevronDown
                         size={20}
-                        className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        className={`text-hc-muted transition-transform ${isOpen ? 'rotate-180' : ''}`}
                     />
                 </div>
             </button>
@@ -145,17 +145,17 @@ export function ClienteSelector({
                     />
 
                     {/* Menu */}
-                    <div className="absolute z-50 w-full mt-2 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl">
+                    <div className="absolute z-50 w-full mt-2 py-2 bg-hc-surface border border-hc-border rounded-lg" style={{ boxShadow: 'var(--hc-shadow-md)' }}>
                         {/* Busca */}
-                        <div className="px-3 pb-2 border-b border-gray-700">
+                        <div className="px-3 pb-2 border-b border-hc-border">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-hc-muted" size={16} />
                                 <input
                                     type="text"
                                     placeholder="Buscar empresa..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 bg-gray-700/50 border border-gray-600 rounded-md text-white placeholder-gray-400 text-sm focus:outline-none focus:border-purple-500"
+                                    className="w-full pl-9 pr-3 py-2 bg-hc-card border border-hc-border rounded-md text-hc-text placeholder:text-hc-muted text-sm focus:outline-none focus:border-hc-purple"
                                     autoFocus
                                 />
                             </div>
@@ -164,11 +164,11 @@ export function ClienteSelector({
                         {/* Lista de empresas */}
                         <div className="max-h-64 overflow-y-auto">
                             {loading ? (
-                                <div className="px-4 py-8 text-center text-gray-400">
+                                <div className="px-4 py-8 text-center text-hc-muted">
                                     Carregando...
                                 </div>
                             ) : empresasFiltradas.length === 0 ? (
-                                <div className="px-4 py-8 text-center text-gray-400">
+                                <div className="px-4 py-8 text-center text-hc-muted">
                                     Nenhuma empresa encontrada
                                 </div>
                             ) : (
@@ -180,21 +180,21 @@ export function ClienteSelector({
                                         className={`
                       w-full flex items-center justify-between gap-3
                       px-4 py-3 text-left
-                      hover:bg-gray-700/50 transition-colors
-                      ${empresaSelecionada?.id === empresa.id ? 'bg-purple-500/10' : ''}
+                      hover:bg-hc-hover transition-colors
+                      ${empresaSelecionada?.id === empresa.id ? 'bg-hc-purple-dim' : ''}
                     `}
                                     >
                                         <div className="min-w-0">
-                                            <p className="text-white font-medium truncate">
+                                            <p className="text-hc-text font-medium truncate">
                                                 {empresa.nome_fantasia || empresa.razao_social}
                                             </p>
-                                            <p className="text-gray-400 text-sm truncate">
+                                            <p className="text-hc-muted text-sm truncate">
                                                 {formatarCNPJ(empresa.cnpj)}
                                             </p>
                                         </div>
 
                                         {empresaSelecionada?.id === empresa.id && (
-                                            <Check className="flex-shrink-0 text-purple-400" size={18} />
+                                            <Check className="flex-shrink-0 text-hc-purple" size={18} />
                                         )}
                                     </button>
                                 ))

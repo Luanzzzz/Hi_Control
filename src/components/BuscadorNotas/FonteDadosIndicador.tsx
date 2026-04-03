@@ -27,10 +27,10 @@ export function FonteDadosIndicador({
     const tempoCache = cachedAt ? formatarTempoRelativo(cachedAt) : null;
 
     const colorClass = isCache
-        ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+        ? 'bg-hc-purple-dim text-hc-purple border-hc-purple/30'
         : isBancoLocal
-        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+        ? 'bg-hc-info/15 text-hc-info border-hc-info/30'
+        : 'bg-hc-success/15 text-hc-success border-hc-success/30';
 
     const titleText = isCache
         ? `Dados do cache local${tempoCache ? ` (${tempoCache})` : ''}`
