@@ -27,7 +27,7 @@ import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 import { empresaService, Empresa } from '../services/empresaService';
 import { certificadoService } from '../src/services/certificadoService';
 // ClienteSelector canônico — BotStatus e BotMetricas removidos (pertencem ao Dashboard)
-import { ClienteSelector, FonteDadosIndicador } from '../src/components/BuscadorNotas';
+import { ClienteSelector, FonteDadosIndicador } from '../src/components/BuscadorNotas/index';
 import type { CertificadoStatus as CertificadoStatusBadge } from '../src/components/BuscadorNotas/CertificadoBadge';
 
 // Mapeamento: CertificadoStatus do certificadoService → CertificadoStatus do CertificadoBadge
