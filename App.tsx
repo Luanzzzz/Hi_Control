@@ -33,8 +33,8 @@ const AppContent: React.FC = () => {
 
   const toggleTheme = () => setIsDarkMode((v) => !v);
 
-  // Aguarda auth + resolução da rota antes de renderizar o shell
-  if (loading || initialRoute === null) {
+  // 1. Auth ainda carregando
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -45,8 +45,21 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // 2. Não autenticado → Login (ANTES de checar initialRoute)
   if (!isAuthenticated) {
     return <Login />;
+  }
+
+  // 3. Autenticado, mas rota ainda resolvendo (edge case transitório)
+  if (initialRoute === null) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-500 mx-auto mb-4" />
+          <p className="text-slate-400">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   const shellProps = {
