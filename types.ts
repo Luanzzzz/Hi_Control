@@ -1,19 +1,31 @@
 // View States - Navegação principal e submódulos
 export enum ViewState {
+  // Admin-only
   DASHBOARD = 'DASHBOARD',
-  INVOICES = 'INVOICES',
-  INVOICE_EMITTER = 'INVOICE_EMITTER',
-  INVOICE_SEARCH = 'INVOICE_SEARCH',
-  PDV = 'PDV', // NFC-e - Cupom Fiscal Eletrônico
-  CTE = 'CTE', // CT-e - Conhecimento de Transporte
-  NFSE = 'NFSE', // NFS-e - Nota Fiscal de Serviço
-  TASKS = 'TASKS',
-  WHATSAPP = 'WHATSAPP',
   USERS = 'USERS',
   CERTIFICATES = 'CERTIFICATES',
+  CLIENT_DETAIL = 'CLIENT_DETAIL', // Dashboard Específico do Cliente (admin)
+
+  // Cliente — navegação
+  MODULE_HUB = 'MODULE_HUB',         // Home launcher para clientes com 2+ módulos
+
+  // Módulo: Emissão de NF
+  INVOICES = 'INVOICES',              // Container accordion de emissão
+  INVOICE_EMITTER = 'INVOICE_EMITTER',
+  PDV = 'PDV',                        // NFC-e - Cupom Fiscal Eletrônico
+  CTE = 'CTE',                        // CT-e - Conhecimento de Transporte
+  NFSE = 'NFSE',                      // NFS-e - Nota Fiscal de Serviço
+
+  // Módulo: Busca de NF
+  INVOICE_SEARCH = 'INVOICE_SEARCH',
+
+  // Módulos auxiliares
+  TASKS = 'TASKS',
+  WHATSAPP = 'WHATSAPP',
+
+  // Universal
   SETTINGS = 'SETTINGS',
-  CLIENT_DETAIL = 'CLIENT_DETAIL', // Dashboard Específico do Cliente
-  COMING_SOON = 'COMING_SOON'
+  COMING_SOON = 'COMING_SOON',
 }
 
 export interface Contact {

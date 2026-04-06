@@ -21,8 +21,9 @@ import {
   Briefcase,
   Menu,
 } from 'lucide-react';
-import { ViewState, MenuItem, SubModule, MODULE_VIEWS, UserPlan } from '../types';
+import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { hasModuleAccess } from '../utils/moduleVisibility';
 
 interface SidebarProps {
   currentView: ViewState;
@@ -75,19 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
     { id: ViewState.COMING_SOON, label: 'Agenda Médica', icon: Calendar, priority: 2 },
   ];
 
-  const hasModuleAccess = (view: ViewState): boolean => {
-    if (!user) return false;
-    if (user.isAdmin === true) return true;
-    if (view === ViewState.SETTINGS || view === ViewState.COMING_SOON) return true;
-
-    const modules = user.availableModules ?? [];
-    // Se não há módulos configurados no DB (lista vazia), liberar acesso a tudo.
-    if (modules.length === 0) return true;
-
-    return Object.entries(MODULE_VIEWS).some(
-      ([mod, views]) => modules.includes(mod) && views.includes(view)
-    );
-  };
+  const checkAccess = (view: ViewState) => hasModuleAccess(view, user ?? null);
 
   const toggleAccordion = (moduleId: ViewState) => {
     setExpandedModule((prev) => (prev === moduleId ? null : moduleId));
@@ -114,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   };
 
   const renderMenuItem = (item: MenuItem) => {
-    const hasAccess = hasModuleAccess(item.id);
+    const hasAccess = checkAccess(item.id);
     const isExpanded = expandedModule === item.id;
     const hasSubModules = item.subModules && item.subModules.length > 0;
     const isActive =
@@ -173,7 +162,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
                   setView(subModule.id);
                   if (window.innerWidth < 1024) toggleSidebar();
                 }}
-                disabled={!hasModuleAccess(subModule.id)}
+                disabled={!checkAccess(subModule.id)}
                 aria-label={subModule.label}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                   currentView === subModule.id
@@ -194,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   };
 
   const renderExtraModule = (item: MenuItem) => {
-    const hasAccess = hasModuleAccess(item.id);
+    const hasAccess = checkAccess(item.id);
 
     const handleClick = () => {
       if (hasAccess) {
