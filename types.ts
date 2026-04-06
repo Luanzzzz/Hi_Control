@@ -72,8 +72,8 @@ export type ModulePriority = 1 | 2;
 // Mapeamento módulo (Supabase planos.modulos_disponiveis) → ViewStates correspondentes
 export const MODULE_VIEWS: Record<string, ViewState[]> = {
   dashboard: [ViewState.DASHBOARD],
-  buscador_notas: [ViewState.INVOICE_SEARCH, ViewState.INVOICES],
-  emissor_notas: [ViewState.INVOICE_EMITTER, ViewState.PDV, ViewState.CTE, ViewState.NFSE],
+  buscador_notas: [ViewState.INVOICE_SEARCH],
+  emissor_notas: [ViewState.INVOICES, ViewState.INVOICE_EMITTER, ViewState.PDV, ViewState.CTE, ViewState.NFSE],
   tarefas: [ViewState.TASKS],
   whatsapp: [ViewState.WHATSAPP],
   clientes: [ViewState.USERS, ViewState.CLIENT_DETAIL],

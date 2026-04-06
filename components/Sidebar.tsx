@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { hasModuleAccess } from '../utils/moduleVisibility';
+import { hasModuleAccess, filterMenuItemsByUser } from '../utils/moduleVisibility';
 
 interface SidebarProps {
   currentView: ViewState;
@@ -77,6 +77,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   ];
 
   const checkAccess = (view: ViewState) => hasModuleAccess(view, user ?? null);
+
+  // Filtra itens visíveis: admin vê tudo, cliente vê apenas módulos contratados
+  const visibleMenuItems = user?.isAdmin ? menuItems : filterMenuItemsByUser(menuItems, user ?? null);
 
   const toggleAccordion = (moduleId: ViewState) => {
     setExpandedModule((prev) => (prev === moduleId ? null : moduleId));
@@ -273,12 +276,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
           <p className="px-3 mb-2 text-[10px] font-semibold text-hc-muted uppercase tracking-wider">
             Módulos
           </p>
-          {menuItems.map(renderMenuItem)}
+          {visibleMenuItems.map(renderMenuItem)}
 
-          <p className="px-3 mt-6 mb-2 text-[10px] font-semibold text-hc-muted uppercase tracking-wider">
-            Módulos Extras
-          </p>
-          {extraModules.map(renderExtraModule)}
+          {user?.isAdmin && (
+            <>
+              <p className="px-3 mt-6 mb-2 text-[10px] font-semibold text-hc-muted uppercase tracking-wider">
+                Módulos Extras
+              </p>
+              {extraModules.map(renderExtraModule)}
+            </>
+          )}
         </nav>
 
         {/* Footer com avatar do usuário */}

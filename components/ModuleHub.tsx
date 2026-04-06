@@ -10,7 +10,7 @@ import {
   LayoutDashboard,
   LucideIcon,
 } from 'lucide-react';
-import { ViewState } from '../types';
+import { ViewState, UserPlan } from '../types';
 import { useEnabledModules } from '../hooks/useInitialRoute';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -27,7 +27,7 @@ interface ModuleMeta {
 const MODULE_META: Record<string, ModuleMeta> = {
   buscador_notas: {
     icon: Search,
-    description: 'Busque e importe suas notas fiscais',
+    description: 'Consulte e gerencie suas notas fiscais',
     color: 'text-blue-500',
   },
   emissor_notas: {
@@ -37,12 +37,12 @@ const MODULE_META: Record<string, ModuleMeta> = {
   },
   tarefas: {
     icon: CheckSquare,
-    description: 'Gerencie tarefas e obrigações',
+    description: 'Organize e acompanhe suas tarefas',
     color: 'text-green-500',
   },
   whatsapp: {
     icon: MessageCircle,
-    description: 'Comunicação com clientes',
+    description: 'Gerencie seus contatos e mensagens',
     color: 'text-emerald-500',
   },
   clientes: {
@@ -76,6 +76,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ onModuleSelect }) => {
   const enabledModules = useEnabledModules();
 
   const firstName = user?.name?.split(' ')[0] ?? 'Olá';
+  const planLabel = user?.plano === UserPlan.PREMIUM ? 'Premium' : 'Básico';
 
   return (
     <div className="min-h-full bg-gray-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6 sm:p-10">
@@ -85,9 +86,12 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ onModuleSelect }) => {
           <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">
             Bem-vindo, {firstName}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-3">
             Escolha o módulo que deseja acessar
           </p>
+          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-hc-purple-dim text-hc-purple-light border border-hc-purple/20">
+            Plano {planLabel}
+          </span>
         </div>
 
         {/* Grid de módulos */}
