@@ -18,6 +18,28 @@ import type {
   PropsInicioBusca
 } from '../types/notaFiscal';
 
+const extrairMensagemAxios = async (
+  error: unknown,
+  fallback: string
+): Promise<string> => {
+  if (!axios.isAxiosError(error)) {
+    return fallback;
+  }
+
+  const payload = error.response?.data;
+  if (payload instanceof Blob) {
+    try {
+      const text = await payload.text();
+      const json = JSON.parse(text);
+      return json?.detail || json?.mensagem || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  return payload?.detail || payload?.mensagem || fallback;
+};
+
 /**
  * Busca avançada de notas fiscais
  */
@@ -105,11 +127,7 @@ export const baixarXmlNota = async (chaveAcesso: string): Promise<Blob> => {
     });
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const message = error.response?.data?.detail || 'Erro ao baixar XML da nota';
-      throw new Error(message);
-    }
-    throw error;
+    throw new Error(await extrairMensagemAxios(error, 'Erro ao baixar XML da nota'));
   }
 };
 
@@ -240,11 +258,44 @@ export interface BuscarNotasEmpresaResponse {
   empresa_id: string;
   certificado_status: string;
   certificado_usado: string;
+  sincronizacao_automatica?: boolean;
+  novas_notas_sincronizadas?: number;
+  modo_busca?: 'hibrido';
+  tem_dados_locais?: boolean;
+  sincronizacao_disponivel?: boolean;
+  sincronizacao_pendente?: boolean;
+  acao_sugerida?: string | null;
+  ultima_sincronizacao?: string | null;
+  mensagem?: string;
+  orientacao?: {
+    titulo?: string;
+    passos?: string[];
+    acoes_sugeridas?: string[];
+    endpoints_disponiveis?: Record<string, string>;
+  };
   notas: NotaFiscal[];
   ultimo_nsu: number;
   max_nsu: number;
   total_notas: number;
+  total_encontradas?: number;
   tem_mais_notas: boolean;
+}
+
+export interface ExportacaoXmlLoteRequest {
+  cnpj: string;
+  sincronizar_antes?: boolean;
+}
+
+export interface SalvarXmlsDriveResponse {
+  success: boolean;
+  empresa_id: string;
+  total_notas_consideradas: number;
+  total_xmls_processados: number;
+  sincronizacao_automatica: boolean;
+  novas_notas_sincronizadas: number;
+  xmls_salvos_drive: number;
+  xmls_ignorados_drive: number;
+  xmls_sem_conteudo: number;
 }
 
 export interface HistoricoConsulta {
@@ -295,6 +346,100 @@ export const buscarNotasEmpresa = async (
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const message = error.response?.data?.detail || 'Erro ao buscar notas da empresa';
+      throw new Error(message);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Carrega todas as paginas do buscador oficial para uma empresa.
+ * Mantem o endpoint oficial, apenas iterando ate nao haver mais notas.
+ */
+export const buscarTodasNotasEmpresa = async (
+  empresaId: string,
+  filtros: BuscarNotasEmpresaRequest,
+  pageSize: number = 200
+): Promise<BuscarNotasEmpresaResponse> => {
+  const acumuladas: NotaFiscal[] = [];
+  const chavesVistas = new Set<string>();
+  let nsuInicial = 0;
+  let ultimaResposta: BuscarNotasEmpresaResponse | null = null;
+
+  while (true) {
+    const resposta = await buscarNotasEmpresa(empresaId, {
+      ...filtros,
+      nsu_inicial: nsuInicial,
+      max_notas: pageSize,
+    });
+
+    for (const nota of resposta.notas || []) {
+      const chave = nota.chave_acesso || `${nota.id}-${nota.numero_nf}-${nota.serie}`;
+      if (chavesVistas.has(chave)) {
+        continue;
+      }
+      chavesVistas.add(chave);
+      acumuladas.push(nota);
+    }
+
+    ultimaResposta = resposta;
+
+    if (!resposta.tem_mais_notas || resposta.notas.length === 0) {
+      break;
+    }
+
+    nsuInicial = resposta.ultimo_nsu;
+  }
+
+  if (!ultimaResposta) {
+    return await buscarNotasEmpresa(empresaId, filtros);
+  }
+
+  return {
+    ...ultimaResposta,
+    notas: acumuladas,
+    total_notas: acumuladas.length,
+    total_encontradas: acumuladas.length,
+    ultimo_nsu: ultimaResposta.max_nsu,
+    tem_mais_notas: false,
+  };
+};
+
+/**
+ * Baixa um ZIP com todos os XMLs fiscais da empresa.
+ */
+export const baixarXmlsLoteEmpresa = async (
+  empresaId: string,
+  payload: ExportacaoXmlLoteRequest
+): Promise<Blob> => {
+  try {
+    const response = await api.post(
+      `/nfe/empresas/${empresaId}/notas/xmls/lote/baixar`,
+      payload,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(await extrairMensagemAxios(error, 'Erro ao baixar XMLs em lote'));
+  }
+};
+
+/**
+ * Salva em lote os XMLs fiscais da empresa no Google Drive.
+ */
+export const salvarXmlsLoteNoDrive = async (
+  empresaId: string,
+  payload: ExportacaoXmlLoteRequest
+): Promise<SalvarXmlsDriveResponse> => {
+  try {
+    const response = await api.post<SalvarXmlsDriveResponse>(
+      `/nfe/empresas/${empresaId}/notas/xmls/lote/salvar-drive`,
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.detail || 'Erro ao salvar XMLs no Drive';
       throw new Error(message);
     }
     throw error;

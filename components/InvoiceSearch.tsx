@@ -5,7 +5,7 @@
  * Endpoint de certificado: GET /certificados/empresas/{id}/certificado/status
  *   → via certificadoService.obterStatus() (src/services/certificadoService.ts)
  * Google Drive: apoio documental — acessado via Configurações, não aqui.
- * Bot de sincronização: monitorado no Dashboard, não aqui.
+ * Bot de sincronização: acionado sob demanda quando não houver dados locais.
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
@@ -13,6 +13,8 @@ import {
   Calendar,
   FileText,
   Download,
+  Archive,
+  Upload,
   Eye,
   RefreshCw,
   Building2,
@@ -20,12 +22,20 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Button, PageHeader, SearchBar, InlineAlert, LoadingState, EmptyState } from '../src/components/ui';
-import { buscarNotasEmpresa, baixarXmlNota, downloadBlob } from '../src/services/notaFiscalService';
+import {
+  buscarNotasEmpresa,
+  buscarTodasNotasEmpresa,
+  baixarXmlNota,
+  baixarXmlsLoteEmpresa,
+  downloadBlob,
+  salvarXmlsLoteNoDrive,
+} from '../src/services/notaFiscalService';
 import { downloadDANFCE, downloadDACTE, downloadPDF } from '../src/services/fiscalService';
 import type { NotaFiscal, TipoNotaFiscal, SituacaoNota } from '../src/types/notaFiscal';
 import { CORES_TIPO_NF, CORES_SITUACAO } from '../src/types/notaFiscal';
 import { empresaService, Empresa } from '../services/empresaService';
 import { certificadoService } from '../src/services/certificadoService';
+import { botService } from '../src/services/botService';
 // ClienteSelector canônico — BotStatus e BotMetricas removidos (pertencem ao Dashboard)
 import { ClienteSelector, FonteDadosIndicador } from '../src/components/BuscadorNotas/index';
 import type { CertificadoStatus as CertificadoStatusBadge } from '../src/components/BuscadorNotas/CertificadoBadge';
@@ -69,6 +79,12 @@ const getSituacaoNormalizada = (situacao: string): SituacaoNota => {
   return 'autorizada' as SituacaoNota; // Fallback seguro
 };
 
+interface BuscaVaziaContexto {
+  title: string;
+  description: string;
+  syncAvailable: boolean;
+}
+
 // ClienteSelector inline removido — usando canônico de src/components/BuscadorNotas/
 
 export const InvoiceSearch: React.FC = () => {
@@ -109,6 +125,9 @@ export const InvoiceSearch: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
+  const [buscaExecutada, setBuscaExecutada] = useState(false);
+  const [buscaVaziaContexto, setBuscaVaziaContexto] = useState<BuscaVaziaContexto | null>(null);
+  const [solicitandoSincronizacao, setSolicitandoSincronizacao] = useState(false);
 
   // Filtro client-side aplicado sobre os resultados da busca
   const invoicesFiltrados = useMemo(() => {
@@ -146,6 +165,9 @@ export const InvoiceSearch: React.FC = () => {
   const [maxNSU, setMaxNSU] = useState<number>(0);
   const [temMaisNotas, setTemMaisNotas] = useState<boolean>(false);
   const [carregandoMais, setCarregandoMais] = useState<boolean>(false);
+  const [carregandoTodas, setCarregandoTodas] = useState<boolean>(false);
+  const [baixandoXmlsLote, setBaixandoXmlsLote] = useState<boolean>(false);
+  const [salvandoXmlsDrive, setSalvandoXmlsDrive] = useState<boolean>(false);
   const [limitePorPagina, setLimitePorPagina] = useState<number>(50); // Quantidade de notas por página
 
   // Estado do modal de visualização
@@ -169,6 +191,17 @@ export const InvoiceSearch: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    setInvoices([]);
+    setFonteResultado(null);
+    setError(null);
+    setBuscaExecutada(false);
+    setBuscaVaziaContexto(null);
+    setUltimoNSU(0);
+    setMaxNSU(0);
+    setTemMaisNotas(false);
+  }, [empresaSelecionada?.id]);
+
   const carregarEmpresaPorId = async (id: string) => {
     setLoadingEmpresa(true);
     try {
@@ -181,6 +214,19 @@ export const InvoiceSearch: React.FC = () => {
     } finally {
       setLoadingEmpresa(false);
     }
+  };
+
+  const obterCnpjEmpresaSelecionada = (): string | null => {
+    if (!empresaSelecionada?.cnpj) {
+      return null;
+    }
+
+    const cnpjLimpo = empresaSelecionada.cnpj.replace(/\D/g, '');
+    if (cnpjLimpo.length !== 14) {
+      return null;
+    }
+
+    return cnpjLimpo;
   };
 
   // Validar período de busca (máximo 90 dias)
@@ -206,8 +252,16 @@ export const InvoiceSearch: React.FC = () => {
       return;
     }
 
+    const erroPeriodo = validarPeriodo();
+    if (erroPeriodo) {
+      setError(`⚠️ ${erroPeriodo}`);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    setBuscaExecutada(true);
+    setBuscaVaziaContexto(null);
     setInvoices([]);  // Limpar resultados anteriores
     setFonteResultado(null);
     setUltimoNSU(0);  // Resetar paginação
@@ -222,10 +276,9 @@ export const InvoiceSearch: React.FC = () => {
         return;
       }
 
-      // Remover formatação do CNPJ (deve ter 14 dígitos)
-      const cnpjLimpo = empresaSelecionada.cnpj.replace(/\D/g, '');
+      const cnpjLimpo = obterCnpjEmpresaSelecionada();
 
-      if (cnpjLimpo.length !== 14) {
+      if (!cnpjLimpo) {
         setError('⚠️ CNPJ inválido (deve ter 14 dígitos)');
         setIsLoading(false);
         return;
@@ -260,7 +313,29 @@ export const InvoiceSearch: React.FC = () => {
       setTemMaisNotas(resultado.tem_mais_notas);
 
       if (resultado.total_notas === 0) {
-        setError('ℹ️ Nenhuma nota fiscal encontrada para esta empresa');
+        const partesDescricao = [
+          resultado.mensagem || 'Nenhuma nota encontrada apos consultar a SEFAZ e o historico local desta empresa.',
+        ];
+
+        if (resultado.ultima_sincronizacao) {
+          partesDescricao.push(
+            `Última sincronização registrada em ${formatDateTime(resultado.ultima_sincronizacao)}.`
+          );
+        } else {
+          partesDescricao.push('Ainda não há sincronização registrada para esta empresa.');
+        }
+
+        setBuscaVaziaContexto({
+          title: 'Nenhuma nota encontrada',
+          description: partesDescricao.join(' '),
+          syncAvailable: Boolean(resultado.sincronizacao_disponivel),
+        });
+
+        if (resultado.success === false && resultado.mensagem) {
+          setError(resultado.mensagem);
+        }
+      } else {
+        setBuscaVaziaContexto(null);
       }
 
       // Feedback de sucesso ao usuário
@@ -271,10 +346,13 @@ export const InvoiceSearch: React.FC = () => {
       };
       const icone = resultado.fonte === 'cache' ? '💾' : resultado.fonte === 'banco_local' ? '🗄️' : '🌐';
       const origem = origemMap[resultado.fonte] ?? resultado.fonte;
-      console.log(`${icone} ${resultado.total_notas} notas encontradas (${origem})`);
+      console.log(
+        `${icone} ${resultado.total_notas} notas encontradas (${origem}) | novas sincronizadas: ${resultado.novas_notas_sincronizadas ?? 0}`
+      );
     } catch (err: any) {
       const mensagemErro = err.message || 'Erro ao buscar notas fiscais. Tente novamente.';
       setError(mensagemErro);
+      setBuscaVaziaContexto(null);
 
       // Se erro de certificado, mostrar alerta específico
       if (mensagemErro.toLowerCase().includes('certificado')) {
@@ -295,7 +373,10 @@ export const InvoiceSearch: React.FC = () => {
     setError(null);
 
     try {
-      const cnpjLimpo = empresaSelecionada.cnpj.replace(/\D/g, '');
+      const cnpjLimpo = obterCnpjEmpresaSelecionada();
+      if (!cnpjLimpo) {
+        throw new Error('CNPJ inválido para carregar mais notas.');
+      }
 
       // Buscar próxima página a partir do último NSU (sem +1: ultimo_nsu já é o próximo offset)
       const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
@@ -317,6 +398,116 @@ export const InvoiceSearch: React.FC = () => {
       setError(`Erro ao carregar mais notas: ${err.message}`);
     } finally {
       setCarregandoMais(false);
+    }
+  };
+
+  const handleCarregarTodasNotas = async () => {
+    if (!empresaSelecionada || carregandoTodas) {
+      return;
+    }
+
+    const cnpjLimpo = obterCnpjEmpresaSelecionada();
+    if (!cnpjLimpo) {
+      setError('⚠️ CNPJ inválido para carregar todas as notas.');
+      return;
+    }
+
+    setCarregandoTodas(true);
+    setError(null);
+
+    try {
+      const resultado = await buscarTodasNotasEmpresa(
+        empresaSelecionada.id,
+        { cnpj: cnpjLimpo },
+        Math.max(limitePorPagina, 200)
+      );
+
+      setInvoices(resultado.notas || []);
+      setFonteResultado(resultado.fonte ?? null);
+      setUltimoNSU(resultado.max_nsu);
+      setMaxNSU(resultado.max_nsu);
+      setTemMaisNotas(false);
+      setBuscaExecutada(true);
+
+      setError(`ℹ️ Todas as ${resultado.notas.length} notas fiscais da empresa foram carregadas.`);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao carregar todas as notas.');
+    } finally {
+      setCarregandoTodas(false);
+    }
+  };
+
+  const handleBaixarXmlsLote = async () => {
+    if (!empresaSelecionada || baixandoXmlsLote) {
+      return;
+    }
+
+    const cnpjLimpo = obterCnpjEmpresaSelecionada();
+    if (!cnpjLimpo) {
+      setError('⚠️ CNPJ inválido para exportar XMLs.');
+      return;
+    }
+
+    setBaixandoXmlsLote(true);
+    setError(null);
+
+    try {
+      const blob = await baixarXmlsLoteEmpresa(empresaSelecionada.id, {
+        cnpj: cnpjLimpo,
+        sincronizar_antes: true,
+      });
+      const nomeArquivo = `XMLs_${cnpjLimpo}_${new Date().toISOString().slice(0, 10)}.zip`;
+      downloadBlob(blob, nomeArquivo);
+      setError('ℹ️ Lote de XMLs gerado com sucesso.');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao baixar XMLs em lote.');
+    } finally {
+      setBaixandoXmlsLote(false);
+    }
+  };
+
+  const handleSalvarXmlsDrive = async () => {
+    if (!empresaSelecionada || salvandoXmlsDrive) {
+      return;
+    }
+
+    const cnpjLimpo = obterCnpjEmpresaSelecionada();
+    if (!cnpjLimpo) {
+      setError('⚠️ CNPJ inválido para salvar XMLs no Drive.');
+      return;
+    }
+
+    setSalvandoXmlsDrive(true);
+    setError(null);
+
+    try {
+      const resultado = await salvarXmlsLoteNoDrive(empresaSelecionada.id, {
+        cnpj: cnpjLimpo,
+        sincronizar_antes: true,
+      });
+
+      setError(
+        `ℹ️ Exportação concluída: ${resultado.xmls_salvos_drive} XMLs salvos no Drive, ` +
+        `${resultado.xmls_ignorados_drive} ignorados e ${resultado.xmls_sem_conteudo} sem conteúdo.`
+      );
+    } catch (err: any) {
+      setError(err.message || 'Erro ao salvar XMLs no Drive.');
+    } finally {
+      setSalvandoXmlsDrive(false);
+    }
+  };
+
+  const handleSolicitarSincronizacao = async () => {
+    setSolicitandoSincronizacao(true);
+    setError(null);
+
+    try {
+      await botService.forcarSincronizacao();
+      setError('ℹ️ Sincronização assistida solicitada. Tente a busca novamente em instantes.');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao solicitar sincronização automática.');
+    } finally {
+      setSolicitandoSincronizacao(false);
     }
   };
 
@@ -406,6 +597,10 @@ export const InvoiceSearch: React.FC = () => {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
+  const formatDateTime = (date: string): string => {
+    return new Date(date).toLocaleString('pt-BR');
+  };
+
   // Limpar filtros
   const clearFilters = () => {
     setSearchTerm('');
@@ -421,13 +616,52 @@ export const InvoiceSearch: React.FC = () => {
 
   const filterSelectClass = "w-full px-3 py-2 bg-hc-surface border border-hc-border rounded-lg focus:outline-none focus:border-hc-purple text-hc-text text-sm transition-colors";
   const filterLabelClass = "block text-xs font-medium text-hc-muted mb-1.5";
+  const semResultadosPorFiltro = invoices.length > 0 && invoicesFiltrados.length === 0;
+
+  const emptyStateProps = semResultadosPorFiltro
+    ? {
+        title: 'Nenhum resultado para os filtros atuais',
+        description: 'Ajuste ou limpe os filtros para visualizar as notas já encontradas.',
+        action: (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            Limpar filtros
+          </Button>
+        ),
+      }
+    : buscaVaziaContexto
+    ? {
+        title: buscaVaziaContexto.title,
+        description: buscaVaziaContexto.description,
+        action: buscaVaziaContexto.syncAvailable ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<RefreshCw size={14} />}
+            loading={solicitandoSincronizacao}
+            onClick={handleSolicitarSincronizacao}
+          >
+            Solicitar sincronização assistida
+          </Button>
+        ) : undefined,
+      }
+    : buscaExecutada
+    ? {
+        title: 'Busca concluída sem resultados',
+        description: 'Não há notas disponíveis na SEFAZ nem no histórico local para os critérios informados.',
+        action: undefined,
+      }
+    : {
+        title: 'Nenhuma busca realizada',
+        description: 'Selecione uma empresa e clique em Buscar para consultar.',
+        action: undefined,
+      };
 
   return (
     <div className="p-6 space-y-5">
       {/* Header */}
       <PageHeader
         title="Buscador de Notas Fiscais"
-        subtitle="Consulte e gerencie suas notas fiscais eletrônicas"
+        subtitle="Consulta automática na SEFAZ com histórico consolidado da empresa"
         actions={
           <Button
             variant="primary"
@@ -573,7 +807,33 @@ export const InvoiceSearch: React.FC = () => {
             Resultados ({invoicesFiltrados.length}
             {invoicesFiltrados.length !== invoices.length ? ` de ${invoices.length}` : ''})
           </h2>
-          <FonteDadosIndicador fonte={fonteResultado} />
+          <div className="flex items-center gap-2">
+            {empresaSelecionada && buscaExecutada && invoices.length > 0 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leftIcon={<Archive size={14} />}
+                  loading={baixandoXmlsLote}
+                  onClick={handleBaixarXmlsLote}
+                  disabled={baixandoXmlsLote || salvandoXmlsDrive}
+                >
+                  Baixar XMLs
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leftIcon={<Upload size={14} />}
+                  loading={salvandoXmlsDrive}
+                  onClick={handleSalvarXmlsDrive}
+                  disabled={salvandoXmlsDrive || baixandoXmlsLote}
+                >
+                  Salvar no Drive
+                </Button>
+              </>
+            )}
+            <FonteDadosIndicador fonte={fonteResultado} />
+          </div>
         </div>
 
         {/* Desktop Table View */}
@@ -602,8 +862,9 @@ export const InvoiceSearch: React.FC = () => {
                   <td colSpan={7}>
                     <EmptyState
                       icon={<FileText size={32} />}
-                      title="Nenhuma nota fiscal encontrada"
-                      description="Selecione uma empresa e clique em Buscar para consultar."
+                      title={emptyStateProps.title}
+                      description={emptyStateProps.description}
+                      action={emptyStateProps.action}
                     />
                   </td>
                 </tr>
@@ -692,8 +953,9 @@ export const InvoiceSearch: React.FC = () => {
           ) : invoicesFiltrados.length === 0 ? (
             <EmptyState
               icon={<FileText size={32} />}
-              title="Nenhuma nota fiscal encontrada"
-              description="Selecione uma empresa e clique em Buscar para consultar."
+              title={emptyStateProps.title}
+              description={emptyStateProps.description}
+              action={emptyStateProps.action}
             />
           ) : (
             <div className="divide-y divide-hc-border">
@@ -787,7 +1049,7 @@ export const InvoiceSearch: React.FC = () => {
 
         {/* Carregar mais */}
         {invoices.length > 0 && temMaisNotas && !searchTerm && selectedType === 'TODAS' && selectedStatus === 'todas' && (
-          <div className="p-4 border-t border-hc-border flex justify-center">
+          <div className="p-4 border-t border-hc-border flex flex-wrap justify-center gap-3">
             <Button
               variant="secondary"
               leftIcon={<Download size={15} />}
@@ -799,6 +1061,14 @@ export const InvoiceSearch: React.FC = () => {
               {maxNSU > 0 && !carregandoMais && (
                 <span className="text-hc-muted ml-1.5 text-xs">({invoicesFiltrados.length} de ~{maxNSU})</span>
               )}
+            </Button>
+            <Button
+              variant="ghost"
+              loading={carregandoTodas}
+              onClick={handleCarregarTodasNotas}
+              disabled={carregandoTodas || carregandoMais}
+            >
+              Carregar Todas
             </Button>
           </div>
         )}

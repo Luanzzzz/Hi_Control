@@ -26,7 +26,8 @@ import {
   ArrowDownLeft,
   DollarSign,
   Clock,
-  Edit2
+  Edit2,
+  Zap
 } from 'lucide-react';
 import {
   BarChart as ReBarChart,
@@ -50,6 +51,7 @@ import type { NotaFiscal, TipoNotaFiscal } from '../src/types/notaFiscal';
 import { CORES_TIPO_NF } from '../src/types/notaFiscal';
 import { fileToBase64 } from '../utils/fileUtils';
 import { Button, SearchBar, InlineAlert, LoadingState, EmptyState } from '../src/components/ui';
+import { SincronizacaoAutomatica } from '../src/components/SincronizacaoAutomatica';
 
 // Helper component
 const CalculatorIcon = ({ size }: { size: number }) => (
@@ -250,10 +252,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
     setErrorNotas(null);
     try {
       const cnpjLimpo = empresa.cnpj.replace(/\D/g, '');
-      const resultado = await buscarNotasEmpresa(empresaId, {
+      // Dynamic import buscarTodasNotasEmpresa para buscar TODAS as notas sem limite
+      const { buscarTodasNotasEmpresa } = await import('../src/services/notaFiscalService');
+      const resultado = await buscarTodasNotasEmpresa(empresaId, {
         cnpj: cnpjLimpo,
         nsu_inicial: 0,
-        max_notas: 100
       });
       setInvoices(resultado.notas || []);
       carregarBotStatus();
@@ -621,7 +624,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
       {/* Modal de Certificado */}
       {showCertModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-hc-surface rounded-xl w-full max-w-md overflow-hidden border border-hc-border" style={{ boxShadow: 'var(--hc-shadow-md)' }}>
+          <div className="bg-hc-surface rounded-xl w-full max-w-2xl overflow-hidden border border-hc-border" style={{ boxShadow: 'var(--hc-shadow-md)' }}>
             <div className="px-5 py-4 border-b border-hc-border flex justify-between items-center bg-hc-card/40">
               <h3 className="text-sm font-semibold text-hc-text flex items-center gap-2">
                 <ShieldCheck size={16} className="text-hc-purple" />
@@ -631,26 +634,27 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                 <XCircle size={16} />
               </Button>
             </div>
-            <div className="p-5 space-y-4">
-              {certStatus ? (
-                <div className="flex items-center gap-3 p-3 bg-hc-success/10 border border-hc-success/25 rounded-lg">
-                  <div className="p-1.5 bg-hc-success text-white rounded-full shrink-0"><CheckCircle size={16} /></div>
-                  <div>
-                    <p className="text-xs font-semibold text-hc-success uppercase tracking-wide">Certificado Ativo</p>
-                    <p className="text-xs text-hc-text mt-0.5">Vence em {new Date(certStatus.validade!).toLocaleDateString('pt-BR')}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-x divide-hc-border">
+              <div className="p-5 space-y-4">
+                {certStatus ? (
+                  <div className="flex items-center gap-3 p-3 bg-hc-success/10 border border-hc-success/25 rounded-lg">
+                    <div className="p-1.5 bg-hc-success text-white rounded-full shrink-0"><CheckCircle size={16} /></div>
+                    <div>
+                      <p className="text-xs font-semibold text-hc-success uppercase tracking-wide">Certificado Ativo</p>
+                      <p className="text-xs text-hc-text mt-0.5">Vence em {new Date(certStatus.validade!).toLocaleDateString('pt-BR')}</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-hc-amber/10 border border-hc-amber/25 rounded-lg">
-                  <div className="p-1.5 bg-hc-amber text-white rounded-full shrink-0"><ShieldAlert size={16} /></div>
-                  <div>
-                    <p className="text-xs font-semibold text-hc-amber uppercase tracking-wide">Ação Necessária</p>
-                    <p className="text-xs text-hc-text mt-0.5">Nenhum certificado cadastrado.</p>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-hc-amber/10 border border-hc-amber/25 rounded-lg">
+                    <div className="p-1.5 bg-hc-amber text-white rounded-full shrink-0"><ShieldAlert size={16} /></div>
+                    <div>
+                      <p className="text-xs font-semibold text-hc-amber uppercase tracking-wide">Ação Necessária</p>
+                      <p className="text-xs text-hc-text mt-0.5">Nenhum certificado cadastrado.</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="space-y-3">
+                <div className="space-y-3">
                 <div>
                   <label className="text-[10px] font-semibold text-hc-muted uppercase tracking-widest block mb-2">
                     Arquivo (.pfx / .p12)
@@ -699,6 +703,22 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ empresaId, onB
                 >
                   Ativar Robô de Busca
                 </Button>
+                </div>
+              </div>
+
+              {/* Coluna Direita: Sincronização Automática */}
+              <div className="p-5">
+                <h4 className="text-sm font-semibold text-hc-text mb-4 flex items-center gap-2">
+                  <Zap size={16} className="text-hc-success" />
+                  Sincronização Automática
+                </h4>
+                <SincronizacaoAutomatica
+                  empresaId={empresaId}
+                  onAfterSync={async () => {
+                    carregarBotStatus();
+                    carregarNotasDrive();
+                  }}
+                />
               </div>
             </div>
           </div>
