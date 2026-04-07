@@ -14,6 +14,8 @@ import { WhatsAppModule } from '../components/WhatsAppModule';
 import { Clients } from '../components/Clients';
 import { Configuracoes } from '../components/Configuracoes';
 import { ClientDashboard } from '../components/ClientDashboard';
+import { ClientSearchDashboard } from '../components/ClientSearchDashboard';
+import { ClientEmissionDashboard } from '../components/ClientEmissionDashboard';
 import { SearchDashboard } from '../components/SearchDashboard';
 import { EmissionDashboard } from '../components/EmissionDashboard';
 import { ViewState } from '../types';
@@ -73,7 +75,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
             setView={onViewChange}
             onNavigateToClient={(empresaId) => {
               setSelectedClientId(empresaId);
-              onViewChange(ViewState.CLIENT_DETAIL);
+              onViewChange(ViewState.CLIENT_SEARCH_DETAIL);
             }}
           />
         );
@@ -84,8 +86,31 @@ export const AdminShell: React.FC<AdminShellProps> = ({
             setView={onViewChange}
             onNavigateToClient={(empresaId) => {
               setSelectedClientId(empresaId);
-              onViewChange(ViewState.CLIENT_DETAIL);
+              onViewChange(ViewState.CLIENT_EMISSION_DETAIL);
             }}
+          />
+        );
+
+      case ViewState.CLIENT_SEARCH_DETAIL:
+        return (
+          <ClientSearchDashboard
+            empresaId={selectedClientId ?? ''}
+            onBack={() => {
+              setSelectedClientId(null);
+              onViewChange(ViewState.SEARCH_DASHBOARD);
+            }}
+          />
+        );
+
+      case ViewState.CLIENT_EMISSION_DETAIL:
+        return (
+          <ClientEmissionDashboard
+            empresaId={selectedClientId ?? ''}
+            onBack={() => {
+              setSelectedClientId(null);
+              onViewChange(ViewState.EMISSION_DASHBOARD);
+            }}
+            onNavigate={onViewChange}
           />
         );
 

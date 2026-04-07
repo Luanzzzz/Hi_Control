@@ -18,10 +18,12 @@ export enum ViewState {
 
   // Módulo: Busca de NF
   INVOICE_SEARCH = 'INVOICE_SEARCH',
-  SEARCH_DASHBOARD = 'SEARCH_DASHBOARD',   // Dashboard de métricas de busca (admin)
+  SEARCH_DASHBOARD = 'SEARCH_DASHBOARD',         // Dashboard de métricas de busca (admin)
+  CLIENT_SEARCH_DETAIL = 'CLIENT_SEARCH_DETAIL', // Dashboard de busca por empresa (admin)
 
   // Módulo: Emissão — dashboard
-  EMISSION_DASHBOARD = 'EMISSION_DASHBOARD', // Dashboard de métricas de emissão (admin)
+  EMISSION_DASHBOARD = 'EMISSION_DASHBOARD',         // Dashboard de métricas de emissão (admin)
+  CLIENT_EMISSION_DETAIL = 'CLIENT_EMISSION_DETAIL', // Dashboard de emissão por empresa (admin)
 
   // Módulos auxiliares
   TASKS = 'TASKS',
