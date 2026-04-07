@@ -20,7 +20,8 @@ export function useInitialRoute(): ViewState | null {
 
   if (!user) return null;
 
-  if (user.isAdmin === true) return ViewState.DASHBOARD;
+  // Contador entra direto no dashboard de busca por cliente (não no geral)
+  if (user.isAdmin === true) return ViewState.SEARCH_DASHBOARD;
 
   const modules = user.availableModules ?? [];
 

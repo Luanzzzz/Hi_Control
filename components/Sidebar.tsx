@@ -41,12 +41,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
   const menuItems: MenuItem[] = [
     {
-      id: ViewState.DASHBOARD,
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      priority: 1,
-    },
-    {
       id: ViewState.EMISSION_DASHBOARD,
       label: 'Dashboard de Emissão',
       icon: BarChart2,
