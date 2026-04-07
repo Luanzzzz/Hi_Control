@@ -6,6 +6,8 @@ export const ADMIN_ONLY_VIEWS: ViewState[] = [
   ViewState.USERS,
   ViewState.CERTIFICATES,
   ViewState.CLIENT_DETAIL,
+  ViewState.SEARCH_DASHBOARD,   // Visão operacional de busca — exclusiva do contador
+  ViewState.EMISSION_DASHBOARD, // Visão operacional de emissão — exclusiva do contador
 ];
 
 // Views sempre acessíveis (independente de papel ou plano)

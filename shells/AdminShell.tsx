@@ -14,6 +14,8 @@ import { WhatsAppModule } from '../components/WhatsAppModule';
 import { Clients } from '../components/Clients';
 import { Configuracoes } from '../components/Configuracoes';
 import { ClientDashboard } from '../components/ClientDashboard';
+import { SearchDashboard } from '../components/SearchDashboard';
+import { EmissionDashboard } from '../components/EmissionDashboard';
 import { ViewState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -64,6 +66,28 @@ export const AdminShell: React.FC<AdminShellProps> = ({
 
       case ViewState.INVOICE_SEARCH:
         return <InvoiceSearch />;
+
+      case ViewState.SEARCH_DASHBOARD:
+        return (
+          <SearchDashboard
+            setView={onViewChange}
+            onNavigateToClient={(empresaId) => {
+              setSelectedClientId(empresaId);
+              onViewChange(ViewState.CLIENT_DETAIL);
+            }}
+          />
+        );
+
+      case ViewState.EMISSION_DASHBOARD:
+        return (
+          <EmissionDashboard
+            setView={onViewChange}
+            onNavigateToClient={(empresaId) => {
+              setSelectedClientId(empresaId);
+              onViewChange(ViewState.CLIENT_DETAIL);
+            }}
+          />
+        );
 
       case ViewState.INVOICE_EMITTER:
         return <InvoiceEmitter />;

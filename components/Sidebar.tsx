@@ -20,6 +20,8 @@ import {
   Truck,
   Briefcase,
   Menu,
+  FileSearch,
+  BarChart2,
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,6 +47,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
       priority: 1,
     },
     {
+      id: ViewState.EMISSION_DASHBOARD,
+      label: 'Dashboard de Emissão',
+      icon: BarChart2,
+      priority: 1,
+    },
+    {
       id: ViewState.INVOICES,
       label: 'Emissão de NF',
       icon: FileEdit,
@@ -55,6 +63,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         { id: ViewState.CTE, label: 'CT-e (Transporte)', priority: 1 },
         { id: ViewState.NFSE, label: 'NFS-e (Serviços)', priority: 1 },
       ],
+    },
+    {
+      id: ViewState.SEARCH_DASHBOARD,
+      label: 'Dashboard de Busca',
+      icon: FileSearch,
+      priority: 1,
     },
     {
       id: ViewState.INVOICE_SEARCH,

@@ -18,6 +18,10 @@ export enum ViewState {
 
   // Módulo: Busca de NF
   INVOICE_SEARCH = 'INVOICE_SEARCH',
+  SEARCH_DASHBOARD = 'SEARCH_DASHBOARD',   // Dashboard de métricas de busca (admin)
+
+  // Módulo: Emissão — dashboard
+  EMISSION_DASHBOARD = 'EMISSION_DASHBOARD', // Dashboard de métricas de emissão (admin)
 
   // Módulos auxiliares
   TASKS = 'TASKS',
