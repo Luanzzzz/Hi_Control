@@ -19,7 +19,6 @@ import {
   ShoppingCart,
   Truck,
   Briefcase,
-  Menu,
   FileSearch,
   BarChart2,
 } from 'lucide-react';
@@ -242,8 +241,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         `}
         aria-label="Menu lateral"
       >
-        {/* Logo + botão recolher */}
-        <div className="p-5 flex items-center justify-between border-b border-hc-border">
+        {/* Logo */}
+        <div className="p-5 flex items-center border-b border-hc-border">
           <div className="flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-lg bg-hc-purple flex items-center justify-center shrink-0"
@@ -256,13 +255,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
               <p className="text-[10px] text-hc-muted mt-0.5">Gestão Contábil</p>
             </div>
           </div>
-          <button
-            onClick={toggleSidebar}
-            className="p-1.5 rounded-lg hover:bg-hc-card transition-colors text-hc-muted hover:text-hc-accent"
-            aria-label="Recolher menu"
-          >
-            <Menu size={18} />
-          </button>
         </div>
 
         {/* Plano do usuário */}

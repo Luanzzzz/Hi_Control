@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileSearch,
   RefreshCw,
@@ -10,7 +10,25 @@ import {
   Clock,
   Building2,
   WifiOff,
+  TrendingUp,
+  BarChart2,
+  Activity,
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Cell,
+  PieChart,
+  Pie,
+  RadialBarChart,
+  RadialBar,
+} from 'recharts';
 import { carregarMetricasBusca, type MetricasBusca } from '../src/services/dashboardService';
 import { ViewState } from '../types';
 
@@ -58,6 +76,32 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
   const totalNotas = dados.reduce((acc, d) => acc + d.totalNotas, 0);
   const sincronizados = dados.filter((d) => d.sincronizado).length;
   const semDados = dados.filter((d) => d.totalNotas === 0).length;
+  const [chartMode, setChartMode] = useState<'bar' | 'pie'>('bar');
+
+  // Dados para o gráfico de barras — top 10 empresas por qtd de notas
+  const barData = useMemo(() => {
+    return [...dados]
+      .sort((a, b) => b.totalNotas - a.totalNotas)
+      .slice(0, 10)
+      .map((d, idx) => ({
+        nome: (d.empresa.nome_fantasia || d.empresa.razao_social).slice(0, 18),
+        notas: d.totalNotas,
+        status: d.sincronizado ? 'sync' : 'pending',
+        fill: d.sincronizado ? '#6d28d9' : '#f59e0b',
+      }));
+  }, [dados]);
+
+  // Dados para o gráfico de pizza — distribuição por status
+  const pieData = useMemo(() => {
+    const sync = dados.filter((d) => d.sincronizado && d.totalNotas > 0).length;
+    const pending = dados.filter((d) => !d.sincronizado && d.totalNotas > 0).length;
+    const empty = semDados;
+    return [
+      { name: 'Sincronizadas', value: sync, fill: '#6d28d9' },
+      { name: 'Pendentes', value: pending, fill: '#f59e0b' },
+      { name: 'Sem dados', value: empty, fill: '#475569' },
+    ].filter((d) => d.value > 0);
+  }, [dados, semDados]);
 
   if (loading) {
     return (
@@ -112,23 +156,166 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
         </div>
       )}
 
-      {/* KPIs consolidados */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl p-4 border bg-blue-500/10 border-blue-500/20">
-          <p className="text-xs text-hc-muted mb-1">Total de notas (todos os clientes)</p>
-          <p className="text-2xl font-bold text-hc-text">{totalNotas.toLocaleString('pt-BR')}</p>
+      {/* Painel BI */}
+      {dados.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Gráfico principal */}
+          <div className="lg:col-span-2 bg-hc-surface border border-hc-border rounded-xl p-5" style={{ boxShadow: 'var(--hc-shadow)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={15} className="text-hc-purple-light" />
+                <p className="text-sm font-semibold text-hc-text">
+                  {chartMode === 'bar' ? 'Volume de Notas por Empresa' : 'Distribuição por Status'}
+                </p>
+              </div>
+              <div className="flex bg-hc-card border border-hc-border p-0.5 rounded-lg gap-0.5">
+                <button
+                  onClick={() => setChartMode('bar')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${chartMode === 'bar' ? 'bg-hc-surface text-hc-purple border border-hc-border shadow-sm' : 'text-hc-muted hover:text-hc-text'}`}
+                >
+                  <BarChart2 size={12} className="inline mr-1" />Barras
+                </button>
+                <button
+                  onClick={() => setChartMode('pie')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${chartMode === 'pie' ? 'bg-hc-surface text-hc-purple border border-hc-border shadow-sm' : 'text-hc-muted hover:text-hc-text'}`}
+                >
+                  <Activity size={12} className="inline mr-1" />Pizza
+                </button>
+              </div>
+            </div>
+
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                {chartMode === 'bar' ? (
+                  <BarChart data={barData} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
+                    <XAxis
+                      dataKey="nome"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: '#94a3b8' }}
+                      angle={-35}
+                      textAnchor="end"
+                      interval={0}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(109,40,217,0.07)' }}
+                      contentStyle={{ borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'var(--hc-surface)', fontSize: 12 }}
+                      labelStyle={{ color: 'var(--hc-text)', fontWeight: 600 }}
+                      formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Notas']}
+                    />
+                    <Bar dataKey="notas" radius={[4, 4, 0, 0]} maxBarSize={48} name="Notas">
+                      {barData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : (
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={{ strokeWidth: 1, stroke: '#94a3b8' }}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`pie-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'var(--hc-surface)', fontSize: 12 }}
+                      formatter={(value: number) => [value, 'Empresas']}
+                    />
+                    <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Painel de métricas resumidas */}
+          <div className="bg-hc-surface border border-hc-border rounded-xl p-5 flex flex-col justify-between" style={{ boxShadow: 'var(--hc-shadow)' }}>
+            <div>
+              <p className="text-[11px] font-semibold text-hc-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                <FileSearch size={13} />
+                Resumo Geral
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-hc-muted">Total de notas</span>
+                    <span className="font-semibold text-hc-text">{totalNotas.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-hc-purple h-full rounded-full w-full" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-hc-muted flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" /> Sincronizadas
+                    </span>
+                    <span className="font-semibold text-hc-text">{sincronizados}/{dados.length}</span>
+                  </div>
+                  <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-emerald-400 h-full rounded-full transition-all"
+                      style={{ width: dados.length > 0 ? `${(sincronizados / dados.length) * 100}%` : '0%' }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-hc-muted flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-amber-400" /> Pendentes
+                    </span>
+                    <span className="font-semibold text-hc-text">{dados.length - sincronizados}</span>
+                  </div>
+                  <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-amber-400 h-full rounded-full transition-all"
+                      style={{ width: dados.length > 0 ? `${((dados.length - sincronizados) / dados.length) * 100}%` : '0%' }}
+                    />
+                  </div>
+                </div>
+                {semDados > 0 && (
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-hc-muted flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-slate-400" /> Sem dados
+                      </span>
+                      <span className="font-semibold text-hc-text">{semDados}</span>
+                    </div>
+                    <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-slate-400 h-full rounded-full"
+                        style={{ width: `${(semDados / dados.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-hc-border flex justify-between items-center">
+              <span className="text-xs text-hc-muted">{dados.length} empresa{dados.length !== 1 ? 's' : ''}</span>
+              <span className="text-xs font-semibold text-emerald-400">
+                {dados.length > 0 ? Math.round((sincronizados / dados.length) * 100) : 0}% OK
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="rounded-xl p-4 border bg-emerald-500/10 border-emerald-500/20">
-          <p className="text-xs text-hc-muted mb-1">Empresas sincronizadas</p>
-          <p className="text-2xl font-bold text-hc-text">
-            {sincronizados}/{dados.length}
-          </p>
-        </div>
-        <div className="rounded-xl p-4 border bg-amber-500/10 border-amber-500/20">
-          <p className="text-xs text-hc-muted mb-1">Sem notas importadas</p>
-          <p className="text-2xl font-bold text-hc-text">{semDados}</p>
-        </div>
-      </div>
+      )}
 
       {/* Grid de empresas */}
       {dados.length === 0 ? (

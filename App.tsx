@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/Login';
 import { ViewState } from './types';
@@ -12,10 +12,30 @@ const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.SETTINGS);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // Navegação com suporte ao botão voltar do browser
+  const navigateTo = useCallback((view: ViewState) => {
+    setCurrentView(view);
+    window.history.pushState({ view }, '');
+  }, []);
+
+  // Escuta o botão voltar/avançar do browser
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const view = e.state?.view as ViewState | undefined;
+      if (view) {
+        setCurrentView(view); // setCurrentView direto — não pushState para não duplicar
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Define a rota inicial quando o carregamento de auth termina (R3 fix)
   useEffect(() => {
     if (initialRoute !== null) {
       setCurrentView(initialRoute);
+      // Substitui o estado inicial no histórico (não empilha)
+      window.history.replaceState({ view: initialRoute }, '');
     }
   }, [initialRoute]);
 
@@ -64,7 +84,7 @@ const AppContent: React.FC = () => {
 
   const shellProps = {
     currentView,
-    onViewChange: setCurrentView,
+    onViewChange: navigateTo,
     isDarkMode,
     toggleTheme,
   };
