@@ -158,6 +158,26 @@ export const listarCTe = async (id: string): Promise<CTeAutorizarResponse> => {
 };
 
 /**
+ * Faz download do DANFE (Documento Auxiliar da NF-e) em PDF
+ * @param chaveAcesso Chave de acesso de 44 dígitos
+ * @returns Blob do PDF
+ */
+export const downloadDANFE = async (chaveAcesso: string): Promise<Blob> => {
+  try {
+    const response = await api.get(`/nfe/${chaveAcesso}/danfe`, {
+      responseType: 'blob',
+      timeout: 60000,
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error('Erro ao baixar DANFE. Verifique se a nota está disponível.');
+    }
+    throw error;
+  }
+};
+
+/**
  * Faz download do DACTE (Documento Auxiliar do CT-e) em PDF
  * @param chaveAcesso Chave de acesso de 44 dígitos
  * @returns Blob do PDF
