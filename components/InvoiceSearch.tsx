@@ -284,42 +284,28 @@ export const InvoiceSearch: React.FC = () => {
         return;
       }
 
-      // Buscar notas (primeira página)
-      const resultado = await buscarNotasEmpresa(empresaSelecionada.id, {
-        cnpj: cnpjLimpo,
-        nsu_inicial: 0,        // Começar do NSU 0
-        max_notas: limitePorPagina  // Usar limite configurado
-      });
-
-      console.log('✅ Busca concluída:', {
-        total: resultado.total_notas,
-        fonte: resultado.fonte,
-        tem_mais: resultado.tem_mais_notas,
-        ultimo_nsu: resultado.ultimo_nsu,
-        max_nsu: resultado.max_nsu
-      });
-
-      // Validar estrutura dos dados
-      if (resultado.notas?.length > 0) {
-        const primeiraNota = resultado.notas[0];
-        console.log('📋 Estrutura da primeira nota:', Object.keys(primeiraNota));
-        console.log('📋 Dados da primeira nota:', primeiraNota);
-      }
+      // Buscar e sincronizar: primeira chamada (nsu_inicial=0) aciona o sync SEFAZ
+      // e traz notas novas para o banco. As páginas seguintes leem só o banco.
+      const resultado = await buscarTodasNotasEmpresa(
+        empresaSelecionada.id,
+        { cnpj: cnpjLimpo },
+        200  // 200 notas por página
+      );
 
       setInvoices(resultado.notas || []);
       setFonteResultado(resultado.fonte ?? null);
-      setUltimoNSU(resultado.ultimo_nsu);
+      setUltimoNSU(resultado.max_nsu);
       setMaxNSU(resultado.max_nsu);
-      setTemMaisNotas(resultado.tem_mais_notas);
+      setTemMaisNotas(false);  // buscarTodasNotasEmpresa já carregou tudo
 
       if (resultado.total_notas === 0) {
         const partesDescricao = [
-          resultado.mensagem || 'Nenhuma nota encontrada apos consultar a SEFAZ e o historico local desta empresa.',
+          resultado.mensagem || 'Nenhuma nota encontrada. Verifique o certificado digital ou importe XMLs manualmente.',
         ];
 
         if (resultado.ultima_sincronizacao) {
           partesDescricao.push(
-            `Última sincronização registrada em ${formatDateTime(resultado.ultima_sincronizacao)}.`
+            `Última sincronização: ${formatDateTime(resultado.ultima_sincronizacao)}.`
           );
         } else {
           partesDescricao.push('Ainda não há sincronização registrada para esta empresa.');
@@ -337,18 +323,6 @@ export const InvoiceSearch: React.FC = () => {
       } else {
         setBuscaVaziaContexto(null);
       }
-
-      // Feedback de sucesso ao usuário
-      const origemMap: Record<string, string> = {
-        cache: 'cache local',
-        banco_local: 'banco local',
-        sefaz: 'SEFAZ',
-      };
-      const icone = resultado.fonte === 'cache' ? '💾' : resultado.fonte === 'banco_local' ? '🗄️' : '🌐';
-      const origem = origemMap[resultado.fonte] ?? resultado.fonte;
-      console.log(
-        `${icone} ${resultado.total_notas} notas encontradas (${origem}) | novas sincronizadas: ${resultado.novas_notas_sincronizadas ?? 0}`
-      );
     } catch (err: any) {
       const mensagemErro = err.message || 'Erro ao buscar notas fiscais. Tente novamente.';
       setError(mensagemErro);
