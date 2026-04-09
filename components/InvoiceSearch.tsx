@@ -553,7 +553,8 @@ export const InvoiceSearch: React.FC = () => {
       let blob: Blob;
       let nomeArquivo: string;
 
-      switch (nota.tipo_nf) {
+      const tipoBase = getTipoBase(nota.tipo_nf);
+      switch (tipoBase) {
         case 'NFCe':
           blob = await downloadDANFCE(nota.chave_acesso);
           nomeArquivo = `DANFCE_${nota.chave_acesso}.pdf`;
@@ -911,10 +912,10 @@ export const InvoiceSearch: React.FC = () => {
                         >
                           <Eye size={16} className="text-hc-muted" />
                         </button>
-                        {(invoice.tipo_nf === 'NFCe' || invoice.tipo_nf === 'CTe' || invoice.tipo_nf === 'NFe') && (
+                        {(['NFe', 'NFCe', 'CTe'] as string[]).includes(getTipoBase(invoice.tipo_nf)) && (
                           <button
                             className="p-1.5 hover:bg-hc-info/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            title={`Download ${invoice.tipo_nf === 'NFCe' ? 'DANFCE' : invoice.tipo_nf === 'CTe' ? 'DACTE' : 'DANFE'}`}
+                            title={`Download ${getTipoBase(invoice.tipo_nf) === 'NFCe' ? 'DANFCE' : getTipoBase(invoice.tipo_nf) === 'CTe' ? 'DACTE' : 'DANFE'}`}
                             onClick={() => handleDownloadPdf(invoice)}
                             disabled={!invoice.chave_acesso || downloadingXml === invoice.chave_acesso}
                           >
@@ -1014,7 +1015,7 @@ export const InvoiceSearch: React.FC = () => {
                       <Eye size={15} />
                       Visualizar
                     </button>
-                    {(invoice.tipo_nf === 'NFCe' || invoice.tipo_nf === 'CTe' || invoice.tipo_nf === 'NFe') && (
+                    {(['NFe', 'NFCe', 'CTe'] as string[]).includes(getTipoBase(invoice.tipo_nf)) && (
                       <button
                         className="flex-1 py-2 px-3 bg-hc-info/15 hover:bg-hc-info/25 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium text-hc-info"
                         onClick={() => handleDownloadPdf(invoice)}
@@ -1025,7 +1026,7 @@ export const InvoiceSearch: React.FC = () => {
                         ) : (
                           <FileText size={15} />
                         )}
-                        {invoice.tipo_nf === 'NFCe' ? 'DANFCE' : invoice.tipo_nf === 'CTe' ? 'DACTE' : 'DANFE'}
+                        {getTipoBase(invoice.tipo_nf) === 'NFCe' ? 'DANFCE' : getTipoBase(invoice.tipo_nf) === 'CTe' ? 'DACTE' : 'DANFE'}
                       </button>
                     )}
                     <button
