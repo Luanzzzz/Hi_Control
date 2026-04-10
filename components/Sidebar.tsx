@@ -4,7 +4,6 @@ import {
   FileText,
   CheckSquare,
   MessageCircle,
-  Users,
   Package,
   CreditCard,
   Wrench,
@@ -13,7 +12,6 @@ import {
   LogOut,
   ChevronDown,
   Lock,
-  Search,
   FileEdit,
   Settings,
   ShoppingCart,
@@ -21,6 +19,8 @@ import {
   Briefcase,
   FileSearch,
   BarChart2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { ViewState, MenuItem, SubModule, UserPlan } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -41,46 +41,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   const menuItems: MenuItem[] = [
     {
       id: ViewState.EMISSION_DASHBOARD,
-      label: 'Dashboard de Emissão',
+      label: 'HI emissão',
       icon: BarChart2,
       priority: 1,
     },
     {
-      id: ViewState.INVOICES,
-      label: 'Emissão de NF',
-      icon: FileEdit,
-      priority: 1,
-      subModules: [
-        { id: ViewState.INVOICE_EMITTER, label: 'NF-e (Modelo 55)', priority: 1 },
-        { id: ViewState.PDV, label: 'NFC-e (Cupom Fiscal)', priority: 1 },
-        { id: ViewState.CTE, label: 'CT-e (Transporte)', priority: 1 },
-        { id: ViewState.NFSE, label: 'NFS-e (Serviços)', priority: 1 },
-      ],
-    },
-    {
       id: ViewState.SEARCH_DASHBOARD,
-      label: 'Dashboard de Busca',
+      label: 'HI buscador',
       icon: FileSearch,
       priority: 1,
     },
-    {
-      id: ViewState.INVOICE_SEARCH,
-      label: 'Consultar Notas',
-      icon: Search,
-      priority: 1,
-    },
-    { id: ViewState.TASKS, label: 'Tarefas', icon: CheckSquare, priority: 1 },
-    { id: ViewState.WHATSAPP, label: 'WhatsApp', icon: MessageCircle, priority: 1 },
-    { id: ViewState.USERS, label: 'Clientes', icon: Users, priority: 1 },
+    { id: ViewState.TASKS, label: 'HI tarefas', icon: CheckSquare, priority: 1 },
+    { id: ViewState.WHATSAPP, label: 'HI comunicação', icon: MessageCircle, priority: 1 },
     { id: ViewState.SETTINGS, label: 'Configurações', icon: Settings, priority: 1 },
   ];
 
   const extraModules: MenuItem[] = [
+    { id: ViewState.COMING_SOON, label: 'HI agenda', icon: Calendar, priority: 2 },
     { id: ViewState.COMING_SOON, label: 'Estoque', icon: Package, priority: 2 },
     { id: ViewState.COMING_SOON, label: 'Faturamento', icon: CreditCard, priority: 2 },
     { id: ViewState.COMING_SOON, label: 'Serviços', icon: Wrench, priority: 2 },
     { id: ViewState.COMING_SOON, label: 'Financeiro', icon: PieChart, priority: 2 },
-    { id: ViewState.COMING_SOON, label: 'Agenda Médica', icon: Calendar, priority: 2 },
   ];
 
   const checkAccess = (view: ViewState) => hasModuleAccess(view, user ?? null);
@@ -93,7 +74,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
   };
 
   const getSubModuleIcon = (subModule: SubModule) => {
-    if (subModule.id === ViewState.INVOICE_SEARCH) return Search;
     if (subModule.id === ViewState.INVOICE_EMITTER) return FileEdit;
     if (subModule.id === ViewState.PDV) return ShoppingCart;
     if (subModule.id === ViewState.CTE) return Truck;
@@ -225,6 +205,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
 
   return (
     <>
+      {/* Botão fixo para re-expandir no desktop quando sidebar está colapsada */}
+      {!isOpen && (
+        <button
+          onClick={toggleSidebar}
+          className="hidden lg:flex fixed top-4 left-4 z-30 p-2 rounded-lg bg-hc-surface border border-hc-border text-hc-muted hover:text-hc-text hover:bg-hc-hover transition-colors"
+          aria-label="Abrir menu"
+          style={{ boxShadow: 'var(--hc-shadow)' }}
+        >
+          <PanelLeftOpen size={18} />
+        </button>
+      )}
+
       {/* Overlay mobile */}
       <div
         className={`fixed inset-0 bg-black/60 z-20 lg:hidden ${isOpen ? 'block' : 'hidden'}`}
@@ -241,8 +233,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
         `}
         aria-label="Menu lateral"
       >
-        {/* Logo */}
-        <div className="p-5 flex items-center border-b border-hc-border">
+        {/* Logo + Toggle */}
+        <div className="p-5 flex items-center justify-between border-b border-hc-border">
           <div className="flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-lg bg-hc-purple flex items-center justify-center shrink-0"
@@ -255,6 +247,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, 
               <p className="text-[10px] text-hc-muted mt-0.5">Gestão Contábil</p>
             </div>
           </div>
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 rounded-lg hover:bg-hc-hover text-hc-muted hover:text-hc-text transition-colors"
+            aria-label="Fechar menu"
+          >
+            <PanelLeftClose size={18} />
+          </button>
         </div>
 
         {/* Plano do usuário */}

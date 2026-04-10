@@ -67,7 +67,6 @@ export const ClientShell: React.FC<ClientShellProps> = ({
     return (
       <div className="flex h-screen overflow-hidden w-full flex-col">
         <TopBar
-          toggleSidebar={toggleSidebar}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
         />
@@ -157,7 +156,6 @@ export const ClientShell: React.FC<ClientShellProps> = ({
 
       <div className="flex-1 flex flex-col overflow-hidden w-full relative">
         <TopBar
-          toggleSidebar={toggleSidebar}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
         />

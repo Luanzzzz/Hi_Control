@@ -207,17 +207,17 @@ export const PDV: React.FC = () => {
 
   if (sucesso) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-slate-900 p-6">
+      <div className="p-6 space-y-5">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8">
+          <div className="bg-hc-card border border-hc-border rounded-xl p-8">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <QrCode className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-bold text-hc-text mb-2">
                 Cupom Emitido com Sucesso!
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-hc-muted">
                 Chave de Acesso: {chaveAcesso}
               </p>
             </div>
@@ -227,7 +227,7 @@ export const PDV: React.FC = () => {
                 <img 
                   src={qrCode} 
                   alt="QR Code NFC-e" 
-                  className="max-w-xs border-4 border-gray-200 dark:border-gray-700 rounded-lg"
+                  className="max-w-xs border-4 border-hc-border rounded-lg"
                 />
               </div>
             )}
@@ -235,14 +235,14 @@ export const PDV: React.FC = () => {
             <div className="flex flex-col gap-3">
               <button
                 onClick={imprimirDANFCE}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-hc-purple hover:bg-hc-purple/80 text-white rounded-lg transition-colors"
               >
                 <Printer className="h-5 w-5" />
                 Imprimir DANFCE
               </button>
               <button
                 onClick={novoCupom}
-                className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
               >
                 Novo Cupom
               </button>
@@ -254,14 +254,14 @@ export const PDV: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-slate-900 p-6">
+    <div className="p-6 space-y-5">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <ShoppingCart className="h-8 w-8 text-blue-600" />
+          <h1 className="text-3xl font-bold text-hc-text flex items-center gap-3">
+            <ShoppingCart className="h-8 w-8 text-hc-purple-light" />
             PDV - Emissão de NFC-e
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-hc-muted mt-1">
             Ponto de Venda para emissão de Cupom Fiscal Eletrônico
           </p>
         </div>
@@ -270,14 +270,14 @@ export const PDV: React.FC = () => {
         <BannerContingenciaCompacto />
 
         {/* Seleção de Empresa */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="bg-hc-card border border-hc-border rounded-xl p-4 mb-6">
+          <label className="block text-sm font-medium text-hc-text mb-2">
             Empresa Emissora
           </label>
           <select
             value={empresaSelecionada}
             onChange={(e) => setEmpresaSelecionada(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
+            className="w-full px-4 py-2 border border-hc-border rounded-lg bg-hc-surface text-hc-text"
           >
             {empresas.map((emp) => (
               <option key={emp.id} value={emp.id}>
@@ -291,13 +291,13 @@ export const PDV: React.FC = () => {
           {/* Coluna Esquerda: Itens */}
           <div className="space-y-6">
             {/* Formulário de Adicionar Item */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center justify-between">
+            <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+              <h2 className="text-lg font-bold text-hc-text mb-4 flex items-center justify-between">
                 <span>Adicionar Item</span>
                 <button
                   type="button"
                   onClick={() => setMostrarSeletorProdutos(true)}
-                  className="text-sm px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  className="text-sm px-3 py-1 bg-hc-purple hover:bg-hc-purple/80 text-white rounded-lg transition-colors"
                 >
                   Importar Produtos
                 </button>
@@ -306,25 +306,25 @@ export const PDV: React.FC = () => {
               <form onSubmit={handleSubmit(adicionarItem)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-hc-text mb-1">
                       Código
                     </label>
                     <input
                       type="text"
                       {...register('codigo_produto', { required: true })}
-                      className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                      className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                       placeholder="Ex: 001"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-hc-text mb-1">
                       Unidade
                     </label>
                     <input
                       type="text"
                       {...register('unidade', { required: true })}
-                      className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                      className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                       placeholder="Ex: UN"
                       maxLength={6}
                     />
@@ -332,52 +332,52 @@ export const PDV: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-hc-text mb-1">
                     Descrição
                   </label>
                   <input
                     type="text"
                     {...register('descricao', { required: true })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                    className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                     placeholder="Ex: Produto X"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-hc-text mb-1">
                       Quantidade
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       {...register('quantidade', { required: true, min: 0.01 })}
-                      className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                      className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                       placeholder="1"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-hc-text mb-1">
                       Valor Unitário
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       {...register('valor_unitario', { required: true, min: 0.01 })}
-                      className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                      className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                       placeholder="0.00"
                     />
                   </div>
                 </div>
 
-                <div className="text-right text-lg font-bold text-gray-900 dark:text-white">
+                <div className="text-right text-lg font-bold text-hc-text">
                   Total: R$ {formatarValor(valorNumerico(quantidadeWatch) * valorNumerico(valorUnitarioWatch))}
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                 >
                   <Plus className="h-5 w-5" />
                   Adicionar Item
@@ -386,13 +386,13 @@ export const PDV: React.FC = () => {
             </div>
 
             {/* Lista de Itens */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+            <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+              <h2 className="text-lg font-bold text-hc-text mb-4">
                 Itens do Cupom ({itens.length})
               </h2>
 
               {itens.length === 0 ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                <p className="text-center text-hc-muted py-8">
                   Nenhum item adicionado
                 </p>
               ) : (
@@ -400,23 +400,23 @@ export const PDV: React.FC = () => {
                   {itens.map((item) => (
                     <div
                       key={item.numero_item}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-hc-surface rounded-lg"
                     >
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900 dark:text-white">
+                        <div className="font-medium text-hc-text">
                           {item.descricao}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="text-sm text-hc-muted">
                           {item.quantidade} {item.unidade} x R$ {formatarValor(item.valor_unitario)}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="font-bold text-gray-900 dark:text-white">
+                        <div className="font-bold text-hc-text">
                           R$ {formatarValor(item.valor_total)}
                         </div>
                         <button
                           onClick={() => removerItem(item.numero_item)}
-                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
@@ -431,7 +431,7 @@ export const PDV: React.FC = () => {
           {/* Coluna Direita: Pagamento */}
           <div className="space-y-6">
             {/* Total */}
-            <div className="bg-blue-600 text-white rounded-lg shadow-lg p-6">
+            <div className="bg-hc-purple text-white rounded-lg shadow-lg p-6">
               <div className="text-sm opacity-80 mb-1">Valor Total</div>
               <div className="text-4xl font-bold">
                 R$ {formatarValor(calcularTotalGeral())}
@@ -453,22 +453,22 @@ export const PDV: React.FC = () => {
             </div>
 
             {/* Formas de Pagamento */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+            <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+              <h2 className="text-lg font-bold text-hc-text mb-4">
                 Formas de Pagamento
               </h2>
 
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <button
                   onClick={() => adicionarPagamento('01')}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                 >
                   <DollarSign className="h-5 w-5" />
                   Dinheiro
                 </button>
                 <button
                   onClick={() => adicionarPagamento('03')}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-hc-purple hover:bg-hc-purple/80 text-white rounded-lg transition-colors"
                 >
                   <CreditCard className="h-5 w-5" />
                   Crédito
@@ -494,10 +494,10 @@ export const PDV: React.FC = () => {
                   {pagamentos.map((pag, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-hc-surface rounded-lg"
                     >
                       <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
+                        <div className="font-medium text-hc-text">
                           {pag.tipo === '01' && 'Dinheiro'}
                           {pag.tipo === '03' && 'Cartão de Crédito'}
                           {pag.tipo === '04' && 'Cartão de Débito'}
@@ -505,12 +505,12 @@ export const PDV: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="font-bold text-gray-900 dark:text-white">
+                        <div className="font-bold text-hc-text">
                           R$ {formatarValor(pag.valor)}
                         </div>
                         <button
                           onClick={() => removerPagamento(index)}
-                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
                         >
                           <X className="h-4 w-4 text-red-600" />
                         </button>
@@ -523,9 +523,9 @@ export const PDV: React.FC = () => {
 
             {/* Botão Emitir */}
             {erro && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-red-800 dark:text-red-300">{erro}</p>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-red-400">{erro}</p>
               </div>
             )}
 

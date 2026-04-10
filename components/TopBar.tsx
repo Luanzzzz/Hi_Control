@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { Menu, Moon, Sun, Bell, Search, Sparkles, User, LogOut, Crown, Settings } from 'lucide-react';
+import { Moon, Sun, Bell, Search, Sparkles, User, LogOut, Crown, Settings } from 'lucide-react';
 import { generateAIResponse } from '../services/geminiService';
 import { useAuth } from '../contexts/AuthContext';
 import { UserPlan } from '../types';
 import { PerfilContadorModal } from './PerfilContadorModal';
 
 interface TopBarProps {
-  toggleSidebar: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
+export const TopBar: React.FC<TopBarProps> = ({ isDarkMode, toggleTheme }) => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
@@ -42,14 +41,6 @@ export const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, isDarkMode, toggl
   return (
     <header className="h-14 bg-hc-surface border-b border-hc-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10" style={{ boxShadow: 'var(--hc-shadow-sm)' }}>
       <div className="flex items-center gap-3">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-lg hover:bg-hc-hover text-hc-muted hover:text-hc-text transition-colors"
-          aria-label="Toggle menu"
-        >
-          <Menu size={20} />
-        </button>
-
         <div className="hidden md:flex items-center bg-hc-card border border-hc-border rounded-lg px-3 py-1.5 w-64 lg:w-80 gap-2">
           <Search size={15} className="text-hc-muted shrink-0" />
           <input

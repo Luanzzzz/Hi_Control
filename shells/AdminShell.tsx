@@ -186,7 +186,6 @@ export const AdminShell: React.FC<AdminShellProps> = ({
 
       <div className="flex-1 flex flex-col overflow-hidden w-full relative">
         <TopBar
-          toggleSidebar={toggleSidebar}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
         />

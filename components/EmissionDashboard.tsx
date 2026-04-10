@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import InputMask from 'react-input-mask';
 import {
   FileEdit,
   RefreshCw,
@@ -12,8 +14,14 @@ import {
   ArrowRight,
   Building2,
   Clock,
+  UserPlus,
+  X,
+  ShoppingCart,
+  Truck,
+  Briefcase,
 } from 'lucide-react';
 import { carregarMetricasEmissao, type MetricasEmissao } from '../src/services/dashboardService';
+import { empresaService, type EmpresaCreate } from '../services/empresaService';
 import { ViewState } from '../types';
 
 interface EmissionDashboardProps {
@@ -34,6 +42,9 @@ export const EmissionDashboard: React.FC<EmissionDashboardProps> = ({
   const [atualizando, setAtualizando] = useState(false);
   const [dados, setDados] = useState<MetricasEmissao[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { register, handleSubmit, reset, formState: { errors: formErrors } } = useForm<EmpresaCreate>();
 
   const carregar = async () => {
     try {
@@ -57,11 +68,25 @@ export const EmissionDashboard: React.FC<EmissionDashboardProps> = ({
     carregar();
   }, []);
 
-  const prontos = dados.filter((d) => d.prontoParaEmitir).length;
-  const semCert = dados.filter((d) => !d.certStatus || d.certStatus.status === 'ausente').length;
-  const expirandoOuExpirado = dados.filter(
-    (d) => d.certStatus?.status === 'expirando_em_breve' || d.certStatus?.status === 'expirado'
-  ).length;
+  const onSubmitClient = async (data: EmpresaCreate) => {
+    setFormMessage(null);
+    try {
+      const payload: EmpresaCreate = {
+        ...data,
+        csc_id: data.csc_id !== undefined && data.csc_id !== null && String(data.csc_id).trim() !== ''
+          ? Number(data.csc_id) : undefined,
+        csc_token: data.csc_token && String(data.csc_token).trim() ? String(data.csc_token).trim() : undefined,
+      };
+      const result = await empresaService.criar(payload);
+      setFormMessage({ type: 'success', text: result._message || 'Cliente cadastrado com sucesso!' });
+      reset();
+      carregar();
+      setTimeout(() => { setShowAddClient(false); setFormMessage(null); }, 1500);
+    } catch (error: any) {
+      const detail = error.response?.data?.detail;
+      setFormMessage({ type: 'error', text: typeof detail === 'string' ? detail : 'Erro ao cadastrar cliente.' });
+    }
+  };
 
   if (loading) {
     return (
@@ -80,14 +105,22 @@ export const EmissionDashboard: React.FC<EmissionDashboardProps> = ({
             <FileEdit size={22} className="text-hc-purple-light" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-hc-text">Dashboard de Emissão</h1>
+            <h1 className="text-xl font-bold text-hc-text">HI emissão</h1>
             <p className="text-xs text-hc-muted">
-              Prontidão e certificados de emissão por empresa — não inclui dados de busca
+              Prontidão e certificados de emissão por empresa
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddClient(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-hc-border
+              text-hc-muted hover:text-hc-text hover:bg-hc-card transition-colors"
+          >
+            <UserPlus size={14} />
+            Novo Cliente
+          </button>
           <button
             onClick={atualizar}
             disabled={atualizando}
@@ -96,15 +129,6 @@ export const EmissionDashboard: React.FC<EmissionDashboardProps> = ({
           >
             <RefreshCw size={14} className={atualizando ? 'animate-spin' : ''} />
             Atualizar
-          </button>
-          <button
-            onClick={() => setView(ViewState.INVOICES)}
-            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-hc-purple text-white
-              hover:bg-hc-purple/80 transition-colors"
-          >
-            <FileEdit size={14} />
-            Emitir NF-e
-            <ArrowRight size={14} />
           </button>
         </div>
       </div>
@@ -116,30 +140,29 @@ export const EmissionDashboard: React.FC<EmissionDashboardProps> = ({
         </div>
       )}
 
-      {/* KPIs consolidados */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl p-4 border bg-emerald-500/10 border-emerald-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle size={14} className="text-emerald-500" />
-            <p className="text-xs text-hc-muted">Prontas para emitir</p>
-          </div>
-          <p className="text-2xl font-bold text-hc-text">
-            {prontos}/{dados.length}
-          </p>
-        </div>
-        <div className="rounded-xl p-4 border bg-amber-500/10 border-amber-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldAlert size={14} className="text-amber-500" />
-            <p className="text-xs text-hc-muted">Cert. expirando/expirado</p>
-          </div>
-          <p className="text-2xl font-bold text-hc-text">{expirandoOuExpirado}</p>
-        </div>
-        <div className="rounded-xl p-4 border bg-red-500/10 border-red-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldOff size={14} className="text-red-400" />
-            <p className="text-xs text-hc-muted">Sem certificado</p>
-          </div>
-          <p className="text-2xl font-bold text-hc-text">{semCert}</p>
+      {/* Emissão rápida por tipo de documento */}
+      <div className="bg-hc-card border border-hc-border rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-hc-text mb-3">Emissão rápida</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'NF-e', sub: 'Modelo 55', view: ViewState.INVOICE_EMITTER, Icon: FileEdit },
+            { label: 'NFC-e', sub: 'Cupom Fiscal', view: ViewState.PDV, Icon: ShoppingCart },
+            { label: 'CT-e', sub: 'Transporte', view: ViewState.CTE, Icon: Truck },
+            { label: 'NFS-e', sub: 'Serviços', view: ViewState.NFSE, Icon: Briefcase },
+          ].map(({ label, sub, view, Icon }) => (
+            <button
+              key={label}
+              onClick={() => setView(view)}
+              className="flex flex-col items-center gap-1 p-3 rounded-lg border border-hc-border
+                hover:border-hc-purple hover:bg-hc-purple-dim transition-colors group"
+            >
+              <Icon size={18} className="text-hc-muted group-hover:text-hc-purple-light transition-colors mb-0.5" />
+              <span className="text-sm font-semibold text-hc-text group-hover:text-hc-purple-light">
+                {label}
+              </span>
+              <span className="text-[10px] text-hc-muted">{sub}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -176,30 +199,80 @@ export const EmissionDashboard: React.FC<EmissionDashboardProps> = ({
         </>
       )}
 
-      {/* Acesso rápido por tipo */}
-      <div className="bg-hc-card border border-hc-border rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-hc-text mb-3">Emitir por tipo de documento</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'NF-e', sub: 'Modelo 55', view: ViewState.INVOICE_EMITTER },
-            { label: 'NFC-e', sub: 'Cupom Fiscal', view: ViewState.PDV },
-            { label: 'CT-e', sub: 'Transporte', view: ViewState.CTE },
-            { label: 'NFS-e', sub: 'Serviços', view: ViewState.NFSE },
-          ].map(({ label, sub, view }) => (
-            <button
-              key={label}
-              onClick={() => setView(view)}
-              className="flex flex-col items-center gap-1 p-3 rounded-lg border border-hc-border
-                hover:border-hc-purple hover:bg-hc-purple-dim transition-colors group"
-            >
-              <span className="text-sm font-semibold text-hc-text group-hover:text-hc-purple-light">
-                {label}
-              </span>
-              <span className="text-[10px] text-hc-muted">{sub}</span>
-            </button>
-          ))}
+      {/* Modal Novo Cliente */}
+      {showAddClient && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-hc-surface rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-hc-border">
+            <div className="flex justify-between items-center p-5 border-b border-hc-border sticky top-0 bg-hc-surface z-10">
+              <h3 className="text-base font-semibold font-display text-hc-text">Novo Cliente</h3>
+              <button onClick={() => { setShowAddClient(false); reset(); setFormMessage(null); }} className="p-1.5 rounded-lg hover:bg-hc-hover text-hc-muted">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit(onSubmitClient)} className="p-6 space-y-4">
+              {formMessage && (
+                <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm ${
+                  formMessage.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                  {formMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+                  {formMessage.text}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">CNPJ *</label>
+                  <InputMask mask="99.999.999/9999-99" {...register('cnpj', { required: true })} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Razão Social *</label>
+                  <input type="text" {...register('razao_social', { required: true })} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Nome Fantasia</label>
+                  <input type="text" {...register('nome_fantasia')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Regime Tributário</label>
+                  <select {...register('regime_tributario')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none">
+                    <option value="">Selecione...</option>
+                    <option value="simples_nacional">Simples Nacional</option>
+                    <option value="lucro_presumido">Lucro Presumido</option>
+                    <option value="lucro_real">Lucro Real</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Inscrição Estadual</label>
+                  <input type="text" {...register('inscricao_estadual')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Inscrição Municipal</label>
+                  <input type="text" {...register('inscricao_municipal')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">CEP</label>
+                  <InputMask mask="99999-999" {...register('cep')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Cidade</label>
+                  <input type="text" {...register('cidade')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Estado (UF)</label>
+                  <input type="text" maxLength={2} {...register('estado')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none uppercase" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Email</label>
+                  <input type="email" {...register('email')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-hc-border">
+                <button type="button" onClick={() => { setShowAddClient(false); reset(); setFormMessage(null); }} className="px-4 py-2 text-sm rounded-lg text-hc-muted hover:bg-hc-hover transition-colors">Cancelar</button>
+                <button type="submit" className="px-4 py-2 text-sm rounded-lg bg-hc-purple text-white hover:bg-hc-purple/80 transition-colors">Salvar</button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

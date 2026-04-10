@@ -1,35 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import InputMask from 'react-input-mask';
 import {
   FileSearch,
   RefreshCw,
-  Search,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   ArrowRight,
-  Clock,
   Building2,
   WifiOff,
-  TrendingUp,
-  BarChart2,
-  Activity,
+  UserPlus,
+  X,
+  Clock,
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie,
-  RadialBarChart,
-  RadialBar,
-} from 'recharts';
 import { carregarMetricasBusca, type MetricasBusca } from '../src/services/dashboardService';
+import { empresaService, type EmpresaCreate } from '../services/empresaService';
 import { ViewState } from '../types';
 
 interface SearchDashboardProps {
@@ -50,6 +37,9 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
   const [atualizando, setAtualizando] = useState(false);
   const [dados, setDados] = useState<MetricasBusca[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { register, handleSubmit, reset } = useForm<EmpresaCreate>();
 
   const carregar = async () => {
     try {
@@ -73,35 +63,25 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
     carregar();
   }, []);
 
-  const totalNotas = dados.reduce((acc, d) => acc + d.totalNotas, 0);
-  const sincronizados = dados.filter((d) => d.sincronizado).length;
-  const semDados = dados.filter((d) => d.totalNotas === 0).length;
-  const [chartMode, setChartMode] = useState<'bar' | 'pie'>('bar');
-
-  // Dados para o gráfico de barras — top 10 empresas por qtd de notas
-  const barData = useMemo(() => {
-    return [...dados]
-      .sort((a, b) => b.totalNotas - a.totalNotas)
-      .slice(0, 10)
-      .map((d, idx) => ({
-        nome: (d.empresa.nome_fantasia || d.empresa.razao_social).slice(0, 18),
-        notas: d.totalNotas,
-        status: d.sincronizado ? 'sync' : 'pending',
-        fill: d.sincronizado ? '#6d28d9' : '#f59e0b',
-      }));
-  }, [dados]);
-
-  // Dados para o gráfico de pizza — distribuição por status
-  const pieData = useMemo(() => {
-    const sync = dados.filter((d) => d.sincronizado && d.totalNotas > 0).length;
-    const pending = dados.filter((d) => !d.sincronizado && d.totalNotas > 0).length;
-    const empty = semDados;
-    return [
-      { name: 'Sincronizadas', value: sync, fill: '#6d28d9' },
-      { name: 'Pendentes', value: pending, fill: '#f59e0b' },
-      { name: 'Sem dados', value: empty, fill: '#475569' },
-    ].filter((d) => d.value > 0);
-  }, [dados, semDados]);
+  const onSubmitClient = async (data: EmpresaCreate) => {
+    setFormMessage(null);
+    try {
+      const payload: EmpresaCreate = {
+        ...data,
+        csc_id: data.csc_id !== undefined && data.csc_id !== null && String(data.csc_id).trim() !== ''
+          ? Number(data.csc_id) : undefined,
+        csc_token: data.csc_token && String(data.csc_token).trim() ? String(data.csc_token).trim() : undefined,
+      };
+      const result = await empresaService.criar(payload);
+      setFormMessage({ type: 'success', text: result._message || 'Cliente cadastrado com sucesso!' });
+      reset();
+      carregar();
+      setTimeout(() => { setShowAddClient(false); setFormMessage(null); }, 1500);
+    } catch (error: any) {
+      const detail = error.response?.data?.detail;
+      setFormMessage({ type: 'error', text: typeof detail === 'string' ? detail : 'Erro ao cadastrar cliente.' });
+    }
+  };
 
   if (loading) {
     return (
@@ -120,14 +100,22 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
             <FileSearch size={22} className="text-blue-500" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-hc-text">Dashboard de Busca</h1>
+            <h1 className="text-xl font-bold text-hc-text">HI buscador</h1>
             <p className="text-xs text-hc-muted">
-              Notas fiscais encontradas por empresa — apenas dados de busca
+              Notas fiscais encontradas por empresa
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddClient(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-hc-border
+              text-hc-muted hover:text-hc-text hover:bg-hc-card transition-colors"
+          >
+            <UserPlus size={14} />
+            Novo Cliente
+          </button>
           <button
             onClick={atualizar}
             disabled={atualizando}
@@ -137,15 +125,6 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
             <RefreshCw size={14} className={atualizando ? 'animate-spin' : ''} />
             Atualizar
           </button>
-          <button
-            onClick={() => setView(ViewState.INVOICE_SEARCH)}
-            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-blue-500 text-white
-              hover:bg-blue-600 transition-colors"
-          >
-            <Search size={14} />
-            Consultar Notas
-            <ArrowRight size={14} />
-          </button>
         </div>
       </div>
 
@@ -153,167 +132,6 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
         <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
           <AlertCircle size={16} />
           {erro}
-        </div>
-      )}
-
-      {/* Painel BI */}
-      {dados.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Gráfico principal */}
-          <div className="lg:col-span-2 bg-hc-surface border border-hc-border rounded-xl p-5" style={{ boxShadow: 'var(--hc-shadow)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={15} className="text-hc-purple-light" />
-                <p className="text-sm font-semibold text-hc-text">
-                  {chartMode === 'bar' ? 'Volume de Notas por Empresa' : 'Distribuição por Status'}
-                </p>
-              </div>
-              <div className="flex bg-hc-card border border-hc-border p-0.5 rounded-lg gap-0.5">
-                <button
-                  onClick={() => setChartMode('bar')}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${chartMode === 'bar' ? 'bg-hc-surface text-hc-purple border border-hc-border shadow-sm' : 'text-hc-muted hover:text-hc-text'}`}
-                >
-                  <BarChart2 size={12} className="inline mr-1" />Barras
-                </button>
-                <button
-                  onClick={() => setChartMode('pie')}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${chartMode === 'pie' ? 'bg-hc-surface text-hc-purple border border-hc-border shadow-sm' : 'text-hc-muted hover:text-hc-text'}`}
-                >
-                  <Activity size={12} className="inline mr-1" />Pizza
-                </button>
-              </div>
-            </div>
-
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                {chartMode === 'bar' ? (
-                  <BarChart data={barData} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
-                    <XAxis
-                      dataKey="nome"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fill: '#94a3b8' }}
-                      angle={-35}
-                      textAnchor="end"
-                      interval={0}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
-                      allowDecimals={false}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(109,40,217,0.07)' }}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'var(--hc-surface)', fontSize: 12 }}
-                      labelStyle={{ color: 'var(--hc-text)', fontWeight: 600 }}
-                      formatter={(value: number) => [value.toLocaleString('pt-BR'), 'Notas']}
-                    />
-                    <Bar dataKey="notas" radius={[4, 4, 0, 0]} maxBarSize={48} name="Notas">
-                      {barData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                ) : (
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={3}
-                      dataKey="value"
-                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
-                      labelLine={{ strokeWidth: 1, stroke: '#94a3b8' }}
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`pie-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'var(--hc-surface)', fontSize: 12 }}
-                      formatter={(value: number) => [value, 'Empresas']}
-                    />
-                    <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-                  </PieChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Painel de métricas resumidas */}
-          <div className="bg-hc-surface border border-hc-border rounded-xl p-5 flex flex-col justify-between" style={{ boxShadow: 'var(--hc-shadow)' }}>
-            <div>
-              <p className="text-[11px] font-semibold text-hc-muted uppercase tracking-wider mb-4 flex items-center gap-2">
-                <FileSearch size={13} />
-                Resumo Geral
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-hc-muted">Total de notas</span>
-                    <span className="font-semibold text-hc-text">{totalNotas.toLocaleString('pt-BR')}</span>
-                  </div>
-                  <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-hc-purple h-full rounded-full w-full" />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-hc-muted flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-emerald-400" /> Sincronizadas
-                    </span>
-                    <span className="font-semibold text-hc-text">{sincronizados}/{dados.length}</span>
-                  </div>
-                  <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-emerald-400 h-full rounded-full transition-all"
-                      style={{ width: dados.length > 0 ? `${(sincronizados / dados.length) * 100}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-hc-muted flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-amber-400" /> Pendentes
-                    </span>
-                    <span className="font-semibold text-hc-text">{dados.length - sincronizados}</span>
-                  </div>
-                  <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-amber-400 h-full rounded-full transition-all"
-                      style={{ width: dados.length > 0 ? `${((dados.length - sincronizados) / dados.length) * 100}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-                {semDados > 0 && (
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-hc-muted flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-slate-400" /> Sem dados
-                      </span>
-                      <span className="font-semibold text-hc-text">{semDados}</span>
-                    </div>
-                    <div className="w-full bg-hc-card h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className="bg-slate-400 h-full rounded-full"
-                        style={{ width: `${(semDados / dados.length) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-hc-border flex justify-between items-center">
-              <span className="text-xs text-hc-muted">{dados.length} empresa{dados.length !== 1 ? 's' : ''}</span>
-              <span className="text-xs font-semibold text-emerald-400">
-                {dados.length > 0 ? Math.round((sincronizados / dados.length) * 100) : 0}% OK
-              </span>
-            </div>
-          </div>
         </div>
       )}
 
@@ -348,6 +166,81 @@ export const SearchDashboard: React.FC<SearchDashboardProps> = ({
             ))}
           </div>
         </>
+      )}
+
+      {/* Modal Novo Cliente */}
+      {showAddClient && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-hc-surface rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-hc-border">
+            <div className="flex justify-between items-center p-5 border-b border-hc-border sticky top-0 bg-hc-surface z-10">
+              <h3 className="text-base font-semibold font-display text-hc-text">Novo Cliente</h3>
+              <button onClick={() => { setShowAddClient(false); reset(); setFormMessage(null); }} className="p-1.5 rounded-lg hover:bg-hc-hover text-hc-muted">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit(onSubmitClient)} className="p-6 space-y-4">
+              {formMessage && (
+                <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm ${
+                  formMessage.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                  {formMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                  {formMessage.text}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">CNPJ *</label>
+                  <InputMask mask="99.999.999/9999-99" {...register('cnpj', { required: true })} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Razão Social *</label>
+                  <input type="text" {...register('razao_social', { required: true })} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Nome Fantasia</label>
+                  <input type="text" {...register('nome_fantasia')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Regime Tributário</label>
+                  <select {...register('regime_tributario')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none">
+                    <option value="">Selecione...</option>
+                    <option value="simples_nacional">Simples Nacional</option>
+                    <option value="lucro_presumido">Lucro Presumido</option>
+                    <option value="lucro_real">Lucro Real</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Inscrição Estadual</label>
+                  <input type="text" {...register('inscricao_estadual')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Inscrição Municipal</label>
+                  <input type="text" {...register('inscricao_municipal')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">CEP</label>
+                  <InputMask mask="99999-999" {...register('cep')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Cidade</label>
+                  <input type="text" {...register('cidade')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Estado (UF)</label>
+                  <input type="text" maxLength={2} {...register('estado')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none uppercase" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-hc-text mb-1">Email</label>
+                  <input type="email" {...register('email')} className="w-full rounded-lg bg-hc-surface border border-hc-border text-hc-text p-2 focus:border-hc-purple outline-none" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-hc-border">
+                <button type="button" onClick={() => { setShowAddClient(false); reset(); setFormMessage(null); }} className="px-4 py-2 text-sm rounded-lg text-hc-muted hover:bg-hc-hover transition-colors">Cancelar</button>
+                <button type="submit" className="px-4 py-2 text-sm rounded-lg bg-hc-purple text-white hover:bg-hc-purple/80 transition-colors">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

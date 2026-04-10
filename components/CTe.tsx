@@ -157,17 +157,17 @@ export const CTe: React.FC = () => {
 
   if (sucesso) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-slate-900 p-6">
+      <div className="p-6 space-y-5">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8">
+          <div className="bg-hc-card border border-hc-border rounded-xl p-8">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-bold text-hc-text mb-2">
                 CT-e Autorizado com Sucesso!
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
+              <p className="text-hc-muted text-sm">
                 Chave de Acesso: {chaveAcesso}
               </p>
             </div>
@@ -175,14 +175,14 @@ export const CTe: React.FC = () => {
             <div className="flex flex-col gap-3">
               <button
                 onClick={imprimirDACTE}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-hc-purple hover:bg-hc-purple/80 text-white rounded-lg transition-colors"
               >
                 <FileText className="h-5 w-5" />
                 Imprimir DACTE
               </button>
               <button
                 onClick={novoCTe}
-                className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
               >
                 Novo CT-e
               </button>
@@ -194,14 +194,14 @@ export const CTe: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-slate-900 p-6">
+    <div className="p-6 space-y-5">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <Truck className="h-8 w-8 text-blue-600" />
+          <h1 className="text-3xl font-bold text-hc-text flex items-center gap-3">
+            <Truck className="h-8 w-8 text-hc-purple-light" />
             Emissão de CT-e - Conhecimento de Transporte
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-hc-muted mt-1">
             Documento fiscal eletrônico para prestação de serviços de transporte
           </p>
         </div>
@@ -210,14 +210,14 @@ export const CTe: React.FC = () => {
         <BannerContingenciaCompacto />
 
         {/* Seleção de Empresa */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="bg-hc-card border border-hc-border rounded-xl p-4 mb-6">
+          <label className="block text-sm font-medium text-hc-text mb-2">
             Empresa Emissora (Transportadora)
           </label>
           <select
             value={empresaSelecionada}
             onChange={(e) => setEmpresaSelecionada(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
+            className="w-full px-4 py-2 border border-hc-border rounded-lg bg-hc-surface text-hc-text"
           >
             {empresas.map((emp) => (
               <option key={emp.id} value={emp.id}>
@@ -229,20 +229,20 @@ export const CTe: React.FC = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Informações Gerais do CT-e */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
+          <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+            <h2 className="text-lg font-bold text-hc-text mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-hc-purple-light" />
               Informações Gerais
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Tipo de Serviço
                 </label>
                 <select
                   {...register('tipo_servico')}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                 >
                   <option value="0">Normal</option>
                   <option value="1">Subcontratação</option>
@@ -252,12 +252,12 @@ export const CTe: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Tipo de CT-e
                 </label>
                 <select
                   {...register('tipo_cte')}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                 >
                   <option value="0">Normal</option>
                   <option value="1">Complementar</option>
@@ -267,12 +267,12 @@ export const CTe: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Modalidade de Frete
                 </label>
                 <select
                   {...register('modalidade_frete')}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                 >
                   <option value="0">CIF (Por conta do Remetente)</option>
                   <option value="1">FOB (Por conta do Destinatário)</option>
@@ -303,22 +303,22 @@ export const CTe: React.FC = () => {
           />
 
           {/* Dados da Carga */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+            <h2 className="text-lg font-bold text-hc-text mb-4 flex items-center gap-2">
               <Package className="h-5 w-5 text-orange-600" />
               Dados da Carga
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Valor da Carga (R$) *
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   {...register('carga.valor', { required: true, min: 0.01 })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                   placeholder="0.00"
                 />
                 {errors.carga?.valor && (
@@ -327,14 +327,14 @@ export const CTe: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Peso Bruto (kg) *
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   {...register('carga.peso_bruto', { required: true, min: 0.01 })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                   placeholder="0.00"
                 />
                 {errors.carga?.peso_bruto && (
@@ -343,38 +343,38 @@ export const CTe: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Peso Cubado (kg)
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   {...register('carga.peso_cubado')}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                   placeholder="0.00"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Quantidade de Volumes
                 </label>
                 <input
                   type="number"
                   {...register('carga.quantidade_volumes')}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                   placeholder="0"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-hc-text mb-1">
                   Produto Predominante *
                 </label>
                 <input
                   type="text"
                   {...register('carga.produto_predominante', { required: true })}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                   placeholder="Ex: Materiais de Construção"
                 />
                 {errors.carga?.produto_predominante && (
@@ -385,16 +385,16 @@ export const CTe: React.FC = () => {
           </div>
 
           {/* Documentos Vinculados */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
+          <div className="bg-hc-card border border-hc-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-hc-text flex items-center gap-2">
                 <FileText className="h-5 w-5 text-purple-600" />
                 Documentos Vinculados (NF-e/NFC-e)
               </h2>
               <button
                 type="button"
                 onClick={() => adicionarDocumento({ tipo: 'NFe', chave_acesso: '' })}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-hc-purple hover:bg-hc-purple/80 text-white rounded-lg text-sm transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Adicionar
@@ -402,16 +402,16 @@ export const CTe: React.FC = () => {
             </div>
 
             {documentos.length === 0 ? (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+              <p className="text-center text-hc-muted py-4">
                 Nenhum documento vinculado
               </p>
             ) : (
               <div className="space-y-3">
                 {documentos.map((field, index) => (
-                  <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                  <div key={field.id} className="flex items-center gap-3 p-3 bg-hc-surface rounded-lg">
                     <select
                       {...register(`documentos_vinculados.${index}.tipo` as const)}
-                      className="px-3 py-2 border rounded-lg dark:bg-slate-600 dark:text-white"
+                      className="px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
                     >
                       <option value="NFe">NF-e</option>
                       <option value="NFCe">NFC-e</option>
@@ -423,13 +423,13 @@ export const CTe: React.FC = () => {
                       {...register(`documentos_vinculados.${index}.chave_acesso` as const)}
                       placeholder="Chave de Acesso (44 dígitos)"
                       maxLength={44}
-                      className="flex-1 px-3 py-2 border rounded-lg dark:bg-slate-600 dark:text-white font-mono text-sm"
+                      className="flex-1 px-3 py-2 border rounded-lg bg-hc-surface text-hc-text font-mono text-sm"
                     />
 
                     <button
                       type="button"
                       onClick={() => removerDocumento(index)}
-                      className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </button>
@@ -440,28 +440,28 @@ export const CTe: React.FC = () => {
           </div>
 
           {/* Informações Complementares */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+          <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+            <h2 className="text-lg font-bold text-hc-text mb-4">
               Informações Complementares
             </h2>
             <textarea
               {...register('informacoes_complementares')}
               rows={4}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="Informações adicionais sobre o transporte..."
             />
           </div>
 
           {/* Erros de Validação */}
           {errosValidacao.length > 0 && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
               <div className="flex items-start gap-2 mb-2">
-                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                <h3 className="font-bold text-yellow-800 dark:text-yellow-300">
+                <AlertCircle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <h3 className="font-bold text-amber-400">
                   Erros de Validação
                 </h3>
               </div>
-              <ul className="list-disc list-inside space-y-1 text-sm text-yellow-800 dark:text-yellow-300">
+              <ul className="list-disc list-inside space-y-1 text-sm text-amber-400">
                 {errosValidacao.map((erro, index) => (
                   <li key={index}>{erro}</li>
                 ))}
@@ -471,9 +471,9 @@ export const CTe: React.FC = () => {
 
           {/* Erro Geral */}
           {erro && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-red-800 dark:text-red-300">{erro}</p>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-red-400">{erro}</p>
             </div>
           )}
 
@@ -482,7 +482,7 @@ export const CTe: React.FC = () => {
             <button
               type="button"
               onClick={() => reset()}
-              className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              className="flex-1 px-6 py-3 border border-hc-border text-hc-text rounded-lg hover:bg-hc-hover transition-colors"
             >
               Limpar Formulário
             </button>
@@ -512,8 +512,8 @@ interface ParticipanteFormProps {
 
 const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, prefixo, register, errors }) => {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
-      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+    <div className="bg-hc-card border border-hc-border rounded-xl p-6">
+      <h2 className="text-lg font-bold text-hc-text mb-4 flex items-center gap-2">
         {icone}
         {titulo}
       </h2>
@@ -521,7 +521,7 @@ const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, pref
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               CNPJ/CPF *
             </label>
             <InputMask
@@ -530,7 +530,7 @@ const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, pref
                 return digits.length <= 11 ? '999.999.999-99' : '99.999.999/9999-99';
               }}
               {...register(`${prefixo}.cnpj`, { required: true })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="00.000.000/0000-00"
             />
             {errors[prefixo]?.cnpj && (
@@ -539,26 +539,26 @@ const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, pref
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               Inscrição Estadual
             </label>
             <input
               type="text"
               {...register(`${prefixo}.inscricao_estadual`)}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="Opcional"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-hc-text mb-1">
             Razão Social *
           </label>
           <input
             type="text"
             {...register(`${prefixo}.razao_social`, { required: true })}
-            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+            className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
             placeholder="Nome completo ou Razão Social"
           />
           {errors[prefixo]?.razao_social && (
@@ -568,25 +568,25 @@ const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, pref
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               Logradouro *
             </label>
             <input
               type="text"
               {...register(`${prefixo}.endereco.logradouro`, { required: true })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="Rua, Avenida, etc."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               Número *
             </label>
             <input
               type="text"
               {...register(`${prefixo}.endereco.numero`, { required: true })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="000"
             />
           </div>
@@ -594,25 +594,25 @@ const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, pref
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               Bairro *
             </label>
             <input
               type="text"
               {...register(`${prefixo}.endereco.bairro`, { required: true })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="Bairro"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               CEP *
             </label>
             <InputMask
               mask="99999-999"
               {...register(`${prefixo}.endereco.cep`, { required: true })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="00000-000"
             />
           </div>
@@ -620,40 +620,40 @@ const ParticipanteForm: React.FC<ParticipanteFormProps> = ({ titulo, icone, pref
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               Município *
             </label>
             <input
               type="text"
               {...register(`${prefixo}.endereco.municipio`, { required: true })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
               placeholder="Nome do município"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-hc-text mb-1">
               UF *
             </label>
             <input
               type="text"
               maxLength={2}
               {...register(`${prefixo}.endereco.uf`, { required: true, maxLength: 2 })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white uppercase"
+              className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text uppercase"
               placeholder="SP"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-hc-text mb-1">
             Código IBGE do Município *
           </label>
           <input
             type="text"
             maxLength={7}
             {...register(`${prefixo}.endereco.codigo_municipio`, { required: true })}
-            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-700 dark:text-white"
+            className="w-full px-3 py-2 border rounded-lg bg-hc-surface text-hc-text"
             placeholder="7 dígitos - Ex: 3550308 (São Paulo/SP)"
           />
           {errors[prefixo]?.endereco?.codigo_municipio && (
