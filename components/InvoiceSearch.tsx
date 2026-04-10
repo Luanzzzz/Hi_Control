@@ -122,6 +122,7 @@ export const InvoiceSearch: React.FC = () => {
   // Estados da API
   const [invoices, setInvoices] = useState<NotaFiscal[]>([]);
   const [fonteResultado, setFonteResultado] = useState<'cache' | 'sefaz' | 'banco_local' | null>(null);
+  const [avisoSync, setAvisoSync] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
@@ -260,6 +261,7 @@ export const InvoiceSearch: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
+    setAvisoSync(null);
     setBuscaExecutada(true);
     setBuscaVaziaContexto(null);
     setInvoices([]);  // Limpar resultados anteriores
@@ -297,6 +299,17 @@ export const InvoiceSearch: React.FC = () => {
       setUltimoNSU(resultado.max_nsu);
       setMaxNSU(resultado.max_nsu);
       setTemMaisNotas(false);  // buscarTodasNotasEmpresa já carregou tudo
+
+      // Aviso quando o sync SEFAZ falhou mas há notas no banco local
+      if (resultado.sincronizacao_automatica === false && (resultado.notas?.length ?? 0) > 0) {
+        setAvisoSync(
+          resultado.mensagem
+            ? `Sincronização SEFAZ falhou: ${resultado.mensagem} — exibindo apenas notas do banco local.`
+            : 'Sincronização com SEFAZ indisponível. Exibindo apenas notas já importadas no banco local.'
+        );
+      } else {
+        setAvisoSync(null);
+      }
 
       if (resultado.total_notas === 0) {
         const partesDescricao = [
@@ -773,6 +786,11 @@ export const InvoiceSearch: React.FC = () => {
       {/* Alerta de erro/info/aviso */}
       {error && (
         <InlineAlert variant={errorVariant} message={errorMessage ?? error} onDismiss={() => setError(null)} />
+      )}
+
+      {/* Aviso quando sync SEFAZ falhou mas notas locais foram encontradas */}
+      {avisoSync && !error && (
+        <InlineAlert variant="warning" message={avisoSync} onDismiss={() => setAvisoSync(null)} />
       )}
 
       {/* Resultados */}
